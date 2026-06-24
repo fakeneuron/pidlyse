@@ -17,13 +17,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - [x] **PID-008** [light] | why-reasoning — Completed 2026-06-24.
 - [x] **PID-011** [light] | row-labels — Completed 2026-06-24.
 - [x] **PID-012** [light] | row-status-icons — Completed 2026-06-24.
-- [ ] **PID-EPIC-13** [medium] | feature-expansion — Multi-child epic to make Pidly more informative: adds per-process CPU/RAM display, expands process-pattern vocabulary (vite, bun, node), refines app descriptions and in-app copy, and adds proactive badge/notification support for newly detected strays. (filed via /ft-epic-discovery; refined at .1 closure)
-  - [x] **PID-13.1** [medium] | discovery — Completed 2026-06-24.
-  - [x] **PID-13.2** [medium] | cpu-ram-per-row — Completed 2026-06-24.
-  - [x] **PID-13.3** [medium] | process-patterns — Completed 2026-06-24.
-  - [x] **PID-13.4** [light] | app-description — Completed 2026-06-24.
-  - [x] **PID-13.5** [medium] | notifications — Completed 2026-06-24.
-  - [ ] **PID-13.6** [medium] | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 
 ## Low
 
@@ -38,8 +31,13 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
-- [x] **PID-13.5** [medium] | notifications — Completed 2026-06-24.
-- [x] **PID-13.4** [light] | app-description — Completed 2026-06-24.
+- [x] **PID-EPIC-13** [medium] | feature-expansion — Completed 2026-06-24.
+  - [x] **PID-13.1** [medium] | discovery — Completed 2026-06-24.
+  - [x] **PID-13.2** [medium] | cpu-ram-per-row — Completed 2026-06-24.
+  - [x] **PID-13.3** [medium] | process-patterns — Completed 2026-06-24.
+  - [x] **PID-13.4** [light] | app-description — Completed 2026-06-24.
+  - [x] **PID-13.5** [medium] | notifications — Completed 2026-06-24.
+  - [x] **PID-13.6** [medium] | audit — Completed 2026-06-24.
 - [x] **PID-010** [light] | auto-start — Completed 2026-06-24.
 - [x] **PID-011** [light] | row-labels — Completed 2026-06-24.
 - [x] **PID-012** [light] | row-status-icons — Completed 2026-06-24.
