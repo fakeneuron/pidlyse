@@ -22,7 +22,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-13.2** [medium] | cpu-ram-per-row — Completed 2026-06-24.
   - [x] **PID-13.3** [medium] | process-patterns — Completed 2026-06-24.
   - [x] **PID-13.4** [light] | app-description — Completed 2026-06-24.
-  - [ ] **PID-13.5** [medium] | notifications — Add `UserNotifications` support: fire a macOS system notification when a scan surfaces new stray processes not in the previous result; add an opt-in toggle in `SettingsView`.
+  - [x] **PID-13.5** [medium] | notifications — Completed 2026-06-24.
   - [ ] **PID-13.6** [medium] | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 
 ## Low
@@ -38,6 +38,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-13.5** [medium] | notifications — Completed 2026-06-24.
 - [x] **PID-13.4** [light] | app-description — Completed 2026-06-24.
 - [x] **PID-010** [light] | auto-start — Completed 2026-06-24.
 - [x] **PID-011** [light] | row-labels — Completed 2026-06-24.

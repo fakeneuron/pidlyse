@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 
 /// Enumerates running processes, matches stray candidates, and classifies each
 /// into a descriptive `kind` + `riskTier` (→ derived `safe`/`needsReview`
@@ -35,8 +36,26 @@ final class ScanEngine: ObservableObject {
         }
     }
 
+    /// When true, fires a macOS system notification when a scan surfaces new stray PIDs.
+    /// Persisted to UserDefaults. Permission is requested the first time it is enabled.
+    @Published var notificationsEnabled: Bool = false {
+        didSet {
+            UserDefaults.standard.set(notificationsEnabled, forKey: "notificationsEnabled")
+            if notificationsEnabled && !oldValue {
+                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] granted, _ in
+                    if !granted {
+                        DispatchQueue.main.async { self?.notificationsEnabled = false }
+                    }
+                }
+            }
+        }
+    }
+
     /// PIDs dismissed for this session. Not persisted — cleared on app restart.
     private(set) var dismissedPIDs: Set<Int32> = []
+
+    /// PIDs from the previous completed scan. `nil` = no prior baseline (first scan).
+    private var previousPIDs: Set<Int32>?
 
     private var timer: Timer?
 
@@ -47,6 +66,7 @@ final class ScanEngine: ObservableObject {
         ignoredNames = ud.stringArray(forKey: "ignoredNames") ?? []
         let savedInterval = ud.double(forKey: "scanInterval")
         if savedInterval > 0 { scanInterval = savedInterval }
+        if ud.bool(forKey: "notificationsEnabled") { notificationsEnabled = true }
         startTimer()
     }
 
@@ -68,8 +88,11 @@ final class ScanEngine: ObservableObject {
             let result = Self.enumerate(elapsedThreshold: threshold, ignoredNames: ignored,
                                         dismissedPIDs: dismissed)
             DispatchQueue.main.async {
+                let oldPIDs = self?.previousPIDs
+                self?.previousPIDs = Set(result.map { $0.pid })
                 self?.items = result
                 self?.isScanning = false
+                self?.fireNotificationIfNeeded(newItems: result, previousPIDs: oldPIDs)
             }
         }
     }
@@ -82,11 +105,33 @@ final class ScanEngine: ObservableObject {
     }
 
     /// Manual rescan: clears all dismissed PIDs before scanning so previously
-    /// hidden items can reappear. The background timer calls `scan()` directly
-    /// and does NOT reset dismissals.
+    /// hidden items can reappear. Also resets the notification baseline so
+    /// re-emerging dismissed processes don't falsely fire as "new" strays.
     func rescan() {
         dismissedPIDs = []
+        previousPIDs = nil
         scan()
+    }
+
+    // MARK: - Notifications
+
+    private func fireNotificationIfNeeded(newItems: [ProcessItem], previousPIDs: Set<Int32>?) {
+        guard notificationsEnabled, let prev = previousPIDs else { return }
+        let newStrays = newItems.filter { !prev.contains($0.pid) }
+        guard !newStrays.isEmpty else { return }
+
+        let content = UNMutableNotificationContent()
+        if newStrays.count == 1 {
+            content.title = "New stray process"
+            content.body = "\(newStrays[0].kind.label): \(newStrays[0].displayPath)"
+        } else {
+            content.title = "\(newStrays.count) new stray processes"
+            content.body = newStrays.map { $0.kind.label }.joined(separator: ", ")
+        }
+        content.sound = .default
+
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
     }
 
     // MARK: - Timer

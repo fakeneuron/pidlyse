@@ -41,6 +41,12 @@ struct SettingsView: View {
             Section("Startup") {
                 Toggle("Launch at login", isOn: launchAtLogin)
             }
+            Section("Notifications") {
+                Toggle("Alert on new strays", isOn: $engine.notificationsEnabled)
+                Text("Shows a system notification when a background scan detects processes not seen in the previous scan.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Section("Auto-scan") {
                 Stepper(
                     "Every \(Int(engine.scanInterval / 60)) min",
