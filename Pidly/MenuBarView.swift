@@ -131,6 +131,12 @@ struct MenuBarView: View {
                         .lineLimit(1).truncationMode(.middle)
                 }
                 Spacer()
+                Text(String(format: "%.1f%%", item.cpuPercent))
+                    .font(.caption2).foregroundStyle(.secondary)
+                    .frame(width: 36, alignment: .trailing)
+                Text(ramString(item.rssKB))
+                    .font(.caption2).foregroundStyle(.secondary)
+                    .frame(width: 48, alignment: .trailing)
                 Text(ageString(item.elapsed))
                     .font(.caption2).foregroundStyle(.secondary)
                 Button {
@@ -201,6 +207,11 @@ struct MenuBarView: View {
             let matches = items.filter { $0.kind == kind }
             return matches.isEmpty ? nil : (kind, matches)
         }
+    }
+
+    private func ramString(_ kb: Int) -> String {
+        let mb = kb / 1024
+        return mb > 0 ? "\(mb) MB" : "\(kb) KB"
     }
 
     /// Compact human-readable elapsed age (`45s` / `12m` / `3h` / `2d`).

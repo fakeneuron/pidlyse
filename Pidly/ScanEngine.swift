@@ -139,27 +139,31 @@ final class ScanEngine: ObservableObject {
         guard let kind = detectKind(p.args) else { return nil }
 
         let elapsed = parseElapsed(p.etime)
+        let cpuPercent = Double(p.pcpu) ?? 0.0
+        let rssKB = Int(p.rss) ?? 0
         // Build a draft to reuse ProcessItem's signal logic, then stamp the tier.
         let draft = ProcessItem(pid: p.pid, ppid: p.ppid, command: p.args,
-                                elapsed: elapsed, tty: p.tty, kind: kind, riskTier: .moderate)
+                                elapsed: elapsed, tty: p.tty, kind: kind, riskTier: .moderate,
+                                cpuPercent: cpuPercent, rssKB: rssKB)
         var tier = riskTier(kind: kind,
                             hasTTY: draft.hasTTY,
                             isOrphan: draft.isOrphan,
                             isOld: elapsed >= elapsedThreshold)
         if registeredPIDs.contains(p.pid) && tier == .easy { tier = .moderate }
         return ProcessItem(pid: p.pid, ppid: p.ppid, command: p.args,
-                           elapsed: elapsed, tty: p.tty, kind: kind, riskTier: tier)
+                           elapsed: elapsed, tty: p.tty, kind: kind, riskTier: tier,
+                           cpuPercent: cpuPercent, rssKB: rssKB)
     }
 
     // MARK: - Pure parsing helpers
 
-    /// Split a `ps -o pid=,ppid=,etime=,tty=,args=` line into its fields. The
-    /// first four columns are whitespace-delimited; everything after is the
+    /// Split a `ps -o pid=,ppid=,etime=,tty=,pcpu=,rss=,args=` line into its fields. The
+    /// first six columns are whitespace-delimited; everything after is the
     /// (space-containing) command line.
-    static func parsePSLine(_ line: String) -> (pid: Int32, ppid: Int32, etime: String, tty: String, args: String)? {
+    static func parsePSLine(_ line: String) -> (pid: Int32, ppid: Int32, etime: String, tty: String, pcpu: String, rss: String, args: String)? {
         var remainder = Substring(line)
         var fields: [Substring] = []
-        for _ in 0..<4 {
+        for _ in 0..<6 {
             while let c = remainder.first, c == " " || c == "\t" { remainder = remainder.dropFirst() }
             guard let space = remainder.firstIndex(where: { $0 == " " || $0 == "\t" }) else { return nil }
             fields.append(remainder[..<space])
@@ -167,7 +171,7 @@ final class ScanEngine: ObservableObject {
         }
         let args = remainder.trimmingCharacters(in: .whitespaces)
         guard let pid = Int32(fields[0]), let ppid = Int32(fields[1]), !args.isEmpty else { return nil }
-        return (pid, ppid, String(fields[2]), String(fields[3]), args)
+        return (pid, ppid, String(fields[2]), String(fields[3]), String(fields[4]), String(fields[5]), args)
     }
 
     /// Parse a `ps` etime string (`[[DD-]HH:]MM:SS`) into seconds.
@@ -238,7 +242,7 @@ final class ScanEngine: ObservableObject {
     static func runPS() -> String {
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/bin/ps")
-        task.arguments = ["-axww", "-o", "pid=,ppid=,etime=,tty=,args="]
+        task.arguments = ["-axww", "-o", "pid=,ppid=,etime=,tty=,pcpu=,rss=,args="]
         let pipe = Pipe()
         task.standardOutput = pipe
         task.standardError = Pipe()

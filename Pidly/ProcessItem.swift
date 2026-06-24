@@ -57,6 +57,10 @@ struct ProcessItem: Identifiable {
     let tty: String
     let kind: ProcessKind
     let riskTier: RiskTier
+    /// CPU usage percentage from `ps pcpu` column.
+    let cpuPercent: Double
+    /// Resident set size in KB from `ps rss` column.
+    let rssKB: Int
 
     var id: Int32 { pid }
 

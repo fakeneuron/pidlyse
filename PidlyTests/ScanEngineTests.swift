@@ -6,17 +6,19 @@ final class ScanEngineTests: XCTestCase {
     // MARK: - parsePSLine
 
     func testParsePSLine_withSpacesInArgs() {
-        let line = "  569     1 12-08:33:38 ??       /Library/Helpers/com.docker.vmnetd --flag a b"
+        let line = "  569     1 12-08:33:38 ??       0.1  12345  /Library/Helpers/com.docker.vmnetd --flag a b"
         let parsed = ScanEngine.parsePSLine(line)
         XCTAssertEqual(parsed?.pid, 569)
         XCTAssertEqual(parsed?.ppid, 1)
         XCTAssertEqual(parsed?.etime, "12-08:33:38")
         XCTAssertEqual(parsed?.tty, "??")
+        XCTAssertEqual(parsed?.pcpu, "0.1")
+        XCTAssertEqual(parsed?.rss, "12345")
         XCTAssertEqual(parsed?.args, "/Library/Helpers/com.docker.vmnetd --flag a b")
     }
 
     func testParsePSLine_withRealTTY() {
-        let line = " 2172  100    30:13 ttys001  npm run dev"
+        let line = " 2172  100    30:13 ttys001  0.0  8192  npm run dev"
         let parsed = ScanEngine.parsePSLine(line)
         XCTAssertEqual(parsed?.pid, 2172)
         XCTAssertEqual(parsed?.tty, "ttys001")
@@ -97,20 +99,20 @@ final class ScanEngineTests: XCTestCase {
 
     func testBucketDerivation() {
         let easy = ProcessItem(pid: 1, ppid: 1, command: "pytest", elapsed: 9999,
-                               tty: "??", kind: .pytest, riskTier: .easy)
+                               tty: "??", kind: .pytest, riskTier: .easy, cpuPercent: 0, rssKB: 0)
         let high = ProcessItem(pid: 2, ppid: 1, command: "uvicorn", elapsed: 9999,
-                               tty: "??", kind: .uvicorn, riskTier: .high)
+                               tty: "??", kind: .uvicorn, riskTier: .high, cpuPercent: 0, rssKB: 0)
         XCTAssertEqual(easy.bucket, .safe)
         XCTAssertEqual(high.bucket, .needsReview)
     }
 
     func testEnumerate_classifiesInjectedOutput() {
         let output = """
-          569     1 12-08:33:38 ??       /Applications/Docker.app/Contents/MacOS/com.docker.backend
-         2172     1    45:00 ??       npm run dev
-         3000  2999    00:30 ttys002  python -m pytest tests/unit
-         4000     1 01:46:38 ??       python -m pytest tests/slow
-         9999     1 00:10 ??       /usr/sbin/cfprefsd agent
+          569     1 12-08:33:38 ??   0.0  4096   /Applications/Docker.app/Contents/MacOS/com.docker.backend
+         2172     1    45:00 ??   0.1  8192   npm run dev
+         3000  2999    00:30 ttys002  0.0  4096   python -m pytest tests/unit
+         4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow
+         9999     1 00:10 ??   0.0  1024   /usr/sbin/cfprefsd agent
         """
         let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60, psOutput: output)
 
@@ -136,7 +138,7 @@ final class ScanEngineTests: XCTestCase {
 
     func testPortRegisteredProcess_demotedFromEasyToNeedsReview() {
         // Would be easy (orphaned, old, no TTY pytest) but pid 4000 is on a registered port.
-        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
         let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          registeredPIDs: [4000])
@@ -146,7 +148,7 @@ final class ScanEngineTests: XCTestCase {
 
     func testPortRegisteredProcess_alreadyModerate_staysNeedsReview() {
         // Has a TTY → moderate already; port match doesn't change outcome.
-        let output = "  3000  2999    00:30 ttys002  python -m pytest tests/unit"
+        let output = "  3000  2999    00:30 ttys002  0.0  4096   python -m pytest tests/unit"
         let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          registeredPIDs: [3000])
@@ -155,7 +157,7 @@ final class ScanEngineTests: XCTestCase {
 
     func testNonRegisteredProcess_easyStaysSafe() {
         // Not in registeredPIDs → no demotion.
-        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
         let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          registeredPIDs: [])
@@ -166,7 +168,7 @@ final class ScanEngineTests: XCTestCase {
     // MARK: - ignoredNames filtering
 
     func testEnumerate_ignoredNames_match_filtersProcess() {
-        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
         let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          ignoredNames: ["pytest"])
@@ -174,7 +176,7 @@ final class ScanEngineTests: XCTestCase {
     }
 
     func testEnumerate_ignoredNames_noMatch_processKept() {
-        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
         let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          ignoredNames: ["vitest"])
@@ -182,7 +184,7 @@ final class ScanEngineTests: XCTestCase {
     }
 
     func testEnumerate_ignoredNames_caseInsensitive() {
-        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
         let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          ignoredNames: ["PyTest"])
@@ -190,7 +192,7 @@ final class ScanEngineTests: XCTestCase {
     }
 
     func testEnumerate_ignoredNames_empty_noFiltering() {
-        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
         let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          ignoredNames: [])
@@ -200,7 +202,7 @@ final class ScanEngineTests: XCTestCase {
     // MARK: - dismissedPIDs filtering
 
     func testEnumerate_dismissedPIDs_match_filtersProcess() {
-        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
         let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          dismissedPIDs: [4000])
@@ -208,7 +210,7 @@ final class ScanEngineTests: XCTestCase {
     }
 
     func testEnumerate_dismissedPIDs_noMatch_processKept() {
-        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
         let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          dismissedPIDs: [9999])
@@ -216,7 +218,7 @@ final class ScanEngineTests: XCTestCase {
     }
 
     func testEnumerate_dismissedPIDs_empty_noFiltering() {
-        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
         let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          dismissedPIDs: [])
@@ -227,7 +229,7 @@ final class ScanEngineTests: XCTestCase {
 
     private func item(command: String) -> ProcessItem {
         ProcessItem(pid: 1, ppid: 1, command: command, elapsed: 0,
-                    tty: "??", kind: .pytest, riskTier: .easy)
+                    tty: "??", kind: .pytest, riskTier: .easy, cpuPercent: 0, rssKB: 0)
     }
 
     func testDisplayPath_absolutePathWithArgs_showsParentSlashExec() {

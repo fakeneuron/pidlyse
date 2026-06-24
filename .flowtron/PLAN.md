@@ -19,7 +19,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - [x] **PID-012** [light] | row-status-icons — Completed 2026-06-24.
 - [ ] **PID-EPIC-13** [medium] | feature-expansion — Multi-child epic to make Pidly more informative: adds per-process CPU/RAM display, expands process-pattern vocabulary (vite, bun, node), refines app descriptions and in-app copy, and adds proactive badge/notification support for newly detected strays. (filed via /ft-epic-discovery; refined at .1 closure)
   - [x] **PID-13.1** [medium] | discovery — Completed 2026-06-24.
-  - [ ] **PID-13.2** [medium] | cpu-ram-per-row — Add `%cpu` and `rss` columns to the `ps` shell-out in `ScanEngine`, surface as new fields on `ProcessItem`, and render as a compact `0.1% · 48 MB` annotation on each popover row in `MenuBarView`.
+  - [x] **PID-13.2** [medium] | cpu-ram-per-row — Completed 2026-06-24.
   - [ ] **PID-13.3** [medium] | process-patterns — Expand `ScanEngine.detectKind` to recognise vite (dev server), bun (runtime), and bare node processes; assign risk tiers (vite/bun = npm-tier, node = high); add `ProcessKind` cases and labels.
   - [ ] **PID-13.4** [light] | app-description — Update `README.md` with a sharper tagline and feature summary reflecting the shipped feature set; review and improve stale or generic in-app copy.
   - [ ] **PID-13.5** [medium] | notifications — Add `UserNotifications` support: fire a macOS system notification when a scan surfaces new stray processes not in the previous result; add an opt-in toggle in `SettingsView`.
