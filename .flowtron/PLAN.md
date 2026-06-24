@@ -21,10 +21,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## Low
 
 - [x] **PID-010** [light] | auto-start — Completed 2026-06-24.
-- [ ] **PID-EPIC-14** [light]🔧 | correctness — detectKind false positives + docker-stop clarity. Discovery supplied by audit-repo 2026-06-24. Surfaced by audit-repo 2026-06-24 (Theme: Pattern-Matching Brittleness).
-  - [x] **PID-14.2** [light]🔧 | bun-guard — Completed 2026-06-24.
-  - [x] **PID-14.3** [light]🔧 | docker-stop-note — Completed 2026-06-24.
-  - [ ] **PID-14.N** [light]🔧 | audit
 - [ ] **PID-EPIC-15** [light]🔧 | doc-sync — SPEC.md divergences + tasknote README quick commands. Discovery supplied by audit-repo 2026-06-24. Surfaced by audit-repo 2026-06-24 (Theme: Spec-Code Drift).
   - [ ] **PID-15.2** [light]🔧 | spec-settings — fix `Settings.swift` → `SettingsView.swift` in SPEC project structure table; update JSON override claim (move to Future Opportunities or implement)
   - [ ] **PID-15.3** [light]🔧 | tasknote-readme-cmds — replace generic Quick Commands stub with correct xcodebuild invocations; document `CODE_SIGNING_ALLOWED=NO` requirement for CLI test runs
@@ -39,6 +35,10 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-EPIC-14** [light]🔧 | correctness — Completed 2026-06-24.
+  - [x] **PID-14.2** [light]🔧 | bun-guard — Completed 2026-06-24.
+  - [x] **PID-14.3** [light]🔧 | docker-stop-note — Completed 2026-06-24.
+  - [x] **PID-14.4** [light]🔧 | correctness audit — Completed 2026-06-24.
 - [x] **PID-EPIC-13** [medium] | feature-expansion — Completed 2026-06-24.
   - [x] **PID-13.1** [medium] | discovery — Completed 2026-06-24.
   - [x] **PID-13.2** [medium] | cpu-ram-per-row — Completed 2026-06-24.
