@@ -8,8 +8,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-- [ ] **PID-003** [heavy] | popover-ui — Two-section list (Safe / Needs Review). Shows PID, command snippet, elapsed age, kill button per safe item. Wired to live scan results.
-- [ ] **PID-004** [medium] | kill-action — Kill button sends SIGTERM; SIGKILL fallback after 2 s if still alive. Triggers immediate rescan. PID removed from list on next scan result.
+- [ ] **PID-004** [medium] | kill-hardening — Harden the kill flow: `docker stop` for Docker containers/daemon (vs raw SIGKILL) + kill edge-cases. Core SIGTERM→2s→SIGKILL + rescan mechanism shipped in PID-003 (`KillService.swift`).
 - [ ] **PID-005** [medium] | port-registry — `PortRegistry.swift` with hardcoded port table (mirrored from CLAUDE.md). Any process on a registered port demoted to Needs Review, regardless of other criteria.
 - [ ] **PID-006** [medium] | polish — Icon states (outline / filled / spinner), badge colours (red safe-count / yellow review-only), scan timer, Settings panel (interval, elapsed threshold, ignored PIDs).
 
@@ -20,7 +19,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- [ ] **PID-009** [medium] | kill-all-safe — Bulk "Kill all safe" action at top of Safe section. Same SIGTERM → SIGKILL flow per PID, concurrent.
 - [ ] **PID-010** [light] | auto-start — `SMAppService` login-item registration. Off by default, toggleable in Settings.
 
 ## Future Opportunities
@@ -32,6 +30,8 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-003** [heavy] | popover-ui — Completed 2026-06-23.
+- [x] **PID-009** [medium] | kill-all-safe — Completed 2026-06-23 (absorbed by PID-003 "Clean all safe").
 - [x] **PID-002** [heavy] | scan-engine — Completed 2026-06-23.
 - [x] **PID-001** [heavy] | scaffold — Completed 2026-06-23.
 
