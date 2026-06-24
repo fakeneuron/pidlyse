@@ -9,10 +9,13 @@ enum ProcessKind: String, CaseIterable {
     case npm
     case pytest
     case vitest
+    case vite
     case jest
     case playwrightTest
     case playwrightMCP
     case chromeHelper
+    case bun
+    case node
 
     /// Short, user-facing label shown in the popover row.
     var label: String {
@@ -22,10 +25,13 @@ enum ProcessKind: String, CaseIterable {
         case .npm:            return "npm"
         case .pytest:         return "pytest"
         case .vitest:         return "vitest"
+        case .vite:           return "Vite"
         case .jest:           return "Jest"
         case .playwrightTest: return "Playwright test"
         case .playwrightMCP:  return "playwright-mcp"
         case .chromeHelper:   return "Chrome (playwright-mcp)"
+        case .bun:            return "Bun"
+        case .node:           return "Node"
         }
     }
 }

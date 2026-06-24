@@ -20,7 +20,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - [ ] **PID-EPIC-13** [medium] | feature-expansion — Multi-child epic to make Pidly more informative: adds per-process CPU/RAM display, expands process-pattern vocabulary (vite, bun, node), refines app descriptions and in-app copy, and adds proactive badge/notification support for newly detected strays. (filed via /ft-epic-discovery; refined at .1 closure)
   - [x] **PID-13.1** [medium] | discovery — Completed 2026-06-24.
   - [x] **PID-13.2** [medium] | cpu-ram-per-row — Completed 2026-06-24.
-  - [ ] **PID-13.3** [medium] | process-patterns — Expand `ScanEngine.detectKind` to recognise vite (dev server), bun (runtime), and bare node processes; assign risk tiers (vite/bun = npm-tier, node = high); add `ProcessKind` cases and labels.
+  - [x] **PID-13.3** [medium] | process-patterns — Completed 2026-06-24.
   - [ ] **PID-13.4** [light] | app-description — Update `README.md` with a sharper tagline and feature summary reflecting the shipped feature set; review and improve stale or generic in-app copy.
   - [ ] **PID-13.5** [medium] | notifications — Add `UserNotifications` support: fire a macOS system notification when a scan surfaces new stray processes not in the previous result; add an opt-in toggle in `SettingsView`.
   - [ ] **PID-13.6** [medium] | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.

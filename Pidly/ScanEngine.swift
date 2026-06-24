@@ -211,10 +211,13 @@ final class ScanEngine: ObservableObject {
         }
         if s.contains("pytest") { return .pytest }
         if s.contains("vitest") { return .vitest }
+        if s.contains("vite") { return .vite }
         if s.contains("jest") { return .jest }
         if s.contains("uvicorn") { return .uvicorn }
         if s.contains("docker") { return .docker }
         if s.contains("npm") { return .npm }
+        if s.contains("bun") { return .bun }
+        if s.contains("node ") { return .node }
         return nil
     }
 
@@ -222,15 +225,15 @@ final class ScanEngine: ObservableObject {
     /// "strong stray" only when it has no terminal, is orphaned, and is old.
     static func riskTier(kind: ProcessKind, hasTTY: Bool, isOrphan: Bool, isOld: Bool) -> RiskTier {
         // Real dev infra — never an easy kill regardless of signals.
-        if kind == .docker || kind == .uvicorn { return .high }
+        if kind == .docker || kind == .uvicorn || kind == .node { return .high }
 
         let strongStray = !hasTTY && isOrphan && isOld
         switch kind {
         case .pytest, .vitest, .jest, .playwrightTest, .playwrightMCP, .chromeHelper:
             return strongStray ? .easy : .moderate
-        case .npm:
+        case .npm, .vite, .bun:
             return strongStray ? .moderate : .high
-        case .docker, .uvicorn:
+        case .docker, .uvicorn, .node:
             return .high   // handled above; keeps the switch exhaustive
         }
     }

@@ -49,6 +49,12 @@ final class ScanEngineTests: XCTestCase {
         XCTAssertEqual(ScanEngine.detectKind("uvicorn backend.main:app --reload"), .uvicorn)
         XCTAssertEqual(ScanEngine.detectKind("npm run dev"), .npm)
         XCTAssertEqual(ScanEngine.detectKind("node @playwright/mcp@latest"), .playwrightMCP)
+        // New patterns: vite, bun, node
+        XCTAssertEqual(ScanEngine.detectKind("node node_modules/.bin/vite --port 5173"), .vite)
+        XCTAssertEqual(ScanEngine.detectKind("bun run dev"), .bun)
+        XCTAssertEqual(ScanEngine.detectKind("node server.js"), .node)
+        // vitest must still win over vite (order check)
+        XCTAssertEqual(ScanEngine.detectKind("node node_modules/.bin/vitest run"), .vitest)
     }
 
     func testDetectKind_chromeUnderPlaywrightMCP_isChromeHelper() {
@@ -90,8 +96,31 @@ final class ScanEngineTests: XCTestCase {
         XCTAssertEqual(tier, .high)
     }
 
+    func testNode_isHighRisk() {
+        // Bare node is always high risk, like docker/uvicorn.
+        let tier = ScanEngine.riskTier(kind: .node, hasTTY: false, isOrphan: true, isOld: true)
+        XCTAssertEqual(tier, .high)
+    }
+
     func testNpmStrongStray_isModerate_notEasy() {
         let tier = ScanEngine.riskTier(kind: .npm, hasTTY: false, isOrphan: true, isOld: true)
+        XCTAssertEqual(tier, .moderate)
+    }
+
+    func testViteStrongStray_isModerate() {
+        // npm-tier: strongStray → moderate, not easy.
+        let tier = ScanEngine.riskTier(kind: .vite, hasTTY: false, isOrphan: true, isOld: true)
+        XCTAssertEqual(tier, .moderate)
+    }
+
+    func testViteNotStrongStray_isHigh() {
+        let tier = ScanEngine.riskTier(kind: .vite, hasTTY: true, isOrphan: false, isOld: false)
+        XCTAssertEqual(tier, .high)
+    }
+
+    func testBunStrongStray_isModerate() {
+        // npm-tier: strongStray → moderate.
+        let tier = ScanEngine.riskTier(kind: .bun, hasTTY: false, isOrphan: true, isOld: true)
         XCTAssertEqual(tier, .moderate)
     }
 
