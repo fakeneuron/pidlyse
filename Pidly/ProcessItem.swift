@@ -65,6 +65,20 @@ struct ProcessItem: Identifiable {
     /// `safe` only for the easy tier; everything else needs explicit review.
     var bucket: Bucket { riskTier == .easy ? .safe : .needsReview }
 
+    /// Compact display label shown in the popover row. Absolute-path executables
+    /// format as `parentDir/executableName` (e.g. `bin/uvicorn`); bare-word
+    /// commands show just the first token (e.g. `npm`).
+    var displayPath: String {
+        let firstToken = command.split(separator: " ", maxSplits: 1)
+            .first.map(String.init) ?? command
+        guard firstToken.hasPrefix("/") else { return firstToken }
+        let url = URL(fileURLWithPath: firstToken)
+        let execName = url.lastPathComponent
+        let parentName = url.deletingLastPathComponent().lastPathComponent
+        guard !parentName.isEmpty, parentName != "/" else { return execName }
+        return "\(parentName)/\(execName)"
+    }
+
     /// True when the process has no controlling terminal — a stray indicator.
     var hasTTY: Bool {
         let t = tty.trimmingCharacters(in: .whitespaces)

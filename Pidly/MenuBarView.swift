@@ -126,7 +126,7 @@ struct MenuBarView: View {
                     .frame(width: 8, height: 8)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("PID \(item.pid)").font(.caption).monospaced()
-                    Text(item.command)
+                    Text(item.displayPath)
                         .font(.caption2).foregroundStyle(.secondary)
                         .lineLimit(1).truncationMode(.middle)
                 }
