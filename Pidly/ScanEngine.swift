@@ -6,39 +6,100 @@ import Foundation
 /// stays in one place as the UI (PID-003), kill flow (PID-004), and port
 /// registry (PID-005) layer on top.
 final class ScanEngine: ObservableObject {
-    /// Default "old enough to be stale" threshold. Made configurable in PID-006.
     static let defaultElapsedThreshold: TimeInterval = 30 * 60
+    static let defaultScanInterval: TimeInterval = 120
 
     @Published private(set) var items: [ProcessItem] = []
+    @Published private(set) var isScanning: Bool = false
 
-    /// Elapsed-time threshold above which a process counts as "old". Settings
-    /// panel (PID-006) will drive this; constant default for now.
-    var elapsedThreshold: TimeInterval
-
-    init(elapsedThreshold: TimeInterval = ScanEngine.defaultElapsedThreshold) {
-        self.elapsedThreshold = elapsedThreshold
+    /// How often (seconds) the background timer auto-scans. Persisted to UserDefaults.
+    @Published var scanInterval: TimeInterval = 120 {
+        didSet {
+            UserDefaults.standard.set(scanInterval, forKey: "scanInterval")
+            startTimer()
+        }
     }
 
-    /// Run a scan and publish the results. Synchronous for now; background
-    /// dispatch + the periodic timer are PID-006 concerns.
+    /// Elapsed-time threshold above which a process counts as "old". Persisted to UserDefaults.
+    @Published var elapsedThreshold: TimeInterval = 30 * 60 {
+        didSet {
+            UserDefaults.standard.set(elapsedThreshold, forKey: "elapsedThreshold")
+        }
+    }
+
+    /// Command-prefix substrings to hide from scan results (case-insensitive).
+    /// Persisted to UserDefaults as a string array.
+    @Published var ignoredNames: [String] = [] {
+        didSet {
+            UserDefaults.standard.set(ignoredNames, forKey: "ignoredNames")
+        }
+    }
+
+    private var timer: Timer?
+
+    init() {
+        let ud = UserDefaults.standard
+        let savedThreshold = ud.double(forKey: "elapsedThreshold")
+        if savedThreshold > 0 { elapsedThreshold = savedThreshold }
+        ignoredNames = ud.stringArray(forKey: "ignoredNames") ?? []
+        let savedInterval = ud.double(forKey: "scanInterval")
+        if savedInterval > 0 { scanInterval = savedInterval }
+        startTimer()
+    }
+
+    deinit {
+        timer?.invalidate()
+    }
+
+    // MARK: - Scanning
+
+    /// Kick off a background scan. Debounces if already in-flight.
+    /// Must be called from the main thread (timer + SwiftUI actions always are).
     func scan() {
-        items = Self.enumerate(elapsedThreshold: elapsedThreshold)
+        guard !isScanning else { return }
+        isScanning = true
+        let threshold = elapsedThreshold
+        let ignored = ignoredNames
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let result = Self.enumerate(elapsedThreshold: threshold, ignoredNames: ignored)
+            DispatchQueue.main.async {
+                self?.items = result
+                self?.isScanning = false
+            }
+        }
+    }
+
+    // MARK: - Timer
+
+    private func startTimer() {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: scanInterval, repeats: true) { [weak self] _ in
+            self?.scan()
+        }
     }
 
     // MARK: - Enumeration
 
-    /// Parse + classify `ps` output into stray candidates. `psOutput` and
-    /// `registeredPIDs` are injectable so the pure pipeline can be unit-tested
-    /// without shelling out. When `registeredPIDs` is nil the live `lsof` query runs.
+    /// Parse + classify `ps` output into stray candidates. `psOutput`,
+    /// `registeredPIDs`, and `ignoredNames` are injectable for unit testing.
+    /// When `registeredPIDs` is nil the live `lsof` query runs.
+    /// Items whose command args contain any `ignoredNames` entry are dropped.
     static func enumerate(elapsedThreshold: TimeInterval = defaultElapsedThreshold,
                           psOutput: String? = nil,
-                          registeredPIDs: Set<Int32>? = nil) -> [ProcessItem] {
+                          registeredPIDs: Set<Int32>? = nil,
+                          ignoredNames: [String] = []) -> [ProcessItem] {
         let output = psOutput ?? runPS()
         let portPIDs = registeredPIDs ?? PortRegistry.listeningPIDs()
-        return output
+        let all = output
             .split(separator: "\n", omittingEmptySubsequences: true)
             .compactMap { makeItem(from: String($0), elapsedThreshold: elapsedThreshold,
                                    registeredPIDs: portPIDs) }
+        guard !ignoredNames.isEmpty else { return all }
+        return all.filter { item in
+            !ignoredNames.contains { prefix in
+                item.command.localizedCaseInsensitiveContains(prefix)
+            }
+        }
     }
 
     /// Build one classified `ProcessItem` from a `ps` line, or `nil` if the line

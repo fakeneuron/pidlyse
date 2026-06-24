@@ -35,6 +35,14 @@ struct MenuBarView: View {
             }
             .buttonStyle(.borderless)
             .help("Rescan")
+            Button {
+                NSApp.activate(ignoringOtherApps: true)
+                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            } label: {
+                Image(systemName: "gear")
+            }
+            .buttonStyle(.borderless)
+            .help("Settings")
         }
         .padding(.horizontal)
         .padding(.vertical, 8)

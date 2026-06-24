@@ -1,0 +1,50 @@
+import SwiftUI
+
+/// Settings panel: scan interval, stale-process threshold, ignored command prefixes.
+/// Opened via Cmd+, or the gear button in the popover header.
+struct SettingsView: View {
+    @ObservedObject var engine: ScanEngine
+
+    /// Binding that joins/splits `ignoredNames` on newlines for the TextEditor.
+    private var ignoredNamesText: Binding<String> {
+        Binding(
+            get: { engine.ignoredNames.joined(separator: "\n") },
+            set: {
+                engine.ignoredNames = $0
+                    .components(separatedBy: "\n")
+                    .map { $0.trimmingCharacters(in: .whitespaces) }
+                    .filter { !$0.isEmpty }
+            }
+        )
+    }
+
+    var body: some View {
+        Form {
+            Section("Auto-scan") {
+                Stepper(
+                    "Every \(Int(engine.scanInterval / 60)) min",
+                    value: $engine.scanInterval,
+                    in: 60.0...3600.0,
+                    step: 60.0
+                )
+                Stepper(
+                    "Stale after \(Int(engine.elapsedThreshold / 60)) min",
+                    value: $engine.elapsedThreshold,
+                    in: 300.0...7200.0,
+                    step: 300.0
+                )
+            }
+            Section("Ignored processes") {
+                TextEditor(text: ignoredNamesText)
+                    .font(.system(.body, design: .monospaced))
+                    .frame(minHeight: 80)
+                Text("One command substring per line — matching processes are hidden from scan results.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .frame(width: 360)
+        .navigationTitle("Pidly")
+    }
+}

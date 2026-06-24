@@ -10,7 +10,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 - [x] **PID-004** [medium] | kill-hardening — Completed 2026-06-24.
 - [x] **PID-005** [medium] | port-registry — Completed 2026-06-24.
-- [ ] **PID-006** [medium] | polish — Icon states (outline / filled / spinner), badge colours (red safe-count / yellow review-only), scan timer, Settings panel (interval, elapsed threshold, ignored PIDs).
+- [x] **PID-006** [medium] | polish — Completed 2026-06-24.
 
 ## Medium
 
@@ -30,6 +30,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-006** [medium] | polish — Completed 2026-06-24.
 - [x] **PID-005** [medium] | port-registry — Completed 2026-06-24.
 - [x] **PID-004** [medium] | kill-hardening — Completed 2026-06-24.
 - [x] **PID-003** [heavy] | popover-ui — Completed 2026-06-23.

@@ -163,6 +163,40 @@ final class ScanEngineTests: XCTestCase {
         XCTAssertEqual(items.first?.bucket, .safe)
     }
 
+    // MARK: - ignoredNames filtering
+
+    func testEnumerate_ignoredNames_match_filtersProcess() {
+        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+                                         psOutput: output,
+                                         ignoredNames: ["pytest"])
+        XCTAssertEqual(items.count, 0)
+    }
+
+    func testEnumerate_ignoredNames_noMatch_processKept() {
+        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+                                         psOutput: output,
+                                         ignoredNames: ["vitest"])
+        XCTAssertEqual(items.count, 1)
+    }
+
+    func testEnumerate_ignoredNames_caseInsensitive() {
+        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+                                         psOutput: output,
+                                         ignoredNames: ["PyTest"])
+        XCTAssertEqual(items.count, 0)
+    }
+
+    func testEnumerate_ignoredNames_empty_noFiltering() {
+        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+                                         psOutput: output,
+                                         ignoredNames: [])
+        XCTAssertEqual(items.count, 1)
+    }
+
     // MARK: - PortRegistry.parsePIDAndPort
 
     func testParsePIDAndPort_registeredPort_returnsPID() {
