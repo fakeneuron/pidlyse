@@ -29,12 +29,12 @@ struct MenuBarView: View {
             Text("Pidly").font(.headline)
             Spacer()
             Button {
-                engine.scan()
+                engine.rescan()
             } label: {
                 Image(systemName: "arrow.clockwise")
             }
             .buttonStyle(.borderless)
-            .help("Rescan")
+            .help("Rescan (restores hidden items)")
             Button {
                 NSApp.activate(ignoringOtherApps: true)
                 NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
@@ -118,6 +118,13 @@ struct MenuBarView: View {
             Spacer()
             Text(ageString(item.elapsed))
                 .font(.caption2).foregroundStyle(.secondary)
+            Button {
+                engine.dismiss(item.pid)
+            } label: {
+                Image(systemName: "eye.slash")
+            }
+            .buttonStyle(.borderless)
+            .help("Ignore for session")
             Button {
                 KillService.kill(item) { engine.scan() }
             } label: {

@@ -197,6 +197,32 @@ final class ScanEngineTests: XCTestCase {
         XCTAssertEqual(items.count, 1)
     }
 
+    // MARK: - dismissedPIDs filtering
+
+    func testEnumerate_dismissedPIDs_match_filtersProcess() {
+        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+                                         psOutput: output,
+                                         dismissedPIDs: [4000])
+        XCTAssertEqual(items.count, 0)
+    }
+
+    func testEnumerate_dismissedPIDs_noMatch_processKept() {
+        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+                                         psOutput: output,
+                                         dismissedPIDs: [9999])
+        XCTAssertEqual(items.count, 1)
+    }
+
+    func testEnumerate_dismissedPIDs_empty_noFiltering() {
+        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+                                         psOutput: output,
+                                         dismissedPIDs: [])
+        XCTAssertEqual(items.count, 1)
+    }
+
     // MARK: - PortRegistry.parsePIDAndPort
 
     func testParsePIDAndPort_registeredPort_returnsPID() {

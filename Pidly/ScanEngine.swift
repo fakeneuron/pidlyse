@@ -35,6 +35,9 @@ final class ScanEngine: ObservableObject {
         }
     }
 
+    /// PIDs dismissed for this session. Not persisted — cleared on app restart.
+    private(set) var dismissedPIDs: Set<Int32> = []
+
     private var timer: Timer?
 
     init() {
@@ -60,13 +63,30 @@ final class ScanEngine: ObservableObject {
         isScanning = true
         let threshold = elapsedThreshold
         let ignored = ignoredNames
+        let dismissed = dismissedPIDs
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let result = Self.enumerate(elapsedThreshold: threshold, ignoredNames: ignored)
+            let result = Self.enumerate(elapsedThreshold: threshold, ignoredNames: ignored,
+                                        dismissedPIDs: dismissed)
             DispatchQueue.main.async {
                 self?.items = result
                 self?.isScanning = false
             }
         }
+    }
+
+    /// Hide a process for this session. Removes it from `items` immediately and
+    /// excludes it from subsequent scans. A manual rescan (↺) clears the dismissed set.
+    func dismiss(_ pid: Int32) {
+        dismissedPIDs.insert(pid)
+        items = items.filter { $0.pid != pid }
+    }
+
+    /// Manual rescan: clears all dismissed PIDs before scanning so previously
+    /// hidden items can reappear. The background timer calls `scan()` directly
+    /// and does NOT reset dismissals.
+    func rescan() {
+        dismissedPIDs = []
+        scan()
     }
 
     // MARK: - Timer
@@ -81,25 +101,32 @@ final class ScanEngine: ObservableObject {
     // MARK: - Enumeration
 
     /// Parse + classify `ps` output into stray candidates. `psOutput`,
-    /// `registeredPIDs`, and `ignoredNames` are injectable for unit testing.
-    /// When `registeredPIDs` is nil the live `lsof` query runs.
-    /// Items whose command args contain any `ignoredNames` entry are dropped.
+    /// `registeredPIDs`, `ignoredNames`, and `dismissedPIDs` are injectable
+    /// for unit testing. When `registeredPIDs` is nil the live `lsof` query runs.
+    /// Items whose command args contain any `ignoredNames` entry, or whose PID is
+    /// in `dismissedPIDs`, are dropped.
     static func enumerate(elapsedThreshold: TimeInterval = defaultElapsedThreshold,
                           psOutput: String? = nil,
                           registeredPIDs: Set<Int32>? = nil,
-                          ignoredNames: [String] = []) -> [ProcessItem] {
+                          ignoredNames: [String] = [],
+                          dismissedPIDs: Set<Int32> = []) -> [ProcessItem] {
         let output = psOutput ?? runPS()
         let portPIDs = registeredPIDs ?? PortRegistry.listeningPIDs()
-        let all = output
+        var all = output
             .split(separator: "\n", omittingEmptySubsequences: true)
             .compactMap { makeItem(from: String($0), elapsedThreshold: elapsedThreshold,
                                    registeredPIDs: portPIDs) }
-        guard !ignoredNames.isEmpty else { return all }
-        return all.filter { item in
-            !ignoredNames.contains { prefix in
-                item.command.localizedCaseInsensitiveContains(prefix)
+        if !ignoredNames.isEmpty {
+            all = all.filter { item in
+                !ignoredNames.contains { prefix in
+                    item.command.localizedCaseInsensitiveContains(prefix)
+                }
             }
         }
+        if !dismissedPIDs.isEmpty {
+            all = all.filter { !dismissedPIDs.contains($0.pid) }
+        }
+        return all
     }
 
     /// Build one classified `ProcessItem` from a `ps` line, or `nil` if the line

@@ -14,8 +14,8 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-- [ ] **PID-007** [light] | dismiss-snooze — "Ignore for session" per PID (snoozes until app restart, no kill). Dismiss button in popover row.
 - [ ] **PID-008** [light] | why-reasoning — "Why is this here?" expander per row — inline classification reasoning (which criteria fired, elapsed time, TTY status, parent PID).
+- [ ] **PID-011** [light] | row-labels — Show executable name + parent folder instead of raw command path in popover rows.
 
 ## Low
 
@@ -30,6 +30,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-007** [light] | dismiss-snooze — Completed 2026-06-24.
 - [x] **PID-006** [medium] | polish — Completed 2026-06-24.
 - [x] **PID-005** [medium] | port-registry — Completed 2026-06-24.
 - [x] **PID-004** [medium] | kill-hardening — Completed 2026-06-24.
