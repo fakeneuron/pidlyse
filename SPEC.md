@@ -27,7 +27,7 @@ Pidly/
     ProcessItem.swift       # model: pid, name, age, tty, bucket
     PortRegistry.swift      # hardcoded + parseable port table
     KillService.swift       # safe kill wrapper (SIGTERM → SIGKILL fallback)
-    Settings.swift          # scan interval, thresholds, ignored pids
+    SettingsView.swift      # scan interval, thresholds, ignored pids
 ```
 
 ---
@@ -87,7 +87,7 @@ Dismiss / ignore: snoozes that PID for the session (does not survive restart).
 
 ## Port Registry
 
-`PortRegistry.swift` holds the canonical port table (mirrored from CLAUDE.md global table). Loaded at startup; user can also supply a JSON override file.
+`PortRegistry.swift` holds the canonical port table (mirrored from CLAUDE.md global table). Loaded at startup.
 
 Any process matched whose port appears in the registry is demoted to "needs review" regardless of other criteria.
 
