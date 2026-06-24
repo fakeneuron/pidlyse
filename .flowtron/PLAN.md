@@ -8,7 +8,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-- [ ] **PID-002** [heavy] | scan-engine — `ps aux` parsing + pattern matching (playwright-mcp, pytest, vitest, jest, Chrome helpers). TTY check, elapsed-time threshold, parent-PID alive check. Returns `[ProcessItem]`.
 - [ ] **PID-003** [heavy] | popover-ui — Two-section list (Safe / Needs Review). Shows PID, command snippet, elapsed age, kill button per safe item. Wired to live scan results.
 - [ ] **PID-004** [medium] | kill-action — Kill button sends SIGTERM; SIGKILL fallback after 2 s if still alive. Triggers immediate rescan. PID removed from list on next scan result.
 - [ ] **PID-005** [medium] | port-registry — `PortRegistry.swift` with hardcoded port table (mirrored from CLAUDE.md). Any process on a registered port demoted to Needs Review, regardless of other criteria.
@@ -33,6 +32,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-002** [heavy] | scan-engine — Completed 2026-06-23.
 - [x] **PID-001** [heavy] | scaffold — Completed 2026-06-23.
 
 <!--

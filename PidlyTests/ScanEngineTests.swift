@@ -1,0 +1,134 @@
+import XCTest
+@testable import Pidly
+
+final class ScanEngineTests: XCTestCase {
+
+    // MARK: - parsePSLine
+
+    func testParsePSLine_withSpacesInArgs() {
+        let line = "  569     1 12-08:33:38 ??       /Library/Helpers/com.docker.vmnetd --flag a b"
+        let parsed = ScanEngine.parsePSLine(line)
+        XCTAssertEqual(parsed?.pid, 569)
+        XCTAssertEqual(parsed?.ppid, 1)
+        XCTAssertEqual(parsed?.etime, "12-08:33:38")
+        XCTAssertEqual(parsed?.tty, "??")
+        XCTAssertEqual(parsed?.args, "/Library/Helpers/com.docker.vmnetd --flag a b")
+    }
+
+    func testParsePSLine_withRealTTY() {
+        let line = " 2172  100    30:13 ttys001  npm run dev"
+        let parsed = ScanEngine.parsePSLine(line)
+        XCTAssertEqual(parsed?.pid, 2172)
+        XCTAssertEqual(parsed?.tty, "ttys001")
+        XCTAssertEqual(parsed?.args, "npm run dev")
+    }
+
+    func testParsePSLine_rejectsMalformed() {
+        XCTAssertNil(ScanEngine.parsePSLine(""))
+        XCTAssertNil(ScanEngine.parsePSLine("   "))
+        XCTAssertNil(ScanEngine.parsePSLine("123 456 only-three-fields"))
+    }
+
+    // MARK: - parseElapsed
+
+    func testParseElapsed_formats() {
+        XCTAssertEqual(ScanEngine.parseElapsed("05:23"), TimeInterval(5 * 60 + 23))
+        XCTAssertEqual(ScanEngine.parseElapsed("01:05:23"), TimeInterval(3600 + 5 * 60 + 23))
+        XCTAssertEqual(ScanEngine.parseElapsed("2-03:04:05"), TimeInterval(2 * 86400 + 3 * 3600 + 4 * 60 + 5))
+        XCTAssertEqual(ScanEngine.parseElapsed("42"), TimeInterval(42))
+    }
+
+    // MARK: - detectKind
+
+    func testDetectKind_basics() {
+        XCTAssertEqual(ScanEngine.detectKind("python -m pytest tests/"), .pytest)
+        XCTAssertEqual(ScanEngine.detectKind("node node_modules/.bin/vitest run"), .vitest)
+        XCTAssertEqual(ScanEngine.detectKind("node node_modules/.bin/jest --watch"), .jest)
+        XCTAssertEqual(ScanEngine.detectKind("uvicorn backend.main:app --reload"), .uvicorn)
+        XCTAssertEqual(ScanEngine.detectKind("npm run dev"), .npm)
+        XCTAssertEqual(ScanEngine.detectKind("node @playwright/mcp@latest"), .playwrightMCP)
+    }
+
+    func testDetectKind_chromeUnderPlaywrightMCP_isChromeHelper() {
+        let args = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --headless " +
+                   "--user-data-dir=/Users/me/Library/Caches/ms-playwright-mcp/mcp-chrome-abc"
+        XCTAssertEqual(ScanEngine.detectKind(args), .chromeHelper)
+    }
+
+    func testDetectKind_normalChrome_isExcluded() {
+        let args = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --user-data-dir=/Users/me/Default"
+        XCTAssertNil(ScanEngine.detectKind(args))
+    }
+
+    func testDetectKind_unrelated_isNil() {
+        XCTAssertNil(ScanEngine.detectKind("/usr/sbin/cfprefsd agent"))
+    }
+
+    // MARK: - riskTier / bucket
+
+    func testOrphanedOldPytest_isEasyKill() {
+        let tier = ScanEngine.riskTier(kind: .pytest, hasTTY: false, isOrphan: true, isOld: true)
+        XCTAssertEqual(tier, .easy)
+    }
+
+    func testRecentPytestWithTTY_isNotEasy() {
+        // Has a terminal and isn't old → not a strong stray.
+        let tier = ScanEngine.riskTier(kind: .pytest, hasTTY: true, isOrphan: false, isOld: false)
+        XCTAssertEqual(tier, .moderate)
+    }
+
+    func testUvicorn_isHighRisk() {
+        // Dev infra is high regardless of stray signals.
+        let tier = ScanEngine.riskTier(kind: .uvicorn, hasTTY: false, isOrphan: true, isOld: true)
+        XCTAssertEqual(tier, .high)
+    }
+
+    func testDocker_isHighRisk() {
+        let tier = ScanEngine.riskTier(kind: .docker, hasTTY: false, isOrphan: true, isOld: true)
+        XCTAssertEqual(tier, .high)
+    }
+
+    func testNpmStrongStray_isModerate_notEasy() {
+        let tier = ScanEngine.riskTier(kind: .npm, hasTTY: false, isOrphan: true, isOld: true)
+        XCTAssertEqual(tier, .moderate)
+    }
+
+    // MARK: - bucket derivation + end-to-end enumerate
+
+    func testBucketDerivation() {
+        let easy = ProcessItem(pid: 1, ppid: 1, command: "pytest", elapsed: 9999,
+                               tty: "??", kind: .pytest, riskTier: .easy)
+        let high = ProcessItem(pid: 2, ppid: 1, command: "uvicorn", elapsed: 9999,
+                               tty: "??", kind: .uvicorn, riskTier: .high)
+        XCTAssertEqual(easy.bucket, .safe)
+        XCTAssertEqual(high.bucket, .needsReview)
+    }
+
+    func testEnumerate_classifiesInjectedOutput() {
+        let output = """
+          569     1 12-08:33:38 ??       /Applications/Docker.app/Contents/MacOS/com.docker.backend
+         2172     1    45:00 ??       npm run dev
+         3000  2999    00:30 ttys002  python -m pytest tests/unit
+         4000     1 01:46:38 ??       python -m pytest tests/slow
+         9999     1 00:10 ??       /usr/sbin/cfprefsd agent
+        """
+        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60, psOutput: output)
+
+        // cfprefsd matches nothing → excluded; the other four are candidates.
+        XCTAssertEqual(items.count, 4)
+
+        let docker = items.first { $0.pid == 569 }
+        XCTAssertEqual(docker?.kind, .docker)
+        XCTAssertEqual(docker?.bucket, .needsReview)
+
+        // Orphaned, old (1h46m), no TTY pytest → easy → safe.
+        let strayPytest = items.first { $0.pid == 4000 }
+        XCTAssertEqual(strayPytest?.kind, .pytest)
+        XCTAssertEqual(strayPytest?.riskTier, .easy)
+        XCTAssertEqual(strayPytest?.bucket, .safe)
+
+        // Recent pytest with a TTY → not a strong stray → needsReview.
+        let activePytest = items.first { $0.pid == 3000 }
+        XCTAssertEqual(activePytest?.bucket, .needsReview)
+    }
+}

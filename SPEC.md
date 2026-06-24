@@ -36,30 +36,36 @@ Pidly/
 
 Runs on a configurable timer (default: every 60 s). Shells out to `ps aux` or uses `sysctl` directly to enumerate processes. Matches against a pattern set:
 
-| Pattern | Category |
-|---------|----------|
-| `playwright-mcp` / `@playwright/mcp` | Orphaned MCP browser tooling |
-| `pytest`, `vitest`, `jest.*test`, `playwright test` | Hung test runners |
-| Chrome processes under `ms-playwright-mcp/` user-data dirs | Zombie browser helpers |
+| Pattern | `kind` | Category |
+|---------|--------|----------|
+| `playwright-mcp` / `@playwright/mcp` | `playwrightMCP` | Orphaned MCP browser tooling |
+| `pytest`, `vitest`, `jest`, `playwright test` | `pytest` / `vitest` / `jest` / `playwrightTest` | Hung test runners |
+| Chrome processes under `ms-playwright-mcp/` user-data dirs | `chromeHelper` | Zombie browser helpers |
+| `docker` (daemon + helpers) | `docker` | Real dev infra — never an easy kill |
+| `uvicorn` | `uvicorn` | Backend dev server — never an easy kill |
+| `npm` | `npm` | Dev tooling / servers |
 
-Each match is evaluated on:
+A process that matches no `kind` is not a stray candidate and is excluded. Each match is evaluated on:
 
 - **TTY**: `??` = no controlling terminal → stray indicator
 - **Elapsed time**: configurable threshold, default > 30 min
-- **Parent PID**: parent dead → orphan
+- **Parent PID**: parent dead (reparented to `launchd`, ppid == 1) → orphan
 
 ---
 
 ## Classification
 
-Two buckets only. A process goes in exactly one:
+Each candidate carries a descriptive **`kind`** (see the Scan Engine table) and a 3-level **`riskTier`** — `easy` / `moderate` / `high` — the display gradient (the popover may render all three). The two **kill-action buckets** (`safe` / `needsReview`) are **derived** from the tier and remain the only classification the kill flow acts on:
 
-| Bucket | Criteria |
-|--------|----------|
-| **Safe to kill** | Old elapsed + no TTY + parent dead + no registry-port match |
-| **Needs review** | Tied to a registered port/project, recently started, or parent still alive |
+| `riskTier` | Bucket | When |
+|------------|--------|------|
+| **easy** | **Safe to kill** | Test runner / playwright-mcp / Chrome helper that is a *strong stray*: old elapsed **and** no TTY **and** parent dead |
+| **moderate** | **Needs review** | A candidate without all three strong-stray signals (recently started, has a TTY, or parent still alive) |
+| **high** | **Needs review** | Real dev infra (`docker`, `uvicorn`) — never an easy kill regardless of signals; also `npm`/other when not a strong stray |
 
-Port registry awareness: any process listening on a port in the CLAUDE.md global port table is automatically demoted to "needs review" — never auto-killed.
+`bucket = (riskTier == .easy) ? .safe : .needsReview`. A process is **never auto-killed**; `safe` items still require an explicit click (per CLAUDE.md).
+
+Port registry awareness ([[PID-005]], not yet implemented): any process listening on a port in the CLAUDE.md global port table is automatically demoted to "needs review" — never auto-killed.
 
 ---
 
