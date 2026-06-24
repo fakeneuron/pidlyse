@@ -261,8 +261,8 @@ final class ScanEngine: ObservableObject {
         if s.contains("uvicorn") { return .uvicorn }
         if s.contains("docker") { return .docker }
         if s.contains("npm") { return .npm }
-        if s.contains("bun") { return .bun }
-        if s.contains("node ") { return .node }
+        if s.hasPrefix("bun ") || s == "bun" || s.contains("/bun ") || s.hasSuffix("/bun") { return .bun }
+        if s.contains("node ") || s.hasSuffix("node") { return .node }
         return nil
     }
 

@@ -57,6 +57,18 @@ final class ScanEngineTests: XCTestCase {
         XCTAssertEqual(ScanEngine.detectKind("node node_modules/.bin/vitest run"), .vitest)
     }
 
+    func testDetectKind_bundle_notBun() {
+        // Ruby bundler must not match the bun guard.
+        XCTAssertNil(ScanEngine.detectKind("bundle install"))
+        XCTAssertNil(ScanEngine.detectKind("/usr/local/bin/bundle install"))
+    }
+
+    func testDetectKind_bareNode_isNode() {
+        // No trailing space — hasSuffix("node") path.
+        XCTAssertEqual(ScanEngine.detectKind("node"), .node)
+        XCTAssertEqual(ScanEngine.detectKind("/usr/local/bin/node"), .node)
+    }
+
     func testDetectKind_chromeUnderPlaywrightMCP_isChromeHelper() {
         let args = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --headless " +
                    "--user-data-dir=/Users/me/Library/Caches/ms-playwright-mcp/mcp-chrome-abc"
