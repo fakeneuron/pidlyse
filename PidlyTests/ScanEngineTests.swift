@@ -131,4 +131,54 @@ final class ScanEngineTests: XCTestCase {
         let activePytest = items.first { $0.pid == 3000 }
         XCTAssertEqual(activePytest?.bucket, .needsReview)
     }
+
+    // MARK: - Port registry demotion
+
+    func testPortRegisteredProcess_demotedFromEasyToNeedsReview() {
+        // Would be easy (orphaned, old, no TTY pytest) but pid 4000 is on a registered port.
+        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+                                         psOutput: output,
+                                         registeredPIDs: [4000])
+        XCTAssertEqual(items.first?.riskTier, .moderate)
+        XCTAssertEqual(items.first?.bucket, .needsReview)
+    }
+
+    func testPortRegisteredProcess_alreadyModerate_staysNeedsReview() {
+        // Has a TTY → moderate already; port match doesn't change outcome.
+        let output = "  3000  2999    00:30 ttys002  python -m pytest tests/unit"
+        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+                                         psOutput: output,
+                                         registeredPIDs: [3000])
+        XCTAssertEqual(items.first?.bucket, .needsReview)
+    }
+
+    func testNonRegisteredProcess_easyStaysSafe() {
+        // Not in registeredPIDs → no demotion.
+        let output = "  4000     1 01:46:38 ??       python -m pytest tests/slow"
+        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+                                         psOutput: output,
+                                         registeredPIDs: [])
+        XCTAssertEqual(items.first?.riskTier, .easy)
+        XCTAssertEqual(items.first?.bucket, .safe)
+    }
+
+    // MARK: - PortRegistry.parsePIDAndPort
+
+    func testParsePIDAndPort_registeredPort_returnsPID() {
+        // 3001 is siteguy's frontend port — in registeredPorts.
+        let line = "node       1234 user  22u  IPv4 0x0  0t0  TCP *:3001 (LISTEN)"
+        let pid = PortRegistry.parsePIDAndPort(line)
+        XCTAssertEqual(pid, 1234)
+    }
+
+    func testParsePIDAndPort_unregisteredPort_returnsNil() {
+        let line = "ruby       5678 user  11u  IPv4 0x0  0t0  TCP *:9999 (LISTEN)"
+        XCTAssertNil(PortRegistry.parsePIDAndPort(line))
+    }
+
+    func testParsePIDAndPort_headerLine_returnsNil() {
+        let line = "COMMAND    PID   USER   FD   TYPE DEVICE SIZE/OFF NODE NAME"
+        XCTAssertNil(PortRegistry.parsePIDAndPort(line))
+    }
 }

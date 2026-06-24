@@ -9,7 +9,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## High
 
 - [x] **PID-004** [medium] | kill-hardening — Completed 2026-06-24.
-- [ ] **PID-005** [medium] | port-registry — `PortRegistry.swift` with hardcoded port table (mirrored from CLAUDE.md). Any process on a registered port demoted to Needs Review, regardless of other criteria.
+- [x] **PID-005** [medium] | port-registry — Completed 2026-06-24.
 - [ ] **PID-006** [medium] | polish — Icon states (outline / filled / spinner), badge colours (red safe-count / yellow review-only), scan timer, Settings panel (interval, elapsed threshold, ignored PIDs).
 
 ## Medium
@@ -30,6 +30,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-005** [medium] | port-registry — Completed 2026-06-24.
 - [x] **PID-004** [medium] | kill-hardening — Completed 2026-06-24.
 - [x] **PID-003** [heavy] | popover-ui — Completed 2026-06-23.
 - [x] **PID-009** [medium] | kill-all-safe — Completed 2026-06-23 (absorbed by PID-003 "Clean all safe").

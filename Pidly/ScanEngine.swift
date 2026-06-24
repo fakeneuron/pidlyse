@@ -27,19 +27,26 @@ final class ScanEngine: ObservableObject {
 
     // MARK: - Enumeration
 
-    /// Parse + classify `ps` output into stray candidates. `psOutput` is
-    /// injectable so the pure pipeline can be unit-tested without shelling out.
+    /// Parse + classify `ps` output into stray candidates. `psOutput` and
+    /// `registeredPIDs` are injectable so the pure pipeline can be unit-tested
+    /// without shelling out. When `registeredPIDs` is nil the live `lsof` query runs.
     static func enumerate(elapsedThreshold: TimeInterval = defaultElapsedThreshold,
-                          psOutput: String? = nil) -> [ProcessItem] {
+                          psOutput: String? = nil,
+                          registeredPIDs: Set<Int32>? = nil) -> [ProcessItem] {
         let output = psOutput ?? runPS()
+        let portPIDs = registeredPIDs ?? PortRegistry.listeningPIDs()
         return output
             .split(separator: "\n", omittingEmptySubsequences: true)
-            .compactMap { makeItem(from: String($0), elapsedThreshold: elapsedThreshold) }
+            .compactMap { makeItem(from: String($0), elapsedThreshold: elapsedThreshold,
+                                   registeredPIDs: portPIDs) }
     }
 
     /// Build one classified `ProcessItem` from a `ps` line, or `nil` if the line
     /// doesn't parse or matches no known `ProcessKind`.
-    static func makeItem(from line: String, elapsedThreshold: TimeInterval) -> ProcessItem? {
+    /// A process whose PID is in `registeredPIDs` is demoted from `.easy` to `.moderate`
+    /// so it always lands in the Needs Review bucket.
+    static func makeItem(from line: String, elapsedThreshold: TimeInterval,
+                         registeredPIDs: Set<Int32> = []) -> ProcessItem? {
         guard let p = parsePSLine(line) else { return nil }
         guard let kind = detectKind(p.args) else { return nil }
 
@@ -47,10 +54,11 @@ final class ScanEngine: ObservableObject {
         // Build a draft to reuse ProcessItem's signal logic, then stamp the tier.
         let draft = ProcessItem(pid: p.pid, ppid: p.ppid, command: p.args,
                                 elapsed: elapsed, tty: p.tty, kind: kind, riskTier: .moderate)
-        let tier = riskTier(kind: kind,
+        var tier = riskTier(kind: kind,
                             hasTTY: draft.hasTTY,
                             isOrphan: draft.isOrphan,
                             isOld: elapsed >= elapsedThreshold)
+        if registeredPIDs.contains(p.pid) && tier == .easy { tier = .moderate }
         return ProcessItem(pid: p.pid, ppid: p.ppid, command: p.args,
                            elapsed: elapsed, tty: p.tty, kind: kind, riskTier: tier)
     }
