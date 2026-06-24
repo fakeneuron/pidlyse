@@ -108,11 +108,22 @@ struct MenuBarView: View {
         }
     }
 
+    private func riskColor(_ tier: RiskTier) -> Color {
+        switch tier {
+        case .easy:     return .green
+        case .moderate: return .orange
+        case .high:     return .red
+        }
+    }
+
     private func row(_ item: ProcessItem) -> some View {
         let isOld = item.elapsed >= engine.elapsedThreshold
         let isExpanded = expandedPIDs.contains(item.pid)
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
+                Circle()
+                    .fill(riskColor(item.riskTier))
+                    .frame(width: 8, height: 8)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("PID \(item.pid)").font(.caption).monospaced()
                     Text(item.command)
