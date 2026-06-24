@@ -7,6 +7,7 @@ import SwiftUI
 /// rescan. Never auto-kills — every kill is an explicit click (per CLAUDE.md).
 struct MenuBarView: View {
     @ObservedObject var engine: ScanEngine
+    @State private var expandedPIDs: Set<Int32> = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -108,31 +109,75 @@ struct MenuBarView: View {
     }
 
     private func row(_ item: ProcessItem) -> some View {
-        HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("PID \(item.pid)").font(.caption).monospaced()
-                Text(item.command)
+        let isOld = item.elapsed >= engine.elapsedThreshold
+        let isExpanded = expandedPIDs.contains(item.pid)
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("PID \(item.pid)").font(.caption).monospaced()
+                    Text(item.command)
+                        .font(.caption2).foregroundStyle(.secondary)
+                        .lineLimit(1).truncationMode(.middle)
+                }
+                Spacer()
+                Text(ageString(item.elapsed))
                     .font(.caption2).foregroundStyle(.secondary)
-                    .lineLimit(1).truncationMode(.middle)
+                Button {
+                    if expandedPIDs.contains(item.pid) {
+                        expandedPIDs.remove(item.pid)
+                    } else {
+                        expandedPIDs.insert(item.pid)
+                    }
+                } label: {
+                    Image(systemName: isExpanded ? "info.circle.fill" : "info.circle")
+                }
+                .buttonStyle(.borderless)
+                .help("Why is this here?")
+                Button {
+                    engine.dismiss(item.pid)
+                } label: {
+                    Image(systemName: "eye.slash")
+                }
+                .buttonStyle(.borderless)
+                .help("Ignore for session")
+                Button {
+                    KillService.kill(item) { engine.scan() }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                }
+                .buttonStyle(.borderless)
+                .help("Kill PID \(item.pid)")
             }
-            Spacer()
-            Text(ageString(item.elapsed))
-                .font(.caption2).foregroundStyle(.secondary)
-            Button {
-                engine.dismiss(item.pid)
-            } label: {
-                Image(systemName: "eye.slash")
+            if isExpanded {
+                reasoningBlock(item: item, isOld: isOld)
             }
-            .buttonStyle(.borderless)
-            .help("Ignore for session")
-            Button {
-                KillService.kill(item) { engine.scan() }
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-            }
-            .buttonStyle(.borderless)
-            .help("Kill PID \(item.pid)")
         }
+    }
+
+    private func reasoningBlock(item: ProcessItem, isOld: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 4) {
+                if !item.hasTTY { criterionTag("no tty") }
+                if item.isOrphan { criterionTag("orphan") }
+                if isOld { criterionTag("old") }
+            }
+            Text("tty \(item.tty)  ·  ppid \(item.ppid)  ·  age \(ageString(item.elapsed))")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .monospaced()
+        }
+        .padding(.leading, 4)
+        .padding(.bottom, 4)
+    }
+
+    private func criterionTag(_ label: String) -> some View {
+        Text(label)
+            .font(.caption2)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2)
+            .background(Color.orange.opacity(0.12))
+            .foregroundStyle(.orange)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 
     // MARK: - Derived data

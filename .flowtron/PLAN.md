@@ -14,8 +14,9 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-- [ ] **PID-008** [light] | why-reasoning — "Why is this here?" expander per row — inline classification reasoning (which criteria fired, elapsed time, TTY status, parent PID).
+- [x] **PID-008** [light] | why-reasoning — Completed 2026-06-24.
 - [ ] **PID-011** [light] | row-labels — Show executable name + parent folder instead of raw command path in popover rows.
+- [ ] **PID-012** [light] | row-status-icons — Explore icon/color-based row status indicators that surface stray signals (no-tty, orphan, old) without requiring the ⓘ tap — row tint, leading icon badge, or risk-tier color dot.
 
 ## Low
 
@@ -30,6 +31,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-008** [light] | why-reasoning — Completed 2026-06-24.
 - [x] **PID-007** [light] | dismiss-snooze — Completed 2026-06-24.
 - [x] **PID-006** [medium] | polish — Completed 2026-06-24.
 - [x] **PID-005** [medium] | port-registry — Completed 2026-06-24.
