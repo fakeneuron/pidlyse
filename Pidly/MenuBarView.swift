@@ -69,7 +69,7 @@ struct MenuBarView: View {
                     .font(.subheadline).bold()
                 Spacer()
                 Button("Clean all") {
-                    KillService.kill(pids: safeItems.map(\.pid)) { engine.scan() }
+                    KillService.kill(safeItems) { engine.scan() }
                 }
                 .buttonStyle(.borderless)
                 .foregroundStyle(.red)
@@ -111,7 +111,7 @@ struct MenuBarView: View {
             Text(ageString(item.elapsed))
                 .font(.caption2).foregroundStyle(.secondary)
             Button {
-                KillService.kill(pid: item.pid) { engine.scan() }
+                KillService.kill(item) { engine.scan() }
             } label: {
                 Image(systemName: "xmark.circle.fill")
             }

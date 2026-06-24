@@ -8,7 +8,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-- [ ] **PID-004** [medium] | kill-hardening — Harden the kill flow: `docker stop` for Docker containers/daemon (vs raw SIGKILL) + kill edge-cases. Core SIGTERM→2s→SIGKILL + rescan mechanism shipped in PID-003 (`KillService.swift`).
+- [x] **PID-004** [medium] | kill-hardening — Completed 2026-06-24.
 - [ ] **PID-005** [medium] | port-registry — `PortRegistry.swift` with hardcoded port table (mirrored from CLAUDE.md). Any process on a registered port demoted to Needs Review, regardless of other criteria.
 - [ ] **PID-006** [medium] | polish — Icon states (outline / filled / spinner), badge colours (red safe-count / yellow review-only), scan timer, Settings panel (interval, elapsed threshold, ignored PIDs).
 
@@ -30,6 +30,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-004** [medium] | kill-hardening — Completed 2026-06-24.
 - [x] **PID-003** [heavy] | popover-ui — Completed 2026-06-23.
 - [x] **PID-009** [medium] | kill-all-safe — Completed 2026-06-23 (absorbed by PID-003 "Clean all safe").
 - [x] **PID-002** [heavy] | scan-engine — Completed 2026-06-23.
