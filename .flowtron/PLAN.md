@@ -23,7 +23,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - [x] **PID-010** [light] | auto-start — Completed 2026-06-24.
 - [ ] **PID-EPIC-14** [light]🔧 | correctness — detectKind false positives + docker-stop clarity. Discovery supplied by audit-repo 2026-06-24. Surfaced by audit-repo 2026-06-24 (Theme: Pattern-Matching Brittleness).
   - [x] **PID-14.2** [light]🔧 | bun-guard — Completed 2026-06-24.
-  - [ ] **PID-14.3** [light]🔧 | docker-stop-note — document / clarify that `dockerStopByPID` targets container root PIDs, not host daemon processes; remove or annotate the dead path accordingly
+  - [x] **PID-14.3** [light]🔧 | docker-stop-note — Completed 2026-06-24.
   - [ ] **PID-14.N** [light]🔧 | audit
 - [ ] **PID-EPIC-15** [light]🔧 | doc-sync — SPEC.md divergences + tasknote README quick commands. Discovery supplied by audit-repo 2026-06-24. Surfaced by audit-repo 2026-06-24 (Theme: Spec-Code Drift).
   - [ ] **PID-15.2** [light]🔧 | spec-settings — fix `Settings.swift` → `SettingsView.swift` in SPEC project structure table; update JSON override claim (move to Future Opportunities or implement)

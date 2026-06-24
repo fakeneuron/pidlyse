@@ -14,10 +14,11 @@ enum KillService {
 
     // MARK: - Public kill API
 
-    /// Terminate one process. Docker items route through `docker stop` first;
-    /// all others (and Docker fallback) use SIGTERM → grace → SIGKILL. EPERM
-    /// is handled silently: `onComplete` fires and the next rescan reflects the
-    /// unchanged process. `onComplete` always fires on the main queue.
+    /// Terminate one process. Docker items whose PID is a container root process
+    /// route through `docker stop` first; docker daemon/helper PIDs and all other
+    /// processes use SIGTERM → grace → SIGKILL. EPERM is handled silently:
+    /// `onComplete` fires and the next rescan reflects the unchanged process.
+    /// `onComplete` always fires on the main queue.
     static func kill(_ item: ProcessItem, onComplete: @escaping () -> Void = {}) {
         if item.kind == .docker {
             DispatchQueue.global().async {
@@ -78,8 +79,10 @@ enum KillService {
         return candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
     }
 
-    /// Try to stop the container that owns `pid` via `docker stop`. Returns
-    /// `true` if a container was found and stopped successfully.
+    /// Try to stop the container whose root PID (`State.Pid`) matches `pid` via
+    /// `docker stop`. Succeeds only when `pid` is a container's init process on
+    /// the host; Docker daemon and helper PIDs never match and fall through to
+    /// POSIX signals. Returns `true` if a container was found and stopped.
     private static func dockerStopByPID(_ pid: Int32) -> Bool {
         guard let docker = dockerCLIPath(),
               let containerID = findContainerID(docker: docker, for: pid),
@@ -109,7 +112,8 @@ enum KillService {
         return nil
     }
 
-    /// Return the root PID of a running container via `docker inspect`.
+    /// Return the root PID of a running container via `docker inspect`
+    /// (`State.Pid` — the container's init process as seen on the host).
     private static func containerPID(docker: String, containerID: String) -> Int32? {
         let task = Process()
         task.executableURL = URL(fileURLWithPath: docker)
