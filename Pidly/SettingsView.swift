@@ -1,9 +1,27 @@
+import ServiceManagement
 import SwiftUI
 
 /// Settings panel: scan interval, stale-process threshold, ignored command prefixes.
 /// Opened via Cmd+, or the gear button in the popover header.
 struct SettingsView: View {
     @ObservedObject var engine: ScanEngine
+
+    private var launchAtLogin: Binding<Bool> {
+        Binding(
+            get: { SMAppService.mainApp.status == .enabled },
+            set: { enable in
+                do {
+                    if enable {
+                        try SMAppService.mainApp.register()
+                    } else {
+                        try SMAppService.mainApp.unregister()
+                    }
+                } catch {
+                    // Registration can fail if the user denies the system prompt.
+                }
+            }
+        )
+    }
 
     /// Binding that joins/splits `ignoredNames` on newlines for the TextEditor.
     private var ignoredNamesText: Binding<String> {
@@ -20,6 +38,9 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            Section("Startup") {
+                Toggle("Launch at login", isOn: launchAtLogin)
+            }
             Section("Auto-scan") {
                 Stepper(
                     "Every \(Int(engine.scanInterval / 60)) min",

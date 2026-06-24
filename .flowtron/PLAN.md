@@ -20,7 +20,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- [ ] **PID-010** [light] | auto-start — `SMAppService` login-item registration. Off by default, toggleable in Settings.
+- [x] **PID-010** [light] | auto-start — Completed 2026-06-24.
 
 ## Future Opportunities
 
@@ -31,6 +31,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-010** [light] | auto-start — Completed 2026-06-24.
 - [x] **PID-011** [light] | row-labels — Completed 2026-06-24.
 - [x] **PID-012** [light] | row-status-icons — Completed 2026-06-24.
 - [x] **PID-008** [light] | why-reasoning — Completed 2026-06-24.
