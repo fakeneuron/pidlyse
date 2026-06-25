@@ -16,7 +16,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-18.2** [light]🔧 | init-notifications — Completed 2026-06-25.
   - [ ] **PID-18.3** [medium]🧠 | kill-pidreuse — snapshot process start time (`kinfo_proc.kp_proc.p_starttime`) before SIGTERM; verify match before SIGKILL in `KillService.killPosix`; add unit tests
   - [x] **PID-18.4** [light]🔧 | listeningpids-tests — Completed 2026-06-25.
-  - [ ] **PID-18.5** [light]🔧 | portregistry-tripwire — `PortRegistryTests` canary asserting specific known ports (anti-drift guard for manual sync table)
+  - [x] **PID-18.5** [light]🔧 | portregistry-tripwire — Completed 2026-06-25.
   - [ ] **PID-18.N** [light]🔧 | audit
 
 ## Future Opportunities

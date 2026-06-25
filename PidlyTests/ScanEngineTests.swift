@@ -341,4 +341,32 @@ final class ScanEngineTests: XCTestCase {
         let pids = PortRegistry.listeningPIDs(lsofOutput: output)
         XCTAssertEqual(pids, [1234])
     }
+
+    // MARK: - PortRegistry.registeredPorts (anti-drift canary)
+
+    /// Tripwire for the manually-synced port table. `registeredPorts` mirrors
+    /// `~/.claude/CLAUDE.md` §"Localhost Port Registry" by hand; if an edit
+    /// accidentally drops or corrupts a known port, this assertion fails under
+    /// `make test`. Each port is an anchor for an active project — keep this
+    /// canary in sync when the global table changes.
+    func testRegisteredPorts_canaryKnownPorts() {
+        let known: [Int] = [
+            5182,   // InvisiPaw frontend
+            8001,   // InvisiPaw backend
+            3001,   // siteguy frontend
+            4000,   // marscharts frontend
+            5120,   // flowtron/viz
+            5899,   // stockshock frontend
+            8005,   // bidviz backend
+            3002,   // fakeneuron
+            4321,   // spinalcord
+            5184,   // wandora frontend
+            5183,   // delparte
+            3003,   // blastimage
+        ]
+        for port in known {
+            XCTAssertTrue(PortRegistry.registeredPorts.contains(port),
+                          "registeredPorts is missing known port \(port) — manual sync table drifted from ~/.claude/CLAUDE.md")
+        }
+    }
 }
