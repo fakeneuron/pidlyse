@@ -8,7 +8,12 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-(none)
+- [ ] **PID-EPIC-20** [medium]🧠 | dmg-release — Package Pidly for distribution: code signing, notarization, and DMG creation so any user can install and run the app.
+  - [x] **PID-20.1** [medium]🧠 | discovery — Completed 2026-06-25.
+  - [ ] **PID-20.2** [light]🔧 | build-install — Add `make build-release` (Release config, ad-hoc signed) and `make install` (copies to /Applications) Makefile targets.
+  - [ ] **PID-20.3** [light]🔧 | dmg-package — Add `make dmg` using `hdiutil` to produce an ad-hoc-signed DMG from the Release build; includes /Applications symlink inside the image.
+  - [ ] **PID-20.4** [light]🔧 | release-ci — GitHub Actions `release.yml` on `v*` tag push: build Release app, package DMG, attach artifact to GitHub Release via `gh release upload`.
+  - [ ] **PID-20.N** [light]🔧 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line).
 
 ## Medium
 
