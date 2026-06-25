@@ -8,29 +8,30 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-- [x] **PID-004** [medium] | kill-hardening — Completed 2026-06-24.
-- [x] **PID-005** [medium] | port-registry — Completed 2026-06-24.
-- [x] **PID-006** [medium] | polish — Completed 2026-06-24.
+- [ ] **PID-EPIC-17** [light]🔧 | ci-gates — Verification gates: `make test` shortcut + GitHub Actions on push. Discovery supplied by audit-repo 2026-06-24. Surfaced by audit-repo 2026-06-24 (Theme: No automated verification gates).
+  - [ ] **PID-17.3** [light]🔧 | ci-actions — `.github/workflows/test.yml` running `make test` on push to `main`
+  - [ ] **PID-17.N** [light]🔧 | audit
 
 ## Medium
 
-- [x] **PID-008** [light] | why-reasoning — Completed 2026-06-24.
-- [x] **PID-011** [light] | row-labels — Completed 2026-06-24.
-- [x] **PID-012** [light] | row-status-icons — Completed 2026-06-24.
-
-## Low
-
-- [x] **PID-010** [light] | auto-start — Completed 2026-06-24.
+- [ ] **PID-EPIC-18** [medium]🧠 | correctness — Close three correctness gaps: init notification side-effect, PID-reuse race in kill path, listeningPIDs test coverage, port-registry drift tripwire. Discovery supplied by audit-repo 2026-06-24. Surfaced by audit-repo 2026-06-24 (Theme: Kill path correctness / Init-time side-effects / Manual port-table sync).
+  - [ ] **PID-18.2** [light]🔧 | init-notifications — fix `notificationsEnabled` init side-effect: use `_notificationsEnabled = Published(wrappedValue:)` instead of direct assignment (same pattern as `_scanInterval` / `_elapsedThreshold`)
+  - [ ] **PID-18.3** [medium]🧠 | kill-pidreuse — snapshot process start time (`kinfo_proc.kp_proc.p_starttime`) before SIGTERM; verify match before SIGKILL in `KillService.killPosix`; add unit tests
+  - [ ] **PID-18.4** [light]🔧 | listeningpids-tests — unit tests for `PortRegistry.listeningPIDs(lsofOutput:)`: multi-line input, PID dedup, header-line skip
+  - [ ] **PID-18.5** [light]🔧 | portregistry-tripwire — `PortRegistryTests` canary asserting specific known ports (anti-drift guard for manual sync table)
+  - [ ] **PID-18.N** [light]🔧 | audit
 
 ## Future Opportunities
 
 - XPC service / `launchd` plist for background scanning (no app in foreground required)
 - Docker / container management panel
-- JSON override file for port registry (user-editable, loaded at startup)
+- JSON override file for port registry (user-editable, loaded at startup) — also resolves the manual-sync burden flagged in audit-repo 2026-06-24
 - Animated icon states beyond simple badge
+- TTY sentinel single-source-of-truth: extract `ProcessItem.isTTYAttached(_:)` helper, call from `ScanEngine.makeItem` to eliminate dual-site sentinel set
 
 ## Completed
 
+- [x] **PID-17.2** [light]🔧 | makefile-test — Completed 2026-06-25.
 - [x] **PID-EPIC-16** [light]🔧 | code-quality — Completed 2026-06-24.
   - [x] **PID-16.1** [light]🔧 | discovery — Completed 2026-06-24.
   - [x] **PID-16.2** [light]🔧 | shellout-helper — Completed 2026-06-24.

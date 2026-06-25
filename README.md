@@ -24,6 +24,8 @@ Sits beside the clock. Periodically scans for known process junk — orphaned te
 
 Open `Pidly.xcodeproj` in Xcode and run (⌘R). The app lives in the menu bar — no Dock icon (`LSUIElement = YES`).
 
+Run the test suite from the command line with `make test`.
+
 ## Menu Bar States
 
 | State | Icon | Badge |
