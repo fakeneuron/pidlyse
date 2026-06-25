@@ -12,12 +12,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-- [ ] **PID-EPIC-18** [medium]🧠 | correctness — Close three correctness gaps: init notification side-effect, PID-reuse race in kill path, listeningPIDs test coverage, port-registry drift tripwire. Discovery supplied by audit-repo 2026-06-24. Surfaced by audit-repo 2026-06-24 (Theme: Kill path correctness / Init-time side-effects / Manual port-table sync).
-  - [x] **PID-18.2** [light]🔧 | init-notifications — Completed 2026-06-25.
-  - [x] **PID-18.3** [medium]🧠 | kill-pidreuse — Completed 2026-06-25.
-  - [x] **PID-18.4** [light]🔧 | listeningpids-tests — Completed 2026-06-25.
-  - [x] **PID-18.5** [light]🔧 | portregistry-tripwire — Completed 2026-06-25.
-  - [ ] **PID-18.N** [light]🔧 | audit
+(none)
 
 ## Future Opportunities
 
@@ -29,6 +24,12 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-EPIC-18** [medium]🧠 | correctness — Completed 2026-06-25.
+  - [x] **PID-18.2** [light]🔧 | init-notifications — Completed 2026-06-25.
+  - [x] **PID-18.3** [medium]🧠 | kill-pidreuse — Completed 2026-06-25.
+  - [x] **PID-18.4** [light]🔧 | listeningpids-tests — Completed 2026-06-25.
+  - [x] **PID-18.5** [light]🔧 | portregistry-tripwire — Completed 2026-06-25.
+  - [x] **PID-18.N** [light]🔧 | audit — Completed 2026-06-25.
 - [x] **PID-EPIC-17** [light]🔧 | ci-gates — Completed 2026-06-25.
   - [x] **PID-17.2** [light]🔧 | makefile-test — Completed 2026-06-25.
   - [x] **PID-17.3** [light]🔧 | ci-actions — Completed 2026-06-25.
