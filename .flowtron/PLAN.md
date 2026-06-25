@@ -15,7 +15,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - [ ] **PID-EPIC-18** [medium]🧠 | correctness — Close three correctness gaps: init notification side-effect, PID-reuse race in kill path, listeningPIDs test coverage, port-registry drift tripwire. Discovery supplied by audit-repo 2026-06-24. Surfaced by audit-repo 2026-06-24 (Theme: Kill path correctness / Init-time side-effects / Manual port-table sync).
   - [x] **PID-18.2** [light]🔧 | init-notifications — Completed 2026-06-25.
   - [ ] **PID-18.3** [medium]🧠 | kill-pidreuse — snapshot process start time (`kinfo_proc.kp_proc.p_starttime`) before SIGTERM; verify match before SIGKILL in `KillService.killPosix`; add unit tests
-  - [ ] **PID-18.4** [light]🔧 | listeningpids-tests — unit tests for `PortRegistry.listeningPIDs(lsofOutput:)`: multi-line input, PID dedup, header-line skip
+  - [x] **PID-18.4** [light]🔧 | listeningpids-tests — Completed 2026-06-25.
   - [ ] **PID-18.5** [light]🔧 | portregistry-tripwire — `PortRegistryTests` canary asserting specific known ports (anti-drift guard for manual sync table)
   - [ ] **PID-18.N** [light]🔧 | audit
 

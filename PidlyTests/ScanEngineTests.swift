@@ -309,4 +309,36 @@ final class ScanEngineTests: XCTestCase {
         let line = "COMMAND    PID   USER   FD   TYPE DEVICE SIZE/OFF NODE NAME"
         XCTAssertNil(PortRegistry.parsePIDAndPort(line))
     }
+
+    // MARK: - PortRegistry.listeningPIDs
+
+    func testListeningPIDs_multiLine_returnsAllRegisteredPIDs() {
+        // Two different PIDs on two different registered ports.
+        let output = """
+        node       1234 user  22u  IPv4 0x0  0t0  TCP *:3001 (LISTEN)
+        python     5678 user  11u  IPv4 0x0  0t0  TCP *:5173 (LISTEN)
+        """
+        let pids = PortRegistry.listeningPIDs(lsofOutput: output)
+        XCTAssertEqual(pids, [1234, 5678])
+    }
+
+    func testListeningPIDs_duplicatePID_deduplicates() {
+        // Same PID listening on two registered ports → appears only once in the result.
+        let output = """
+        node       1234 user  22u  IPv4 0x0  0t0  TCP *:3001 (LISTEN)
+        node       1234 user  23u  IPv4 0x0  0t0  TCP *:3002 (LISTEN)
+        """
+        let pids = PortRegistry.listeningPIDs(lsofOutput: output)
+        XCTAssertEqual(pids, [1234])
+    }
+
+    func testListeningPIDs_headerLine_skipped() {
+        // Header line ("COMMAND PID …") must not contribute a PID.
+        let output = """
+        COMMAND    PID   USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
+        node       1234 user  22u  IPv4 0x0  0t0  TCP *:3001 (LISTEN)
+        """
+        let pids = PortRegistry.listeningPIDs(lsofOutput: output)
+        XCTAssertEqual(pids, [1234])
+    }
 }
