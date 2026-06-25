@@ -46,15 +46,47 @@ enum KillService {
         group.notify(queue: .main) { onComplete() }
     }
 
-    /// Whether a process is still alive. `kill(pid, 0)` sends no signal but
-    /// returns 0 only while the process exists (−1/ESRCH once it is gone).
-    static func isAlive(_ pid: Int32) -> Bool {
-        Darwin.kill(pid, 0) == 0
+    // MARK: - Process identity (PID-reuse guard)
+
+    /// A process's start time, used as an identity token across the SIGTERM →
+    /// SIGKILL grace window. If the original process exits and the kernel recycles
+    /// its PID for an unrelated process, the start time differs — so an unchanged
+    /// start time confirms the PID still maps to the *same* process.
+    struct ProcStartTime: Equatable {
+        let sec: Int
+        let usec: Int
+    }
+
+    /// Read a process's start time (`kinfo_proc.kp_proc.p_starttime`) via `sysctl`,
+    /// or `nil` if the process no longer exists or can't be queried (the kernel
+    /// returns a zero-length result for an unknown PID).
+    static func startTime(of pid: Int32) -> ProcStartTime? {
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+        var info = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+        let result = sysctl(&mib, u_int(mib.count), &info, &size, nil, 0)
+        guard result == 0, size > 0 else { return nil }
+        let tv = info.kp_proc.p_starttime
+        return ProcStartTime(sec: Int(tv.tv_sec), usec: Int(tv.tv_usec))
+    }
+
+    /// Whether the SIGKILL fallback should fire after the grace period. SIGKILL
+    /// only when both readings are present AND identical: a missing `current`
+    /// means the process already exited (nothing to kill), and a mismatch means
+    /// the PID was recycled for a different process (killing it would hit an
+    /// innocent bystander). A missing `snapshot` — identity never established at
+    /// SIGTERM time — is treated conservatively as "do not escalate".
+    static func shouldEscalateToSIGKILL(snapshot: ProcStartTime?, current: ProcStartTime?) -> Bool {
+        guard let snapshot, let current else { return false }
+        return snapshot == current
     }
 
     // MARK: - POSIX signal path
 
     private static func killPosix(_ pid: Int32, onComplete: @escaping () -> Void) {
+        // Snapshot identity before SIGTERM so the grace-period SIGKILL can verify
+        // the PID still maps to the same process (guards against PID reuse).
+        let startSnapshot = startTime(of: pid)
         let result = Darwin.kill(pid, SIGTERM)
         if result == -1 && errno == EPERM {
             // Process is owned by another user (e.g. root Docker daemon).
@@ -64,7 +96,7 @@ enum KillService {
             return
         }
         DispatchQueue.global().asyncAfter(deadline: .now() + gracePeriod) {
-            if isAlive(pid) {
+            if shouldEscalateToSIGKILL(snapshot: startSnapshot, current: startTime(of: pid)) {
                 Darwin.kill(pid, SIGKILL)
             }
             DispatchQueue.main.async { onComplete() }

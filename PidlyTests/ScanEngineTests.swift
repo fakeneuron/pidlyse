@@ -370,3 +370,60 @@ final class ScanEngineTests: XCTestCase {
         }
     }
 }
+
+/// Tests for the PID-reuse guard added in PID-18.3: the SIGKILL fallback fires
+/// only when the post-grace start time matches the pre-SIGTERM snapshot.
+final class KillServiceTests: XCTestCase {
+
+    private let a = KillService.ProcStartTime(sec: 1000, usec: 500)
+
+    // MARK: - shouldEscalateToSIGKILL decision matrix
+
+    func testShouldEscalate_sameStartTime_escalates() {
+        // PID still maps to the same process → SIGKILL is safe.
+        let same = KillService.ProcStartTime(sec: 1000, usec: 500)
+        XCTAssertTrue(KillService.shouldEscalateToSIGKILL(snapshot: a, current: same))
+    }
+
+    func testShouldEscalate_differentStartTime_doesNotEscalate() {
+        // PID recycled for a different process → must NOT SIGKILL the bystander.
+        let reused = KillService.ProcStartTime(sec: 2000, usec: 0)
+        XCTAssertFalse(KillService.shouldEscalateToSIGKILL(snapshot: a, current: reused))
+    }
+
+    func testShouldEscalate_differingOnlyByMicroseconds_doesNotEscalate() {
+        // Identity requires both fields equal; same second, different usec → mismatch.
+        let nearMiss = KillService.ProcStartTime(sec: 1000, usec: 501)
+        XCTAssertFalse(KillService.shouldEscalateToSIGKILL(snapshot: a, current: nearMiss))
+    }
+
+    func testShouldEscalate_currentGone_doesNotEscalate() {
+        // Process already exited during the grace period → nothing to kill.
+        XCTAssertFalse(KillService.shouldEscalateToSIGKILL(snapshot: a, current: nil))
+    }
+
+    func testShouldEscalate_snapshotMissing_doesNotEscalate() {
+        // Identity never established at SIGTERM time → conservative: do not escalate.
+        XCTAssertFalse(KillService.shouldEscalateToSIGKILL(snapshot: nil, current: a))
+    }
+
+    func testShouldEscalate_bothMissing_doesNotEscalate() {
+        XCTAssertFalse(KillService.shouldEscalateToSIGKILL(snapshot: nil, current: nil))
+    }
+
+    // MARK: - startTime(of:) liveness reader
+
+    func testStartTime_currentProcess_isNonNil() {
+        XCTAssertNotNil(KillService.startTime(of: getpid()))
+    }
+
+    func testStartTime_currentProcess_isStable() {
+        // Reading the same live PID twice yields the same identity token.
+        XCTAssertEqual(KillService.startTime(of: getpid()), KillService.startTime(of: getpid()))
+    }
+
+    func testStartTime_nonexistentPID_isNil() {
+        // Beyond any assignable PID (kern.maxproc) → kernel returns no process.
+        XCTAssertNil(KillService.startTime(of: 2_000_000_000))
+    }
+}
