@@ -12,7 +12,8 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-(none)
+- [ ] **PID-022** [light]🔧 | settings-open — fix Settings gear: bump deployment target to 14 and use `@Environment(\.openSettings)` instead of the unreliable `showSettingsWindow:` selector
+- [ ] **PID-023** [medium]🧠 | right-click-menu — add right-click / two-finger-tap on menu bar icon to show a minimal context menu (Quit); requires AppKit NSStatusItem bridge since MenuBarExtra(.window) doesn't expose right-click
 
 ## Future Opportunities
 

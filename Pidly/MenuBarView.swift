@@ -8,8 +8,10 @@ import SwiftUI
 struct MenuBarView: View {
     @ObservedObject var engine: ScanEngine
     @State private var expandedPIDs: Set<Int32> = []
-    @State private var safeExpanded = true
-    @State private var reviewExpanded = false
+    /// Kinds that are collapsed. Populated lazily when each kind first appears:
+    /// high-risk groups start collapsed; easy/moderate start expanded.
+    @State private var collapsedKinds: Set<ProcessKind> = []
+    @State private var seenKinds: Set<ProcessKind> = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -23,6 +25,22 @@ struct MenuBarView: View {
         }
         .frame(width: 320)
         .onAppear { engine.scan() }
+        .onChange(of: engine.isScanning) { isScanning in
+            guard !isScanning else { return }
+            initCollapsedKinds()
+        }
+    }
+
+    // MARK: - Init helpers
+
+    private func initCollapsedKinds() {
+        for (kind, rows) in grouped(engine.items) {
+            guard !seenKinds.contains(kind) else { continue }
+            seenKinds.insert(kind)
+            if rows.contains(where: { $0.riskTier == .high }) {
+                collapsedKinds.insert(kind)
+            }
+        }
     }
 
     // MARK: - Sections
@@ -83,62 +101,63 @@ struct MenuBarView: View {
     private var safeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.15)) { safeExpanded.toggle() }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: safeExpanded ? "chevron.down" : "chevron.right")
-                            .font(.caption2)
-                        Text("Safe to clean (\(safeItems.count))")
-                            .font(.subheadline).bold()
-                    }
+                Text("Safe to clean (\(safeItems.count))")
+                    .font(.subheadline).bold()
+                Spacer()
+                Button("Clean all") {
+                    KillService.kill(safeItems) { engine.scan() }
                 }
                 .buttonStyle(.borderless)
-                .foregroundStyle(.primary)
-                Spacer()
-                if safeExpanded {
-                    Button("Clean all") {
-                        KillService.kill(safeItems) { engine.scan() }
-                    }
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(.red)
-                }
+                .foregroundStyle(.red)
             }
-            if safeExpanded {
-                groups(for: safeItems)
-            }
+            groups(for: safeItems)
         }
     }
 
     private var reviewSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.15)) { reviewExpanded.toggle() }
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: reviewExpanded ? "chevron.down" : "chevron.right")
-                        .font(.caption2)
-                    Text("Needs review (\(reviewItems.count))")
-                        .font(.subheadline).bold()
-                }
-            }
-            .buttonStyle(.borderless)
-            .foregroundStyle(.primary)
-            if reviewExpanded {
-                groups(for: reviewItems)
-            }
+            Text("Needs review (\(reviewItems.count))")
+                .font(.subheadline).bold()
+            groups(for: reviewItems)
         }
     }
 
-    /// Render `items` grouped under a per-kind header (collapses noisy clusters
-    /// like Docker's ~10 helpers under one heading). `ProcessKind.allCases`
-    /// gives a stable group order.
+    /// Render `items` grouped under a collapsible per-kind header. High-risk
+    /// groups start collapsed; easy/moderate start expanded.
     private func groups(for items: [ProcessItem]) -> some View {
         ForEach(grouped(items), id: \.0) { kind, rows in
             VStack(alignment: .leading, spacing: 4) {
-                Text(kind.label)
-                    .font(.caption).foregroundStyle(.secondary)
-                ForEach(rows) { row($0) }
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        if collapsedKinds.contains(kind) {
+                            collapsedKinds.remove(kind)
+                        } else {
+                            collapsedKinds.insert(kind)
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: collapsedKinds.contains(kind) ? "chevron.right" : "chevron.down")
+                            .font(.caption2)
+                        Text(kind.label)
+                            .font(.caption).foregroundStyle(.secondary)
+                        if collapsedKinds.contains(kind) {
+                            let totalCPU = rows.reduce(0.0) { $0 + $1.cpuPercent }
+                            let totalRAM = rows.reduce(0) { $0 + $1.rssKB }
+                            Text("·")
+                                .font(.caption2).foregroundStyle(.tertiary)
+                            Text(String(format: "%.1f%%", totalCPU))
+                                .font(.caption2).foregroundStyle(.secondary)
+                            Text(ramString(totalRAM))
+                                .font(.caption2).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
+                if !collapsedKinds.contains(kind) {
+                    ForEach(rows) { row($0) }
+                }
             }
         }
     }
