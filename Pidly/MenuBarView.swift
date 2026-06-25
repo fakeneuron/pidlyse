@@ -8,6 +8,8 @@ import SwiftUI
 struct MenuBarView: View {
     @ObservedObject var engine: ScanEngine
     @State private var expandedPIDs: Set<Int32> = []
+    @State private var safeExpanded = true
+    @State private var reviewExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -44,6 +46,13 @@ struct MenuBarView: View {
             }
             .buttonStyle(.borderless)
             .help("Settings")
+            Button {
+                NSApp.terminate(nil)
+            } label: {
+                Image(systemName: "power")
+            }
+            .buttonStyle(.borderless)
+            .help("Quit Pidly")
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
@@ -74,24 +83,50 @@ struct MenuBarView: View {
     private var safeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Safe to clean (\(safeItems.count))")
-                    .font(.subheadline).bold()
-                Spacer()
-                Button("Clean all") {
-                    KillService.kill(safeItems) { engine.scan() }
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) { safeExpanded.toggle() }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: safeExpanded ? "chevron.down" : "chevron.right")
+                            .font(.caption2)
+                        Text("Safe to clean (\(safeItems.count))")
+                            .font(.subheadline).bold()
+                    }
                 }
                 .buttonStyle(.borderless)
-                .foregroundStyle(.red)
+                .foregroundStyle(.primary)
+                Spacer()
+                if safeExpanded {
+                    Button("Clean all") {
+                        KillService.kill(safeItems) { engine.scan() }
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.red)
+                }
             }
-            groups(for: safeItems)
+            if safeExpanded {
+                groups(for: safeItems)
+            }
         }
     }
 
     private var reviewSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Needs review (\(reviewItems.count))")
-                .font(.subheadline).bold()
-            groups(for: reviewItems)
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) { reviewExpanded.toggle() }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: reviewExpanded ? "chevron.down" : "chevron.right")
+                        .font(.caption2)
+                    Text("Needs review (\(reviewItems.count))")
+                        .font(.subheadline).bold()
+                }
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(.primary)
+            if reviewExpanded {
+                groups(for: reviewItems)
+            }
         }
     }
 

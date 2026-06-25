@@ -24,6 +24,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-021** [light]🔧 | collapsible-sections — Completed 2026-06-25.
 - [x] **PID-EPIC-20** [medium]🧠 | dmg-release — Completed 2026-06-25.
   - [x] **PID-20.1** [medium]🧠 | discovery — Completed 2026-06-25.
   - [x] **PID-20.2** [light]🔧 | build-install — Completed 2026-06-25.
