@@ -21,12 +21,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## Low
 
 - [x] **PID-010** [light] | auto-start — Completed 2026-06-24.
-- [ ] **PID-EPIC-16** [light]🔧 | code-quality — Mechanical code-quality pass: extract shell-out helper (5 duplicate Process/Pipe/wait sites), fix makeItem double-allocation, simplify ScanEngine persistence coupling; survey for additional perf/UX opportunities. Filed via /ft-epic-discovery 2026-06-24.
-  - [x] **PID-16.1** [light]🔧 | discovery — Completed 2026-06-24.
-  - [x] **PID-16.2** [light]🔧 | shellout-helper — Completed 2026-06-24.
-  - [x] **PID-16.3** [light]🔧 | makeitem-alloc — Completed 2026-06-24.
-  - [x] **PID-16.4** [light]🔧 | scanengine-persistence — Completed 2026-06-24.
-  - [ ] **PID-16.5** [light]🔧 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 
 ## Future Opportunities
 
@@ -37,6 +31,12 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-EPIC-16** [light]🔧 | code-quality — Completed 2026-06-24.
+  - [x] **PID-16.1** [light]🔧 | discovery — Completed 2026-06-24.
+  - [x] **PID-16.2** [light]🔧 | shellout-helper — Completed 2026-06-24.
+  - [x] **PID-16.3** [light]🔧 | makeitem-alloc — Completed 2026-06-24.
+  - [x] **PID-16.4** [light]🔧 | scanengine-persistence — Completed 2026-06-24.
+  - [x] **PID-16.5** [light]🔧 | audit — Completed 2026-06-24.
 - [x] **PID-EPIC-15** [light]🔧 | doc-sync — Completed 2026-06-24.
   - [x] **PID-15.2** [light]🔧 | spec-settings — Completed 2026-06-24.
   - [x] **PID-15.3** [light]🔧 | tasknote-readme-cmds — Completed 2026-06-24.
