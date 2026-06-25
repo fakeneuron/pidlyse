@@ -16,7 +16,7 @@ Sits beside the clock. Periodically scans for known process junk — orphaned te
 
 ## Requirements
 
-- macOS 13+
+- macOS 14+
 - Xcode 15+
 - Apple Silicon (M-series) target
 

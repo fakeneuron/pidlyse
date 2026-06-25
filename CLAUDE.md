@@ -4,7 +4,7 @@ Native macOS menu bar app. Full design in [`SPEC.md`](SPEC.md).
 
 ### Tech stack
 
-- Swift + SwiftUI, macOS 13+, Apple Silicon target
+- Swift + SwiftUI, macOS 14+, Apple Silicon target
 - `MenuBarExtra` for tray icon + popover — no AppKit
 - `sysctl` / `ps aux` for process enumeration
 - Xcode project, no backend

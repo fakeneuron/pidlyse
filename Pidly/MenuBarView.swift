@@ -7,6 +7,7 @@ import SwiftUI
 /// rescan. Never auto-kills — every kill is an explicit click (per CLAUDE.md).
 struct MenuBarView: View {
     @ObservedObject var engine: ScanEngine
+    @Environment(\.openSettings) private var openSettings
     @State private var expandedPIDs: Set<Int32> = []
     /// Kinds that are collapsed. Populated lazily when each kind first appears:
     /// high-risk groups start collapsed; easy/moderate start expanded.
@@ -57,8 +58,7 @@ struct MenuBarView: View {
             .buttonStyle(.borderless)
             .help("Rescan (restores hidden items)")
             Button {
-                NSApp.activate(ignoringOtherApps: true)
-                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                openSettings()
             } label: {
                 Image(systemName: "gear")
             }

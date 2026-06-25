@@ -8,8 +8,8 @@ A native macOS menu bar app for Apple Silicon that surfaces stray and zombie pro
 
 ## Tech Stack
 
-- **Language / UI**: Swift + SwiftUI, macOS 13+ target
-- **Menu bar**: `MenuBarExtra` (SwiftUI, macOS 13) — avoids AppKit boilerplate
+- **Language / UI**: Swift + SwiftUI, macOS 14+ target
+- **Menu bar**: `MenuBarExtra` (SwiftUI, macOS 13+) — avoids AppKit boilerplate
 - **Process enumeration**: `sysctl` or `ps aux` shell-out
 - **No helper daemon** for v1. XPC service / `launchd` plist deferred to post-v1 if background scanning proves necessary.
 
