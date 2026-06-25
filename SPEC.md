@@ -34,7 +34,7 @@ Pidly/
 
 ## Scan Engine
 
-Runs on a configurable timer (default: every 60 s). Shells out to `ps aux` or uses `sysctl` directly to enumerate processes. Matches against a pattern set:
+Runs on a configurable timer (default: every 2 min). Shells out to `ps aux` or uses `sysctl` directly to enumerate processes. Matches against a pattern set:
 
 | Pattern | `kind` | Category |
 |---------|--------|----------|
@@ -44,6 +44,9 @@ Runs on a configurable timer (default: every 60 s). Shells out to `ps aux` or us
 | `docker` (daemon + helpers) | `docker` | Real dev infra — never an easy kill |
 | `uvicorn` | `uvicorn` | Backend dev server — never an easy kill |
 | `npm` | `npm` | Dev tooling / servers |
+| `vite` | `vite` | Dev server (Vite) |
+| `bun` | `bun` | JS runtime / package manager |
+| `node` | `node` | Node.js runtime |
 
 A process that matches no `kind` is not a stray candidate and is excluded. Each match is evaluated on:
 
@@ -61,7 +64,7 @@ Each candidate carries a descriptive **`kind`** (see the Scan Engine table) and 
 |------------|--------|------|
 | **easy** | **Safe to kill** | Test runner / playwright-mcp / Chrome helper that is a *strong stray*: old elapsed **and** no TTY **and** parent dead |
 | **moderate** | **Needs review** | A candidate without all three strong-stray signals (recently started, has a TTY, or parent still alive) |
-| **high** | **Needs review** | Real dev infra (`docker`, `uvicorn`) — never an easy kill regardless of signals; also `npm`/other when not a strong stray |
+| **high** | **Needs review** | Real dev infra (`docker`, `uvicorn`, `node`) — never an easy kill regardless of signals; also `npm`/`vite`/`bun` when not a strong stray |
 
 `bucket = (riskTier == .easy) ? .safe : .needsReview`. A process is **never auto-killed**; `safe` items still require an explicit click (per CLAUDE.md).
 
@@ -108,7 +111,7 @@ Any process matched whose port appears in the registry is demoted to "needs revi
 
 Configurable at runtime:
 
-- Scan interval (default: 60 s)
+- Scan interval (default: 2 min)
 - Elapsed-time threshold for "old" (default: 30 min)
 - Ignored PIDs list (session or persistent)
 
