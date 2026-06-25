@@ -21,10 +21,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## Low
 
 - [x] **PID-010** [light] | auto-start — Completed 2026-06-24.
-- [ ] **PID-EPIC-15** [light]🔧 | doc-sync — SPEC.md divergences + tasknote README quick commands. Discovery supplied by audit-repo 2026-06-24. Surfaced by audit-repo 2026-06-24 (Theme: Spec-Code Drift).
-  - [x] **PID-15.2** [light]🔧 | spec-settings — Completed 2026-06-24.
-  - [x] **PID-15.3** [light]🔧 | tasknote-readme-cmds — Completed 2026-06-24.
-  - [ ] **PID-15.N** [light]🔧 | audit
 
 ## Future Opportunities
 
@@ -35,6 +31,10 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-EPIC-15** [light]🔧 | doc-sync — Completed 2026-06-24.
+  - [x] **PID-15.2** [light]🔧 | spec-settings — Completed 2026-06-24.
+  - [x] **PID-15.3** [light]🔧 | tasknote-readme-cmds — Completed 2026-06-24.
+  - [x] **PID-15.N** [light]🔧 | audit — Completed 2026-06-24.
 - [x] **PID-EPIC-14** [light]🔧 | correctness — Completed 2026-06-24.
   - [x] **PID-14.2** [light]🔧 | bun-guard — Completed 2026-06-24.
   - [x] **PID-14.3** [light]🔧 | docker-stop-note — Completed 2026-06-24.

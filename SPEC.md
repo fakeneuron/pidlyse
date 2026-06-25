@@ -65,7 +65,7 @@ Each candidate carries a descriptive **`kind`** (see the Scan Engine table) and 
 
 `bucket = (riskTier == .easy) ? .safe : .needsReview`. A process is **never auto-killed**; `safe` items still require an explicit click (per CLAUDE.md).
 
-Port registry awareness ([[PID-005]], not yet implemented): any process listening on a port in the CLAUDE.md global port table is automatically demoted to "needs review" — never auto-killed.
+Port registry awareness ([[PID-005]]): any process listening on a port in the CLAUDE.md global port table is automatically demoted to "needs review" — never auto-killed.
 
 ---
 
