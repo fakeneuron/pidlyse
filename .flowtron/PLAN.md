@@ -24,7 +24,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - [ ] **PID-EPIC-16** [light]🔧 | code-quality — Mechanical code-quality pass: extract shell-out helper (5 duplicate Process/Pipe/wait sites), fix makeItem double-allocation, simplify ScanEngine persistence coupling; survey for additional perf/UX opportunities. Filed via /ft-epic-discovery 2026-06-24.
   - [x] **PID-16.1** [light]🔧 | discovery — Completed 2026-06-24.
   - [x] **PID-16.2** [light]🔧 | shellout-helper — Completed 2026-06-24.
-  - [ ] **PID-16.3** [light]🔧 | makeitem-alloc — Inline hasTTY/isOrphan computations in ScanEngine.makeItem (lines 190-200), removing the draft ProcessItem heap allocation. Keep riskTier logic unchanged.
+  - [x] **PID-16.3** [light]🔧 | makeitem-alloc — Completed 2026-06-24.
   - [ ] **PID-16.4** [light]🔧 | scanengine-persistence — Simplify ScanEngine @Published+didSet UserDefaults coupling in init: avoid spurious startTimer calls by reading all persisted values before assignment; no behaviour change.
   - [ ] **PID-16.5** [light]🔧 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 

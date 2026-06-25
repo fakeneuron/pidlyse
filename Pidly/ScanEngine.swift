@@ -186,13 +186,12 @@ final class ScanEngine: ObservableObject {
         let elapsed = parseElapsed(p.etime)
         let cpuPercent = Double(p.pcpu) ?? 0.0
         let rssKB = Int(p.rss) ?? 0
-        // Build a draft to reuse ProcessItem's signal logic, then stamp the tier.
-        let draft = ProcessItem(pid: p.pid, ppid: p.ppid, command: p.args,
-                                elapsed: elapsed, tty: p.tty, kind: kind, riskTier: .moderate,
-                                cpuPercent: cpuPercent, rssKB: rssKB)
+        let t = p.tty.trimmingCharacters(in: .whitespaces)
+        let hasTTY = !(t.isEmpty || t == "??" || t == "?" || t == "-")
+        let isOrphan = p.ppid == 1
         var tier = riskTier(kind: kind,
-                            hasTTY: draft.hasTTY,
-                            isOrphan: draft.isOrphan,
+                            hasTTY: hasTTY,
+                            isOrphan: isOrphan,
                             isOld: elapsed >= elapsedThreshold)
         if registeredPIDs.contains(p.pid) && tier == .easy { tier = .moderate }
         return ProcessItem(pid: p.pid, ppid: p.ppid, command: p.args,
