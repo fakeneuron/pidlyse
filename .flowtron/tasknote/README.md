@@ -68,10 +68,7 @@ notes, API specs, DB schema docs, ADRs, inventories).
 
 ## Project quick commands
 
-Replace this section with the commands an assistant should run for this
-project. Keep it terse and high-signal.
-
-- Tests: `pytest tests/` or `npm test`
-- Type check: `npm run typecheck`
-- Lint: `ruff check .` or `npm run lint`
-- Dev server: `npm run dev`
+- Build: `xcodebuild build -scheme Pidly`
+- Tests: `xcodebuild test -scheme Pidly -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
+  (`CODE_SIGNING_ALLOWED=NO` is required for CLI test runs — pre-existing code-signing limitation in this environment)
+- Type check: `xcodebuild build -scheme Pidly` (Swift compiler surfaces all type errors; no separate linter)
