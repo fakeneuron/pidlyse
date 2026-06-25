@@ -68,7 +68,7 @@ notes, API specs, DB schema docs, ADRs, inventories).
 
 ## Project quick commands
 
-- Build: `xcodebuild build -scheme Pidly`
+- Build (Release, ad-hoc signed): `make build-release` → `build/Release/Pidly.app`; or `xcodebuild build -scheme Pidly` for a debug build
 - Tests: `xcodebuild test -scheme Pidly -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
   (`CODE_SIGNING_ALLOWED=NO` is required for CLI test runs — pre-existing code-signing limitation in this environment)
 - Type check: `xcodebuild build -scheme Pidly` (Swift compiler surfaces all type errors; no separate linter)
