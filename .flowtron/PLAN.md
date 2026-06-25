@@ -8,12 +8,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-- [ ] **PID-EPIC-20** [medium]🧠 | dmg-release — Package Pidly for distribution: code signing, notarization, and DMG creation so any user can install and run the app.
-  - [x] **PID-20.1** [medium]🧠 | discovery — Completed 2026-06-25.
-  - [x] **PID-20.2** [light]🔧 | build-install — Completed 2026-06-25.
-  - [x] **PID-20.3** [light]🔧 | dmg-package — Completed 2026-06-25.
-  - [x] **PID-20.4** [light]🔧 | release-ci — Completed 2026-06-25.
-  - [ ] **PID-20.N** [light]🔧 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line).
+(none)
 
 ## Medium
 
@@ -29,6 +24,12 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-EPIC-20** [medium]🧠 | dmg-release — Completed 2026-06-25.
+  - [x] **PID-20.1** [medium]🧠 | discovery — Completed 2026-06-25.
+  - [x] **PID-20.2** [light]🔧 | build-install — Completed 2026-06-25.
+  - [x] **PID-20.3** [light]🔧 | dmg-package — Completed 2026-06-25.
+  - [x] **PID-20.4** [light]🔧 | release-ci — Completed 2026-06-25.
+  - [x] **PID-20.N** [light]🔧 | audit — Completed 2026-06-25.
 - [x] **PID-EPIC-19** [light]🔧 | repo-hygiene — Completed 2026-06-25.
   - [x] **PID-19.2** [light]🔧 | gitignore — Completed 2026-06-25.
   - [x] **PID-19.3** [light]🔧 | spec-drift — Completed 2026-06-25.
