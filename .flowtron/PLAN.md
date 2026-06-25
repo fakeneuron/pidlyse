@@ -8,7 +8,10 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-(none)
+- [ ] **PID-EPIC-19** [light]🔧 | repo-hygiene — .gitignore + SPEC doc-sync. Discovery supplied by audit-repo 2026-06-25. Surfaced by audit-repo 2026-06-25 (Theme: Missing baseline repo hygiene + Doc contract lag).
+  - [x] **PID-19.2** [light]🔧 | gitignore — Completed 2026-06-25.
+  - [ ] **PID-19.3** [light]🔧 | spec-drift — fix SPEC.md scan interval (60s→2min, lines 37 & 111) and add vite/bun/node to the Scan Engine + Classification tables.
+  - [ ] **PID-19.N** [light]🔧 | audit — doc-drift sweep + close PID-EPIC-19.
 
 ## Medium
 
