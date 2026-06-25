@@ -8,10 +8,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-- [ ] **PID-EPIC-19** [light]🔧 | repo-hygiene — .gitignore + SPEC doc-sync. Discovery supplied by audit-repo 2026-06-25. Surfaced by audit-repo 2026-06-25 (Theme: Missing baseline repo hygiene + Doc contract lag).
-  - [x] **PID-19.2** [light]🔧 | gitignore — Completed 2026-06-25.
-  - [x] **PID-19.3** [light]🔧 | spec-drift — Completed 2026-06-25.
-  - [x] **PID-19.N** [light]🔧 | audit — Completed 2026-06-25.
+(none)
 
 ## Medium
 
@@ -27,6 +24,10 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-EPIC-19** [light]🔧 | repo-hygiene — Completed 2026-06-25.
+  - [x] **PID-19.2** [light]🔧 | gitignore — Completed 2026-06-25.
+  - [x] **PID-19.3** [light]🔧 | spec-drift — Completed 2026-06-25.
+  - [x] **PID-19.N** [light]🔧 | audit — Completed 2026-06-25.
 - [x] **PID-EPIC-18** [medium]🧠 | correctness — Completed 2026-06-25.
   - [x] **PID-18.2** [light]🔧 | init-notifications — Completed 2026-06-25.
   - [x] **PID-18.3** [medium]🧠 | kill-pidreuse — Completed 2026-06-25.
