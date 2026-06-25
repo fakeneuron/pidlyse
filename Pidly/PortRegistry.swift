@@ -72,10 +72,12 @@ enum PortRegistry {
 
     // MARK: - lsof shell-out
 
-    static func runLSOF() -> String {
+    /// Shell out to an executable, reading stdout to EOF before `waitUntilExit`
+    /// to prevent pipe-buffer deadlock. Returns stdout as UTF-8 ("" on failure).
+    private static func runShell(_ path: String, _ args: [String]) -> String {
         let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
-        task.arguments = ["-nPi", "-sTCP:LISTEN"]
+        task.executableURL = URL(fileURLWithPath: path)
+        task.arguments = args
         let pipe = Pipe()
         task.standardOutput = pipe
         task.standardError = Pipe()
@@ -84,8 +86,10 @@ enum PortRegistry {
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             task.waitUntilExit()
             return String(data: data, encoding: .utf8) ?? ""
-        } catch {
-            return ""
-        }
+        } catch { return "" }
+    }
+
+    static func runLSOF() -> String {
+        runShell("/usr/sbin/lsof", ["-nPi", "-sTCP:LISTEN"])
     }
 }

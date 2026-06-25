@@ -285,12 +285,12 @@ final class ScanEngine: ObservableObject {
 
     // MARK: - Process enumeration
 
-    /// Shell out to `/bin/ps` for all processes with the columns the classifier
-    /// needs. Reads to EOF before `waitUntilExit` to avoid a full-pipe deadlock.
-    static func runPS() -> String {
+    /// Shell out to an executable, reading stdout to EOF before `waitUntilExit`
+    /// to prevent pipe-buffer deadlock. Returns stdout as UTF-8 ("" on failure).
+    private static func runShell(_ path: String, _ args: [String]) -> String {
         let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/bin/ps")
-        task.arguments = ["-axww", "-o", "pid=,ppid=,etime=,tty=,pcpu=,rss=,args="]
+        task.executableURL = URL(fileURLWithPath: path)
+        task.arguments = args
         let pipe = Pipe()
         task.standardOutput = pipe
         task.standardError = Pipe()
@@ -299,8 +299,10 @@ final class ScanEngine: ObservableObject {
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             task.waitUntilExit()
             return String(data: data, encoding: .utf8) ?? ""
-        } catch {
-            return ""
-        }
+        } catch { return "" }
+    }
+
+    static func runPS() -> String {
+        runShell("/bin/ps", ["-axww", "-o", "pid=,ppid=,etime=,tty=,pcpu=,rss=,args="])
     }
 }

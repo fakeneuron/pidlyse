@@ -79,6 +79,22 @@ enum KillService {
         return candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
     }
 
+    /// Shell out to the Docker CLI, reading stdout to EOF before `waitUntilExit`
+    /// to prevent pipe-buffer deadlock. Returns stdout as UTF-8 ("" on failure)
+    /// and whether the process exited with status 0.
+    private static func runDocker(_ docker: String, _ args: [String]) -> (output: String, ok: Bool) {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: docker)
+        task.arguments = args
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = Pipe()
+        guard (try? task.run()) != nil else { return ("", false) }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        task.waitUntilExit()
+        return (String(data: data, encoding: .utf8) ?? "", task.terminationStatus == 0)
+    }
+
     /// Try to stop the container whose root PID (`State.Pid`) matches `pid` via
     /// `docker stop`. Succeeds only when `pid` is a container's init process on
     /// the host; Docker daemon and helper PIDs never match and fall through to
@@ -95,17 +111,7 @@ enum KillService {
     /// Return the container ID of the running container whose root PID matches
     /// `pid`, or `nil` if no match is found.
     private static func findContainerID(docker: String, for pid: Int32) -> String? {
-        let listTask = Process()
-        listTask.executableURL = URL(fileURLWithPath: docker)
-        listTask.arguments = ["ps", "-q"]
-        let listPipe = Pipe()
-        listTask.standardOutput = listPipe
-        listTask.standardError = Pipe()
-        guard (try? listTask.run()) != nil else { return nil }
-        let listData = listPipe.fileHandleForReading.readDataToEndOfFile()
-        listTask.waitUntilExit()
-        guard let listOutput = String(data: listData, encoding: .utf8) else { return nil }
-
+        let listOutput = runDocker(docker, ["ps", "-q"]).output
         for id in listOutput.split(separator: "\n", omittingEmptySubsequences: true).map(String.init) {
             if containerPID(docker: docker, containerID: id) == pid { return id }
         }
@@ -115,28 +121,12 @@ enum KillService {
     /// Return the root PID of a running container via `docker inspect`
     /// (`State.Pid` — the container's init process as seen on the host).
     private static func containerPID(docker: String, containerID: String) -> Int32? {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: docker)
-        task.arguments = ["inspect", "--format", "{{.State.Pid}}", containerID]
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = Pipe()
-        guard (try? task.run()) != nil else { return nil }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        task.waitUntilExit()
-        guard let output = String(data: data, encoding: .utf8) else { return nil }
+        let output = runDocker(docker, ["inspect", "--format", "{{.State.Pid}}", containerID]).output
         return Int32(output.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
     /// Run `docker stop <containerID>`. Returns `true` on exit status 0.
     private static func dockerStop(docker: String, containerID: String) -> Bool {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: docker)
-        task.arguments = ["stop", containerID]
-        task.standardOutput = Pipe()
-        task.standardError = Pipe()
-        guard (try? task.run()) != nil else { return false }
-        task.waitUntilExit()
-        return task.terminationStatus == 0
+        runDocker(docker, ["stop", containerID]).ok
     }
 }
