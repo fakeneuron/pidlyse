@@ -8,8 +8,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-- [ ] **PID-EPIC-17** [light]🔧 | ci-gates — Verification gates: `make test` shortcut + GitHub Actions on push. Discovery supplied by audit-repo 2026-06-24. Surfaced by audit-repo 2026-06-24 (Theme: No automated verification gates).
-  - [ ] **PID-17.N** [light]🔧 | audit
+(none)
 
 ## Medium
 
@@ -30,8 +29,10 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
-- [x] **PID-17.3** [light]🔧 | ci-actions — Completed 2026-06-25.
-- [x] **PID-17.2** [light]🔧 | makefile-test — Completed 2026-06-25.
+- [x] **PID-EPIC-17** [light]🔧 | ci-gates — Completed 2026-06-25.
+  - [x] **PID-17.2** [light]🔧 | makefile-test — Completed 2026-06-25.
+  - [x] **PID-17.3** [light]🔧 | ci-actions — Completed 2026-06-25.
+  - [x] **PID-17.N** [light]🔧 | audit — Completed 2026-06-25.
 - [x] **PID-EPIC-16** [light]🔧 | code-quality — Completed 2026-06-24.
   - [x] **PID-16.1** [light]🔧 | discovery — Completed 2026-06-24.
   - [x] **PID-16.2** [light]🔧 | shellout-helper — Completed 2026-06-24.
