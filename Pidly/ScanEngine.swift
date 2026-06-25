@@ -69,7 +69,7 @@ final class ScanEngine: ObservableObject {
         if savedThreshold > 0 { _elapsedThreshold = Published(wrappedValue: savedThreshold) }
         _ignoredNames = Published(wrappedValue: savedIgnoredNames)
         if savedInterval > 0 { _scanInterval = Published(wrappedValue: savedInterval) }
-        if savedNotifications { notificationsEnabled = true }
+        if savedNotifications { _notificationsEnabled = Published(wrappedValue: true) }
         startTimer()
     }
 
