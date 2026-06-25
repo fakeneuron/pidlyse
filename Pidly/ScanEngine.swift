@@ -62,11 +62,14 @@ final class ScanEngine: ObservableObject {
     init() {
         let ud = UserDefaults.standard
         let savedThreshold = ud.double(forKey: "elapsedThreshold")
-        if savedThreshold > 0 { elapsedThreshold = savedThreshold }
-        ignoredNames = ud.stringArray(forKey: "ignoredNames") ?? []
         let savedInterval = ud.double(forKey: "scanInterval")
-        if savedInterval > 0 { scanInterval = savedInterval }
-        if ud.bool(forKey: "notificationsEnabled") { notificationsEnabled = true }
+        let savedIgnoredNames = ud.stringArray(forKey: "ignoredNames") ?? []
+        let savedNotifications = ud.bool(forKey: "notificationsEnabled")
+
+        if savedThreshold > 0 { _elapsedThreshold = Published(wrappedValue: savedThreshold) }
+        _ignoredNames = Published(wrappedValue: savedIgnoredNames)
+        if savedInterval > 0 { _scanInterval = Published(wrappedValue: savedInterval) }
+        if savedNotifications { notificationsEnabled = true }
         startTimer()
     }
 
