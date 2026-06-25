@@ -11,7 +11,7 @@ Native macOS menu bar app. Full design in [`SPEC.md`](SPEC.md).
 
 ### Build
 
-Open `Pidly.xcodeproj` in Xcode, ⌘R to run. App appears in menu bar only (`LSUIElement = YES`). Run the test suite from the command line with `make test`. Build a Release app: `make build-release` (ad-hoc signed, output: `build/Release/Pidly.app`). Install to `/Applications`: `make install`.
+Open `Pidly.xcodeproj` in Xcode, ⌘R to run. App appears in menu bar only (`LSUIElement = YES`). Run the test suite from the command line with `make test`. Build a Release app: `make build-release` (ad-hoc signed, output: `build/Release/Pidly.app`). Install to `/Applications`: `make install`. Package a DMG: `make dmg` (output: `build/Pidly.dmg`).
 
 ### Conventions
 

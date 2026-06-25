@@ -26,7 +26,7 @@ Open `Pidly.xcodeproj` in Xcode and run (âŒ˜R). The app lives in the menu bar â€
 
 Run the test suite from the command line with `make test`. The same suite runs automatically on every push to `main` via GitHub Actions (`.github/workflows/test.yml`).
 
-Build a Release `.app` with ad-hoc signing: `make build-release` (output: `build/Release/Pidly.app`). Copy it to `/Applications` with `make install`.
+Build a Release `.app` with ad-hoc signing: `make build-release` (output: `build/Release/Pidly.app`). Copy it to `/Applications` with `make install`. Package a distributable DMG (drag-install, with `/Applications` symlink): `make dmg` (output: `build/Pidly.dmg`).
 
 ## Menu Bar States
 
