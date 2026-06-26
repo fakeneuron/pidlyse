@@ -17,7 +17,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## Low
 
 - [ ] **PID-025** [medium]🧠 | port-registry-json — Load a user-editable JSON file at startup to override/extend the built-in port registry, merged with compiled defaults — also resolves the manual CLAUDE.md↔PortRegistry.swift sync burden flagged in audit-repo 2026-06-24.
-- [ ] **PID-026** [light]🔧 | animated-icon — Animate the menu-bar icon to reflect scan state (e.g. pulse/glyph change when strays are found) beyond the current static badge count.
 - [ ] **PID-EPIC-27** [heavy]🧠 | xpc-background-scan — Background scanning via an XPC service + `launchd` plist so scans run with no app in the foreground. Epic shell — run `/ft-epic-discovery` to break into children (entitlements research, XPC target, launchd plist, scan wiring, settings toggle).
 - [ ] **PID-EPIC-28** [heavy]🧠 | docker-panel — Docker/container management panel: list running containers with stop/remove actions, building on `KillService`'s existing docker paths. Epic shell — run `/ft-epic-discovery` to break into children.
 
@@ -27,6 +26,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-026** [light]🔧 | animated-icon — Completed 2026-06-26.
 - [x] **PID-024** [light]🔧 | tty-sentinel-ssot — Completed 2026-06-26.
 - [x] **PID-023** [medium]🧠 | right-click-menu — Completed 2026-06-25.
 - [x] **PID-022** [light]🔧 | settings-open — Completed 2026-06-25.

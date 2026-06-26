@@ -37,6 +37,8 @@ Build a Release `.app` with ad-hoc signing: `make build-release` (output: `build
 | Review items only | filled icon | yellow count |
 | Scanning | spinner overlay | — |
 
+The icon pulses once when a new stray appears (suppressed under Reduce Motion).
+
 ## Design
 
 See [`SPEC.md`](SPEC.md) for the full technical specification, scan logic, classification rules, and project structure.

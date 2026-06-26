@@ -17,6 +17,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let popover = NSPopover()
     private var cancellable: AnyCancellable?
 
+    /// Last stray count (`safe + review`) the icon rendered. Used to fire a one-shot
+    /// attention pulse only when the count *increases* (a new stray appeared), not on
+    /// every redraw — a continuously animating menu bar icon would be distracting.
+    private var lastStrayCount = 0
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
@@ -41,7 +46,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Native menu bar icon: spinner while scanning, filled cpu + count badge when
     /// strays exist, outline cpu when clean. Badge is red for safe-to-kill count,
     /// yellow when only review items exist. The cpu glyph is a template image
-    /// (auto-adapts to light/dark menu bar); the count keeps its color.
+    /// (auto-adapts to light/dark menu bar); the count keeps its color. When the
+    /// stray count rises, the icon fires a one-shot pulse (see `pulse(_:)`).
     private func updateIcon() {
         guard let button = statusItem?.button else { return }
         let safe = engine.items.filter { $0.bucket == .safe }.count
@@ -76,6 +82,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.imagePosition = .imageOnly
             button.attributedTitle = NSAttributedString(string: "")
         }
+
+        // Pulse once when a new stray appears (count rises), drawing the eye to the
+        // icon without the distraction of continuous motion. Decreases/no-change stay quiet.
+        let strayCount = safe + review
+        if strayCount > lastStrayCount {
+            pulse(button)
+        }
+        lastStrayCount = strayCount
+    }
+
+    /// One-shot attention pulse: a quick alpha dip-and-restore "breath" on the status
+    /// button. Skipped when the system Reduce Motion setting is on — the glyph + badge
+    /// still convey the state without motion.
+    private func pulse(_ button: NSStatusBarButton) {
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.18
+            button.animator().alphaValue = 0.25
+        }, completionHandler: {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.35
+                button.animator().alphaValue = 1.0
+            }
+        })
     }
 
     /// Left-click toggles the popover; right-click (or two-finger tap) shows the

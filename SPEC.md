@@ -106,6 +106,10 @@ Any process matched whose port appears in the registry is demoted to "needs revi
 | Has review items only | filled icon | yellow count |
 | Scanning | spinner overlay | — |
 
+> The icon fires a one-shot pulse (alpha dip-and-restore) when the stray count rises
+> — drawing the eye to a newly-appeared stray. Suppressed under Reduce Motion. The
+> scanning glyph stays static. See PID-026.
+
 ---
 
 ## Settings Panel
@@ -123,7 +127,7 @@ Configurable at runtime:
 - Docker / container management
 - Full Supabase stack awareness
 - Auto-start on login (deferred — add via `SMAppService` post-v1)
-- Animated menu bar icon beyond simple badge
+- Animated menu bar icon beyond simple badge (partially delivered post-v1: a one-shot stray-found pulse, PID-026; continuous animation / scanning spinner remain out)
 - Daemon / background XPC service
 
 ---
