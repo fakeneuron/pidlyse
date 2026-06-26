@@ -3,11 +3,11 @@ import Foundation
 /// Hardcoded port table mirrored from the global CLAUDE.md localhost port registry.
 /// Any process whose PID is listening on one of these ports is demoted to Needs Review
 /// regardless of other classification criteria.
-enum PortRegistry {
+public enum PortRegistry {
 
     // MARK: - Port table (mirrored from ~/.claude/CLAUDE.md §"Localhost Port Registry")
 
-    static let registeredPorts: Set<Int> = [
+    public static let registeredPorts: Set<Int> = [
         // InvisiPaw
         5182, 8001,
         5181, 8011,   // Docker canonical ports (5181 also bidviz — included once)
@@ -56,7 +56,7 @@ enum PortRegistry {
     /// Pure merge: decode the keyed-by-project JSON, flatten its port lists, and union
     /// with the built-in set. Malformed or absent JSON yields the built-ins unchanged —
     /// the override file is advisory, never fatal to a scan. Injectable for unit tests.
-    static func mergedPorts(builtIn: Set<Int> = registeredPorts, userJSON: Data?) -> Set<Int> {
+    public static func mergedPorts(builtIn: Set<Int> = registeredPorts, userJSON: Data?) -> Set<Int> {
         guard let data = userJSON,
               let byProject = try? JSONDecoder().decode([String: [Int]].self, from: data)
         else { return builtIn }
@@ -72,7 +72,7 @@ enum PortRegistry {
 
     /// PIDs currently listening on a registered port.
     /// `lsofOutput` is injectable so the pure pipeline can be unit-tested without shelling out.
-    static func listeningPIDs(lsofOutput: String? = nil) -> Set<Int32> {
+    public static func listeningPIDs(lsofOutput: String? = nil) -> Set<Int32> {
         let output = lsofOutput ?? runLSOF()
         var result = Set<Int32>()
         for line in output.split(separator: "\n", omittingEmptySubsequences: true) {
@@ -90,7 +90,7 @@ enum PortRegistry {
     /// Expected column layout (fields split on whitespace):
     ///   COMMAND(0) PID(1) USER(2) FD(3) TYPE(4) DEVICE(5) SIZE/OFF(6) NODE(7) NAME(8) [(LISTEN)]
     /// NAME format: `*:3001`, `127.0.0.1:3001`, or `[::1]:3001`
-    static func parsePIDAndPort(_ line: String) -> Int32? {
+    public static func parsePIDAndPort(_ line: String) -> Int32? {
         let fields = line.split(separator: " ", omittingEmptySubsequences: true)
         guard fields.count >= 9 else { return nil }
         guard let pid = Int32(fields[1]) else { return nil }

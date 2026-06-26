@@ -1,4 +1,5 @@
 import SwiftUI
+import PidlyCore
 
 /// The popover content: a live two-section list (Safe / Needs Review) bound to
 /// `ScanEngine`, with rows grouped by `kind`. Safe items can be swept with one

@@ -15,7 +15,7 @@ Open `Pidly.xcodeproj` in Xcode, ⌘R to run. App appears in menu bar only (`LSU
 
 ### Conventions
 
-- All scan + classification logic lives in `ScanEngine.swift` — do not scatter it
+- All scan + classification logic lives in the `PidlyCore` package (`ScanCore.swift`, `ProcessItem.swift`, `PortRegistry.swift`) — the shared core the app and the background helper both link; do not scatter it. App-side `ScanEngine.swift` owns only the timer / persistence / notification lifecycle and calls `ScanCore.enumerate(...)`.
 - Two classification buckets only: `safe` and `needsReview` — never kill without explicit user action
-- Port registry lives in `PortRegistry.swift`; keep in sync with CLAUDE.md global port table when ports are added
+- Port registry lives in `PortRegistry.swift` (in the `PidlyCore` package); keep in sync with CLAUDE.md global port table when ports are added
 - Kill flow is always SIGTERM first, SIGKILL fallback after 2 s — never skip the grace period

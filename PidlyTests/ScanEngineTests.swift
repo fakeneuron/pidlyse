@@ -1,4 +1,5 @@
 import XCTest
+import PidlyCore
 @testable import Pidly
 
 final class ScanEngineTests: XCTestCase {
@@ -7,7 +8,7 @@ final class ScanEngineTests: XCTestCase {
 
     func testParsePSLine_withSpacesInArgs() {
         let line = "  569     1 12-08:33:38 ??       0.1  12345  /Library/Helpers/com.docker.vmnetd --flag a b"
-        let parsed = ScanEngine.parsePSLine(line)
+        let parsed = ScanCore.parsePSLine(line)
         XCTAssertEqual(parsed?.pid, 569)
         XCTAssertEqual(parsed?.ppid, 1)
         XCTAssertEqual(parsed?.etime, "12-08:33:38")
@@ -19,7 +20,7 @@ final class ScanEngineTests: XCTestCase {
 
     func testParsePSLine_withRealTTY() {
         let line = " 2172  100    30:13 ttys001  0.0  8192  npm run dev"
-        let parsed = ScanEngine.parsePSLine(line)
+        let parsed = ScanCore.parsePSLine(line)
         XCTAssertEqual(parsed?.pid, 2172)
         XCTAssertEqual(parsed?.tty, "ttys001")
         XCTAssertEqual(parsed?.args, "npm run dev")
@@ -39,113 +40,113 @@ final class ScanEngineTests: XCTestCase {
     }
 
     func testParsePSLine_rejectsMalformed() {
-        XCTAssertNil(ScanEngine.parsePSLine(""))
-        XCTAssertNil(ScanEngine.parsePSLine("   "))
-        XCTAssertNil(ScanEngine.parsePSLine("123 456 only-three-fields"))
+        XCTAssertNil(ScanCore.parsePSLine(""))
+        XCTAssertNil(ScanCore.parsePSLine("   "))
+        XCTAssertNil(ScanCore.parsePSLine("123 456 only-three-fields"))
     }
 
     // MARK: - parseElapsed
 
     func testParseElapsed_formats() {
-        XCTAssertEqual(ScanEngine.parseElapsed("05:23"), TimeInterval(5 * 60 + 23))
-        XCTAssertEqual(ScanEngine.parseElapsed("01:05:23"), TimeInterval(3600 + 5 * 60 + 23))
-        XCTAssertEqual(ScanEngine.parseElapsed("2-03:04:05"), TimeInterval(2 * 86400 + 3 * 3600 + 4 * 60 + 5))
-        XCTAssertEqual(ScanEngine.parseElapsed("42"), TimeInterval(42))
+        XCTAssertEqual(ScanCore.parseElapsed("05:23"), TimeInterval(5 * 60 + 23))
+        XCTAssertEqual(ScanCore.parseElapsed("01:05:23"), TimeInterval(3600 + 5 * 60 + 23))
+        XCTAssertEqual(ScanCore.parseElapsed("2-03:04:05"), TimeInterval(2 * 86400 + 3 * 3600 + 4 * 60 + 5))
+        XCTAssertEqual(ScanCore.parseElapsed("42"), TimeInterval(42))
     }
 
     // MARK: - detectKind
 
     func testDetectKind_basics() {
-        XCTAssertEqual(ScanEngine.detectKind("python -m pytest tests/"), .pytest)
-        XCTAssertEqual(ScanEngine.detectKind("node node_modules/.bin/vitest run"), .vitest)
-        XCTAssertEqual(ScanEngine.detectKind("node node_modules/.bin/jest --watch"), .jest)
-        XCTAssertEqual(ScanEngine.detectKind("uvicorn backend.main:app --reload"), .uvicorn)
-        XCTAssertEqual(ScanEngine.detectKind("npm run dev"), .npm)
-        XCTAssertEqual(ScanEngine.detectKind("node @playwright/mcp@latest"), .playwrightMCP)
+        XCTAssertEqual(ScanCore.detectKind("python -m pytest tests/"), .pytest)
+        XCTAssertEqual(ScanCore.detectKind("node node_modules/.bin/vitest run"), .vitest)
+        XCTAssertEqual(ScanCore.detectKind("node node_modules/.bin/jest --watch"), .jest)
+        XCTAssertEqual(ScanCore.detectKind("uvicorn backend.main:app --reload"), .uvicorn)
+        XCTAssertEqual(ScanCore.detectKind("npm run dev"), .npm)
+        XCTAssertEqual(ScanCore.detectKind("node @playwright/mcp@latest"), .playwrightMCP)
         // New patterns: vite, bun, node
-        XCTAssertEqual(ScanEngine.detectKind("node node_modules/.bin/vite --port 5173"), .vite)
-        XCTAssertEqual(ScanEngine.detectKind("bun run dev"), .bun)
-        XCTAssertEqual(ScanEngine.detectKind("node server.js"), .node)
+        XCTAssertEqual(ScanCore.detectKind("node node_modules/.bin/vite --port 5173"), .vite)
+        XCTAssertEqual(ScanCore.detectKind("bun run dev"), .bun)
+        XCTAssertEqual(ScanCore.detectKind("node server.js"), .node)
         // vitest must still win over vite (order check)
-        XCTAssertEqual(ScanEngine.detectKind("node node_modules/.bin/vitest run"), .vitest)
+        XCTAssertEqual(ScanCore.detectKind("node node_modules/.bin/vitest run"), .vitest)
     }
 
     func testDetectKind_bundle_notBun() {
         // Ruby bundler must not match the bun guard.
-        XCTAssertNil(ScanEngine.detectKind("bundle install"))
-        XCTAssertNil(ScanEngine.detectKind("/usr/local/bin/bundle install"))
+        XCTAssertNil(ScanCore.detectKind("bundle install"))
+        XCTAssertNil(ScanCore.detectKind("/usr/local/bin/bundle install"))
     }
 
     func testDetectKind_bareNode_isNode() {
         // No trailing space — hasSuffix("node") path.
-        XCTAssertEqual(ScanEngine.detectKind("node"), .node)
-        XCTAssertEqual(ScanEngine.detectKind("/usr/local/bin/node"), .node)
+        XCTAssertEqual(ScanCore.detectKind("node"), .node)
+        XCTAssertEqual(ScanCore.detectKind("/usr/local/bin/node"), .node)
     }
 
     func testDetectKind_chromeUnderPlaywrightMCP_isChromeHelper() {
         let args = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --headless " +
                    "--user-data-dir=/Users/me/Library/Caches/ms-playwright-mcp/mcp-chrome-abc"
-        XCTAssertEqual(ScanEngine.detectKind(args), .chromeHelper)
+        XCTAssertEqual(ScanCore.detectKind(args), .chromeHelper)
     }
 
     func testDetectKind_normalChrome_isExcluded() {
         let args = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --user-data-dir=/Users/me/Default"
-        XCTAssertNil(ScanEngine.detectKind(args))
+        XCTAssertNil(ScanCore.detectKind(args))
     }
 
     func testDetectKind_unrelated_isNil() {
-        XCTAssertNil(ScanEngine.detectKind("/usr/sbin/cfprefsd agent"))
+        XCTAssertNil(ScanCore.detectKind("/usr/sbin/cfprefsd agent"))
     }
 
     // MARK: - riskTier / bucket
 
     func testOrphanedOldPytest_isEasyKill() {
-        let tier = ScanEngine.riskTier(kind: .pytest, hasTTY: false, isOrphan: true, isOld: true)
+        let tier = ScanCore.riskTier(kind: .pytest, hasTTY: false, isOrphan: true, isOld: true)
         XCTAssertEqual(tier, .easy)
     }
 
     func testRecentPytestWithTTY_isNotEasy() {
         // Has a terminal and isn't old → not a strong stray.
-        let tier = ScanEngine.riskTier(kind: .pytest, hasTTY: true, isOrphan: false, isOld: false)
+        let tier = ScanCore.riskTier(kind: .pytest, hasTTY: true, isOrphan: false, isOld: false)
         XCTAssertEqual(tier, .moderate)
     }
 
     func testUvicorn_isHighRisk() {
         // Dev infra is high regardless of stray signals.
-        let tier = ScanEngine.riskTier(kind: .uvicorn, hasTTY: false, isOrphan: true, isOld: true)
+        let tier = ScanCore.riskTier(kind: .uvicorn, hasTTY: false, isOrphan: true, isOld: true)
         XCTAssertEqual(tier, .high)
     }
 
     func testDocker_isHighRisk() {
-        let tier = ScanEngine.riskTier(kind: .docker, hasTTY: false, isOrphan: true, isOld: true)
+        let tier = ScanCore.riskTier(kind: .docker, hasTTY: false, isOrphan: true, isOld: true)
         XCTAssertEqual(tier, .high)
     }
 
     func testNode_isHighRisk() {
         // Bare node is always high risk, like docker/uvicorn.
-        let tier = ScanEngine.riskTier(kind: .node, hasTTY: false, isOrphan: true, isOld: true)
+        let tier = ScanCore.riskTier(kind: .node, hasTTY: false, isOrphan: true, isOld: true)
         XCTAssertEqual(tier, .high)
     }
 
     func testNpmStrongStray_isModerate_notEasy() {
-        let tier = ScanEngine.riskTier(kind: .npm, hasTTY: false, isOrphan: true, isOld: true)
+        let tier = ScanCore.riskTier(kind: .npm, hasTTY: false, isOrphan: true, isOld: true)
         XCTAssertEqual(tier, .moderate)
     }
 
     func testViteStrongStray_isModerate() {
         // npm-tier: strongStray → moderate, not easy.
-        let tier = ScanEngine.riskTier(kind: .vite, hasTTY: false, isOrphan: true, isOld: true)
+        let tier = ScanCore.riskTier(kind: .vite, hasTTY: false, isOrphan: true, isOld: true)
         XCTAssertEqual(tier, .moderate)
     }
 
     func testViteNotStrongStray_isHigh() {
-        let tier = ScanEngine.riskTier(kind: .vite, hasTTY: true, isOrphan: false, isOld: false)
+        let tier = ScanCore.riskTier(kind: .vite, hasTTY: true, isOrphan: false, isOld: false)
         XCTAssertEqual(tier, .high)
     }
 
     func testBunStrongStray_isModerate() {
         // npm-tier: strongStray → moderate.
-        let tier = ScanEngine.riskTier(kind: .bun, hasTTY: false, isOrphan: true, isOld: true)
+        let tier = ScanCore.riskTier(kind: .bun, hasTTY: false, isOrphan: true, isOld: true)
         XCTAssertEqual(tier, .moderate)
     }
 
@@ -168,7 +169,7 @@ final class ScanEngineTests: XCTestCase {
          4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow
          9999     1 00:10 ??   0.0  1024   /usr/sbin/cfprefsd agent
         """
-        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60, psOutput: output)
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60, psOutput: output)
 
         // cfprefsd matches nothing → excluded; the other four are candidates.
         XCTAssertEqual(items.count, 4)
@@ -193,7 +194,7 @@ final class ScanEngineTests: XCTestCase {
     func testPortRegisteredProcess_demotedFromEasyToNeedsReview() {
         // Would be easy (orphaned, old, no TTY pytest) but pid 4000 is on a registered port.
         let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
-        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          registeredPIDs: [4000])
         XCTAssertEqual(items.first?.riskTier, .moderate)
@@ -203,7 +204,7 @@ final class ScanEngineTests: XCTestCase {
     func testPortRegisteredProcess_alreadyModerate_staysNeedsReview() {
         // Has a TTY → moderate already; port match doesn't change outcome.
         let output = "  3000  2999    00:30 ttys002  0.0  4096   python -m pytest tests/unit"
-        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          registeredPIDs: [3000])
         XCTAssertEqual(items.first?.bucket, .needsReview)
@@ -212,7 +213,7 @@ final class ScanEngineTests: XCTestCase {
     func testNonRegisteredProcess_easyStaysSafe() {
         // Not in registeredPIDs → no demotion.
         let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
-        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          registeredPIDs: [])
         XCTAssertEqual(items.first?.riskTier, .easy)
@@ -223,7 +224,7 @@ final class ScanEngineTests: XCTestCase {
 
     func testEnumerate_ignoredNames_match_filtersProcess() {
         let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
-        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          ignoredNames: ["pytest"])
         XCTAssertEqual(items.count, 0)
@@ -231,7 +232,7 @@ final class ScanEngineTests: XCTestCase {
 
     func testEnumerate_ignoredNames_noMatch_processKept() {
         let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
-        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          ignoredNames: ["vitest"])
         XCTAssertEqual(items.count, 1)
@@ -239,7 +240,7 @@ final class ScanEngineTests: XCTestCase {
 
     func testEnumerate_ignoredNames_caseInsensitive() {
         let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
-        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          ignoredNames: ["PyTest"])
         XCTAssertEqual(items.count, 0)
@@ -247,7 +248,7 @@ final class ScanEngineTests: XCTestCase {
 
     func testEnumerate_ignoredNames_empty_noFiltering() {
         let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
-        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          ignoredNames: [])
         XCTAssertEqual(items.count, 1)
@@ -257,7 +258,7 @@ final class ScanEngineTests: XCTestCase {
 
     func testEnumerate_dismissedPIDs_match_filtersProcess() {
         let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
-        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          dismissedPIDs: [4000])
         XCTAssertEqual(items.count, 0)
@@ -265,7 +266,7 @@ final class ScanEngineTests: XCTestCase {
 
     func testEnumerate_dismissedPIDs_noMatch_processKept() {
         let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
-        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          dismissedPIDs: [9999])
         XCTAssertEqual(items.count, 1)
@@ -273,7 +274,7 @@ final class ScanEngineTests: XCTestCase {
 
     func testEnumerate_dismissedPIDs_empty_noFiltering() {
         let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
-        let items = ScanEngine.enumerate(elapsedThreshold: 30 * 60,
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
                                          dismissedPIDs: [])
         XCTAssertEqual(items.count, 1)
