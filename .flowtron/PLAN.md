@@ -14,13 +14,16 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 (none)
 
+## Low
+
+- [ ] **PID-024** [light]🔧 | tty-sentinel-ssot — extract a `ProcessItem.isTTYAttached(_:)` helper and call it from `ScanEngine.makeItem` to eliminate the dual-site TTY sentinel set (flagged in audit-repo 2026-06-24)
+
 ## Future Opportunities
 
 - XPC service / `launchd` plist for background scanning (no app in foreground required)
 - Docker / container management panel
 - JSON override file for port registry (user-editable, loaded at startup) — also resolves the manual-sync burden flagged in audit-repo 2026-06-24
 - Animated icon states beyond simple badge
-- TTY sentinel single-source-of-truth: extract `ProcessItem.isTTYAttached(_:)` helper, call from `ScanEngine.makeItem` to eliminate dual-site sentinel set
 
 ## Completed
 
