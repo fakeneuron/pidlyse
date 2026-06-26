@@ -17,6 +17,9 @@
 		AAAA0000000000000000B132 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B133 /* AppDelegate.swift */; };
 		AAAA0000000000000000B142 /* PidlyCore in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA0000000000000000B141 /* PidlyCore */; };
 		AAAA0000000000000000B144 /* PidlyCore in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA0000000000000000B143 /* PidlyCore */; };
+		AAAA0000000000000000B153 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B152 /* main.swift */; };
+		AAAA0000000000000000B156 /* PidlyCore in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA0000000000000000B157 /* PidlyCore */; };
+		AAAA0000000000000000B15D /* HelperConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B15C /* HelperConfigTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -41,6 +44,9 @@
 		AAAA0000000000000000B128 /* KillService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KillService.swift; sourceTree = "<group>"; };
 		AAAA0000000000000000B130 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		AAAA0000000000000000B133 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		AAAA0000000000000000B151 /* PidlyHelper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = PidlyHelper; sourceTree = BUILT_PRODUCTS_DIR; };
+		AAAA0000000000000000B152 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		AAAA0000000000000000B15C /* HelperConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperConfigTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,6 +66,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AAAA0000000000000000B155 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AAAA0000000000000000B156 /* PidlyCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -67,6 +81,7 @@
 			isa = PBXGroup;
 			children = (
 				AAAA0000000000000000B104 /* Pidly */,
+				AAAA0000000000000000B15B /* PidlyHelper */,
 				AAAA0000000000000000B11D /* PidlyTests */,
 				AAAA0000000000000000B105 /* Products */,
 			);
@@ -92,6 +107,7 @@
 			children = (
 				AAAA0000000000000000B102 /* Pidly.app */,
 				AAAA0000000000000000B11A /* PidlyTests.xctest */,
+				AAAA0000000000000000B151 /* PidlyHelper */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -100,8 +116,17 @@
 			isa = PBXGroup;
 			children = (
 				AAAA0000000000000000B11B /* ScanEngineTests.swift */,
+				AAAA0000000000000000B15C /* HelperConfigTests.swift */,
 			);
 			path = PidlyTests;
+			sourceTree = "<group>";
+		};
+		AAAA0000000000000000B15B /* PidlyHelper */ = {
+			isa = PBXGroup;
+			children = (
+				AAAA0000000000000000B152 /* main.swift */,
+			);
+			path = PidlyHelper;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -148,6 +173,25 @@
 			productReference = AAAA0000000000000000B11A /* PidlyTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		AAAA0000000000000000B150 /* PidlyHelper */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AAAA0000000000000000B158 /* Build configuration list for PBXNativeTarget "PidlyHelper" */;
+			buildPhases = (
+				AAAA0000000000000000B154 /* Sources */,
+				AAAA0000000000000000B155 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PidlyHelper;
+			packageProductDependencies = (
+				AAAA0000000000000000B157 /* PidlyCore */,
+			);
+			productName = PidlyHelper;
+			productReference = AAAA0000000000000000B151 /* PidlyHelper */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -164,6 +208,9 @@
 					AAAA0000000000000000B11E = {
 						CreatedOnToolsVersion = 15.0;
 						TestTargetID = AAAA0000000000000000B101;
+					};
+					AAAA0000000000000000B150 = {
+						CreatedOnToolsVersion = 15.0;
 					};
 				};
 			};
@@ -185,6 +232,7 @@
 			targets = (
 				AAAA0000000000000000B101 /* Pidly */,
 				AAAA0000000000000000B11E /* PidlyTests */,
+				AAAA0000000000000000B150 /* PidlyHelper */,
 			);
 		};
 /* End PBXProject section */
@@ -226,6 +274,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				AAAA0000000000000000B11C /* ScanEngineTests.swift in Sources */,
+				AAAA0000000000000000B15D /* HelperConfigTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AAAA0000000000000000B154 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AAAA0000000000000000B153 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -442,6 +499,36 @@
 			};
 			name = Release;
 		};
+		AAAA0000000000000000B159 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fakeneuron.pidly.helper;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		AAAA0000000000000000B15A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fakeneuron.pidly.helper;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -472,6 +559,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		AAAA0000000000000000B158 /* Build configuration list for PBXNativeTarget "PidlyHelper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AAAA0000000000000000B159 /* Debug */,
+				AAAA0000000000000000B15A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -487,6 +583,10 @@
 			productName = PidlyCore;
 		};
 		AAAA0000000000000000B143 /* PidlyCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PidlyCore;
+		};
+		AAAA0000000000000000B157 /* PidlyCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = PidlyCore;
 		};

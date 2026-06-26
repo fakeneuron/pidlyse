@@ -19,7 +19,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - [ ] **PID-EPIC-27** [heavy]🧠 | xpc-background-scan — Keep scanning after Pidly is quit via an unsandboxed `launchd` LaunchAgent (registered through `SMAppService.agent`) that scans + posts new-stray notifications; kills stay in the app. Post-v1; currently a SPEC Non-Goal. (XPC dropped at `.1`.)
   - [x] **PID-27.1** [heavy]🧠 | discovery — Completed 2026-06-26.
   - [x] **PID-27.2** [medium]🧠 | shared-scan-core — Completed 2026-06-26.
-  - [ ] **PID-27.3** [heavy]🧠 | helper-target — Add an unsandboxed LaunchAgent helper executable (own bundle, links the shared core) that runs one scan per invocation, reading interval/threshold/ignored/notify config from a shared store.
+  - [x] **PID-27.3** [heavy]🧠 | helper-target — Completed 2026-06-26.
   - [ ] **PID-27.4** [medium]🔧 | launchd-registration — Author the LaunchAgent `.plist` (`StartInterval`), install it under the app bundle, and register/unregister/query status via `SMAppService.agent(plistName:)`.
   - [ ] **PID-27.5** [heavy]🧠 | notify-and-handoff — Helper posts new-stray notifications (UN authorization + persisted dedupe baseline); share config and last-scan results between app and helper so the two never double-alert.
   - [ ] **PID-27.6** [medium]🧠 | settings-and-signing — Add a "Background scanning" toggle in `SettingsView` gating registration; configure helper signing/notarization (Developer-ID, unsandboxed); update SPEC Non-Goals + Tech Stack.
