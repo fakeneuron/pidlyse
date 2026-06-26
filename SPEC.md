@@ -91,9 +91,17 @@ Dismiss / ignore: snoozes that PID for the session (does not survive restart).
 
 ## Port Registry
 
-`PortRegistry.swift` holds the canonical port table (mirrored from CLAUDE.md global table). Loaded at startup.
+`PortRegistry.swift` holds the canonical compiled port table (mirrored from CLAUDE.md global table). Loaded at startup.
 
-Any process matched whose port appears in the registry is demoted to "needs review" regardless of other criteria.
+**User override file ([[PID-025]]):** at startup the app also reads an optional, user-editable JSON file at `~/Library/Application Support/Pidly/ports.json`, keyed by project:
+
+```json
+{ "siteguy": [3001, 8003], "bidviz": [5181, 8005] }
+```
+
+Its port lists are flattened and **unioned** with the compiled defaults (`effectivePorts = registeredPorts ∪ user ports`) — extend-only: a user can add ports without recompiling but cannot remove a built-in. A missing or malformed file falls back silently to the compiled defaults (the file is advisory, never fatal to a scan). This decouples per-project port additions from the manual CLAUDE.md ↔ `registeredPorts` sync.
+
+Any process matched whose port appears in the merged registry is demoted to "needs review" regardless of other criteria.
 
 ---
 

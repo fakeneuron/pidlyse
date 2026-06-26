@@ -382,6 +382,47 @@ final class ScanEngineTests: XCTestCase {
                           "registeredPorts is missing known port \(port) — manual sync table drifted from ~/.claude/CLAUDE.md")
         }
     }
+
+    // MARK: - PortRegistry.mergedPorts (PID-025 user override merge)
+
+    func testMergedPorts_unionAddsUserPorts() {
+        // Keyed-by-project JSON adds two ports not in the built-in set.
+        let json = #"{"newproj": [9100, 9200]}"#.data(using: .utf8)
+        let merged = PortRegistry.mergedPorts(builtIn: [3001, 8003], userJSON: json)
+        XCTAssertEqual(merged, [3001, 8003, 9100, 9200])
+    }
+
+    func testMergedPorts_flattensMultipleProjects() {
+        // Port lists across multiple project keys are flattened into one set.
+        let json = #"{"siteguy": [3001, 8003], "bidviz": [5181, 8005]}"#.data(using: .utf8)
+        let merged = PortRegistry.mergedPorts(builtIn: [1111], userJSON: json)
+        XCTAssertEqual(merged, [1111, 3001, 8003, 5181, 8005])
+    }
+
+    func testMergedPorts_nilJSON_returnsBuiltInUnchanged() {
+        let merged = PortRegistry.mergedPorts(builtIn: [3001, 8003], userJSON: nil)
+        XCTAssertEqual(merged, [3001, 8003])
+    }
+
+    func testMergedPorts_malformedJSON_fallsBackToBuiltIn() {
+        // Garbage / wrong-shape JSON must not throw or empty the registry.
+        let json = #"{ not valid json "#.data(using: .utf8)
+        let merged = PortRegistry.mergedPorts(builtIn: [3001, 8003], userJSON: json)
+        XCTAssertEqual(merged, [3001, 8003])
+    }
+
+    func testMergedPorts_wrongShapeJSON_fallsBackToBuiltIn() {
+        // Valid JSON but not [String: [Int]] (a flat array) → built-ins unchanged.
+        let json = #"[3001, 8003]"#.data(using: .utf8)
+        let merged = PortRegistry.mergedPorts(builtIn: [5500], userJSON: json)
+        XCTAssertEqual(merged, [5500])
+    }
+
+    func testMergedPorts_emptyObject_returnsBuiltInUnchanged() {
+        let json = #"{}"#.data(using: .utf8)
+        let merged = PortRegistry.mergedPorts(builtIn: [3001], userJSON: json)
+        XCTAssertEqual(merged, [3001])
+    }
 }
 
 /// Tests for the PID-reuse guard added in PID-18.3: the SIGKILL fallback fires
