@@ -25,6 +25,19 @@ final class ScanEngineTests: XCTestCase {
         XCTAssertEqual(parsed?.args, "npm run dev")
     }
 
+    // MARK: - isTTYAttached (TTY sentinel SSOT)
+
+    func testIsTTYAttached_sentinelsMeanNoTerminal() {
+        for none in ["", "  ", "??", "?", "-", " ?? "] {
+            XCTAssertFalse(ProcessItem.isTTYAttached(none), "\(none.debugDescription) should mean no terminal")
+        }
+    }
+
+    func testIsTTYAttached_realTerminal() {
+        XCTAssertTrue(ProcessItem.isTTYAttached("ttys001"))
+        XCTAssertTrue(ProcessItem.isTTYAttached(" ttys002 "))
+    }
+
     func testParsePSLine_rejectsMalformed() {
         XCTAssertNil(ScanEngine.parsePSLine(""))
         XCTAssertNil(ScanEngine.parsePSLine("   "))

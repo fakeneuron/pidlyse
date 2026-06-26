@@ -189,8 +189,7 @@ final class ScanEngine: ObservableObject {
         let elapsed = parseElapsed(p.etime)
         let cpuPercent = Double(p.pcpu) ?? 0.0
         let rssKB = Int(p.rss) ?? 0
-        let t = p.tty.trimmingCharacters(in: .whitespaces)
-        let hasTTY = !(t.isEmpty || t == "??" || t == "?" || t == "-")
+        let hasTTY = ProcessItem.isTTYAttached(p.tty)
         let isOrphan = p.ppid == 1
         var tier = riskTier(kind: kind,
                             hasTTY: hasTTY,

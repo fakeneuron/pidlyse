@@ -89,11 +89,17 @@ struct ProcessItem: Identifiable {
         return "\(parentName)/\(execName)"
     }
 
-    /// True when the process has no controlling terminal — a stray indicator.
-    var hasTTY: Bool {
+    /// True when a `ps` tty field denotes an attached controlling terminal.
+    /// `??`, `?`, `-`, and empty all mean "no terminal". Static so callers
+    /// (e.g. `ScanEngine.makeItem`) can classify a raw field before a
+    /// `ProcessItem` exists — single source of truth for the sentinel set.
+    static func isTTYAttached(_ tty: String) -> Bool {
         let t = tty.trimmingCharacters(in: .whitespaces)
         return !(t.isEmpty || t == "??" || t == "?" || t == "-")
     }
+
+    /// True when the process has no controlling terminal — a stray indicator.
+    var hasTTY: Bool { Self.isTTYAttached(tty) }
 
     /// On macOS a process whose parent has died is reparented to launchd (pid 1).
     var isOrphan: Bool { ppid == 1 }

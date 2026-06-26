@@ -16,7 +16,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- [ ] **PID-024** [light]🔧 | tty-sentinel-ssot — extract a `ProcessItem.isTTYAttached(_:)` helper and call it from `ScanEngine.makeItem` to eliminate the dual-site TTY sentinel set (flagged in audit-repo 2026-06-24)
+(none)
 
 ## Future Opportunities
 
@@ -27,6 +27,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-024** [light]🔧 | tty-sentinel-ssot — Completed 2026-06-26.
 - [x] **PID-023** [medium]🧠 | right-click-menu — Completed 2026-06-25.
 - [x] **PID-022** [light]🔧 | settings-open — Completed 2026-06-25.
 - [x] **PID-021** [light]🔧 | collapsible-sections — Completed 2026-06-25.
