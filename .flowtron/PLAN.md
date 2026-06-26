@@ -16,13 +16,12 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-(none)
+- [ ] **PID-025** [medium]🧠 | port-registry-json — Load a user-editable JSON file at startup to override/extend the built-in port registry, merged with compiled defaults — also resolves the manual CLAUDE.md↔PortRegistry.swift sync burden flagged in audit-repo 2026-06-24.
 
 ## Future Opportunities
 
 - XPC service / `launchd` plist for background scanning (no app in foreground required)
 - Docker / container management panel
-- JSON override file for port registry (user-editable, loaded at startup) — also resolves the manual-sync burden flagged in audit-repo 2026-06-24
 - Animated icon states beyond simple badge
 
 ## Completed
