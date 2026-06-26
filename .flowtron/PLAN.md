@@ -16,14 +16,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- [ ] **PID-EPIC-27** [heavy]🧠 | xpc-background-scan — Keep scanning after Pidly is quit via an unsandboxed `launchd` LaunchAgent (registered through `SMAppService.agent`) that scans + posts new-stray notifications; kills stay in the app. Post-v1; currently a SPEC Non-Goal. (XPC dropped at `.1`.)
-  - [x] **PID-27.1** [heavy]🧠 | discovery — Completed 2026-06-26.
-  - [x] **PID-27.2** [medium]🧠 | shared-scan-core — Completed 2026-06-26.
-  - [x] **PID-27.3** [heavy]🧠 | helper-target — Completed 2026-06-26.
-  - [x] **PID-27.4** [medium]🔧 | launchd-registration — Completed 2026-06-26.
-  - [ ] **PID-27.5** [heavy]🧠 | notify-and-handoff — Helper posts new-stray notifications (UN authorization + persisted dedupe baseline); share config and last-scan results between app and helper so the two never double-alert.
-  - [ ] **PID-27.6** [medium]🧠 | settings-and-signing — Add a "Background scanning" toggle in `SettingsView` gating registration; configure helper signing/notarization (Developer-ID, unsandboxed); update SPEC Non-Goals + Tech Stack.
-  - [ ] **PID-27.7** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line); verifies the launchd-agent cohort integrates cleanly.
+- [ ] **PID-029** [medium]🔧 | drop-background-helper — Tear out the dormant background-helper machinery from the abandoned EPIC-27: remove the `PidlyHelper` target + `PidlyHelper/main.swift`, `Pidly/com.fakeneuron.pidly.helper.plist`, `Pidly/LaunchAgentService.swift`, the two Copy Files build phases, and the `PidlyHelper` target dependency from `Pidly.xcodeproj`. Keep `PidlyCore`. Verify `make build-release` + `make test` green.
 - [ ] **PID-EPIC-28** [heavy]🧠 | docker-panel — Docker/container management panel: list running containers with stop/remove actions, building on `KillService`'s existing docker paths. Epic shell — run `/ft-epic-discovery` to break into children.
 
 ## Future Opportunities
@@ -32,6 +25,14 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-EPIC-27** [heavy]🧠 | xpc-background-scan — Abandoned 2026-06-26 — background scanning dropped (a background component felt too intrusive; Pidly stays a simple foreground-only menu-bar scanner). `.2` PidlyCore extraction kept as a benign refactor; `.3`/`.4` machinery removed in [[PID-029]].
+  - [x] **PID-27.1** [heavy]🧠 | discovery — Completed 2026-06-26.
+  - [x] **PID-27.2** [medium]🧠 | shared-scan-core — Completed 2026-06-26.
+  - [x] **PID-27.3** [heavy]🧠 | helper-target — Completed 2026-06-26.
+  - [x] **PID-27.4** [medium]🔧 | launchd-registration — Completed 2026-06-26.
+  - [x] **PID-27.5** [heavy]🧠 | notify-and-handoff — De-scoped 2026-06-26 — background component dropped; teardown filed as [[PID-029]].
+  - [x] **PID-27.6** [medium]🧠 | settings-and-signing — Won't do — EPIC-27 abandoned 2026-06-26.
+  - [x] **PID-27.7** [medium]🧠 | audit — Won't do — EPIC-27 abandoned 2026-06-26.
 - [x] **PID-025** [medium]🧠 | port-registry-json — Completed 2026-06-26.
 - [x] **PID-026** [light]🔧 | animated-icon — Completed 2026-06-26.
 - [x] **PID-024** [light]🔧 | tty-sentinel-ssot — Completed 2026-06-26.
