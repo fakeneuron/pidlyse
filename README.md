@@ -22,7 +22,7 @@ Sits beside the clock. Periodically scans for known process junk — orphaned te
 
 ## Build & Run
 
-Open `Pidly.xcodeproj` in Xcode and run (⌘R). The app lives in the menu bar — no Dock icon (`LSUIElement = YES`).
+Open `Pidly.xcodeproj` in Xcode and run (⌘R). The app lives in the menu bar — no Dock icon (`LSUIElement = YES`). Left-click the icon to open the popover; right-click (or two-finger tap) for a quick Quit menu.
 
 Run the test suite from the command line with `make test`. The same suite runs automatically on every push to `main` via GitHub Actions (`.github/workflows/test.yml`).
 

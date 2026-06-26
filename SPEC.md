@@ -9,7 +9,7 @@ A native macOS menu bar app for Apple Silicon that surfaces stray and zombie pro
 ## Tech Stack
 
 - **Language / UI**: Swift + SwiftUI, macOS 14+ target
-- **Menu bar**: `MenuBarExtra` (SwiftUI, macOS 13+) — avoids AppKit boilerplate
+- **Menu bar**: AppKit `NSStatusItem` bridge (managed by `AppDelegate`) hosting SwiftUI views — left-click opens the popover, right-click shows a Quit menu. (`MenuBarExtra` was retired in PID-023 because it exposes only left-click.)
 - **Process enumeration**: `sysctl` or `ps aux` shell-out
 - **No helper daemon** for v1. XPC service / `launchd` plist deferred to post-v1 if background scanning proves necessary.
 
@@ -21,7 +21,8 @@ A native macOS menu bar app for Apple Silicon that surfaces stray and zombie pro
 Pidly/
   Pidly.xcodeproj
   Pidly/
-    PidlyApp.swift          # @main, MenuBarExtra entry point
+    PidlyApp.swift          # @main, Settings scene + NSApplicationDelegateAdaptor
+    AppDelegate.swift       # NSStatusItem bridge: icon, popover, right-click Quit menu
     MenuBarView.swift       # popover UI — process list
     ScanEngine.swift        # ps enumeration + classification logic
     ProcessItem.swift       # model: pid, name, age, tty, bucket

@@ -1,0 +1,112 @@
+import AppKit
+import Combine
+import SwiftUI
+
+/// Owns Pidly's menu bar presence. Pidly retired SwiftUI's `MenuBarExtra` in favor
+/// of an AppKit `NSStatusItem` so the icon can respond to right-click — `MenuBarExtra`
+/// surfaces only left-click. The popover content reuses the SwiftUI `MenuBarView`
+/// (hosted in an `NSHostingController`); the icon is drawn natively on the status
+/// button (template image + colored count title) so it highlights correctly and
+/// adapts to the menu bar appearance. Left-click toggles the popover; right-click
+/// shows a minimal context menu (Quit).
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// Single shared scan engine — also read by the `Settings` scene in `PidlyApp`.
+    let engine = ScanEngine()
+
+    private var statusItem: NSStatusItem!
+    private let popover = NSPopover()
+    private var cancellable: AnyCancellable?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+
+        if let button = statusItem.button {
+            button.target = self
+            button.action = #selector(handleClick(_:))
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        }
+
+        popover.behavior = .transient
+        popover.contentViewController = NSHostingController(rootView: MenuBarView(engine: engine))
+
+        // Redraw the icon whenever the engine's scan state changes. `receive(on:)`
+        // defers to the next main-loop tick so the @Published values are already
+        // applied when `updateIcon` reads them.
+        updateIcon()
+        cancellable = engine.objectWillChange
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in self?.updateIcon() }
+    }
+
+    /// Native menu bar icon: spinner while scanning, filled cpu + count badge when
+    /// strays exist, outline cpu when clean. Badge is red for safe-to-kill count,
+    /// yellow when only review items exist. The cpu glyph is a template image
+    /// (auto-adapts to light/dark menu bar); the count keeps its color.
+    private func updateIcon() {
+        guard let button = statusItem?.button else { return }
+        let safe = engine.items.filter { $0.bucket == .safe }.count
+        let review = engine.items.filter { $0.bucket == .needsReview }.count
+
+        let symbol: String
+        let badge: (count: Int, color: NSColor)?
+        if engine.isScanning {
+            symbol = "arrow.2.circlepath"; badge = nil
+        } else if safe > 0 {
+            symbol = "cpu.fill"; badge = (safe, .systemRed)
+        } else if review > 0 {
+            symbol = "cpu.fill"; badge = (review, .systemYellow)
+        } else {
+            symbol = "cpu"; badge = nil
+        }
+
+        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Pidly")
+        image?.isTemplate = true
+        button.image = image
+
+        if let badge {
+            button.imagePosition = .imageLeading
+            button.attributedTitle = NSAttributedString(
+                string: " \(badge.count)",
+                attributes: [
+                    .foregroundColor: badge.color,
+                    .font: NSFont.systemFont(ofSize: 11, weight: .bold),
+                ]
+            )
+        } else {
+            button.imagePosition = .imageOnly
+            button.attributedTitle = NSAttributedString(string: "")
+        }
+    }
+
+    /// Left-click toggles the popover; right-click (or two-finger tap) shows the
+    /// context menu. The mouse-up button is read from the current event.
+    @objc private func handleClick(_ sender: NSStatusBarButton) {
+        if NSApp.currentEvent?.type == .rightMouseUp {
+            showContextMenu(from: sender)
+        } else {
+            togglePopover(from: sender)
+        }
+    }
+
+    private func togglePopover(from button: NSStatusBarButton) {
+        if popover.isShown {
+            popover.performClose(nil)
+        } else {
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        }
+    }
+
+    private func showContextMenu(from button: NSStatusBarButton) {
+        let menu = NSMenu()
+        menu.addItem(
+            withTitle: "Quit Pidly",
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q"
+        )
+        menu.popUp(
+            positioning: nil,
+            at: NSPoint(x: 0, y: button.bounds.height + 5),
+            in: button
+        )
+    }
+}

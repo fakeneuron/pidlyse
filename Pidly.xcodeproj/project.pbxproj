@@ -16,6 +16,7 @@
 		AAAA0000000000000000B127 /* KillService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B128 /* KillService.swift */; };
 		AAAA0000000000000000B12A /* PortRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B129 /* PortRegistry.swift */; };
 		AAAA0000000000000000B131 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B130 /* SettingsView.swift */; };
+		AAAA0000000000000000B132 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B133 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -41,6 +42,7 @@
 		AAAA0000000000000000B128 /* KillService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KillService.swift; sourceTree = "<group>"; };
 		AAAA0000000000000000B129 /* PortRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortRegistry.swift; sourceTree = "<group>"; };
 		AAAA0000000000000000B130 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		AAAA0000000000000000B133 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -74,6 +76,7 @@
 			isa = PBXGroup;
 			children = (
 				AAAA0000000000000000B106 /* PidlyApp.swift */,
+				AAAA0000000000000000B133 /* AppDelegate.swift */,
 				AAAA0000000000000000B107 /* MenuBarView.swift */,
 				AAAA0000000000000000B116 /* ProcessItem.swift */,
 				AAAA0000000000000000B117 /* ScanEngine.swift */,
@@ -203,6 +206,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AAAA0000000000000000B10A /* PidlyApp.swift in Sources */,
+				AAAA0000000000000000B132 /* AppDelegate.swift in Sources */,
 				AAAA0000000000000000B10B /* MenuBarView.swift in Sources */,
 				AAAA0000000000000000B118 /* ProcessItem.swift in Sources */,
 				AAAA0000000000000000B119 /* ScanEngine.swift in Sources */,

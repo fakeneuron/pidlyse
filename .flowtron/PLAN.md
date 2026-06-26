@@ -12,7 +12,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-- [ ] **PID-023** [medium]🧠 | right-click-menu — add right-click / two-finger-tap on menu bar icon to show a minimal context menu (Quit); requires AppKit NSStatusItem bridge since MenuBarExtra(.window) doesn't expose right-click
+(none)
 
 ## Future Opportunities
 
@@ -24,6 +24,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-023** [medium]🧠 | right-click-menu — Completed 2026-06-25.
 - [x] **PID-022** [light]🔧 | settings-open — Completed 2026-06-25.
 - [x] **PID-021** [light]🔧 | collapsible-sections — Completed 2026-06-25.
 - [x] **PID-EPIC-20** [medium]🧠 | dmg-release — Completed 2026-06-25.
