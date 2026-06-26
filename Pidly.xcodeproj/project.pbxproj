@@ -20,6 +20,9 @@
 		AAAA0000000000000000B153 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B152 /* main.swift */; };
 		AAAA0000000000000000B156 /* PidlyCore in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA0000000000000000B157 /* PidlyCore */; };
 		AAAA0000000000000000B15D /* HelperConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B15C /* HelperConfigTests.swift */; };
+		AAAA0000000000000000B15F /* com.fakeneuron.pidly.helper.plist in CopyFiles */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B15E /* com.fakeneuron.pidly.helper.plist */; };
+		AAAA0000000000000000B161 /* PidlyHelper in CopyFiles */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B151 /* PidlyHelper */; settings = {ATTRIBUTES = (SignOnCopy, ); }; };
+		AAAA0000000000000000B164 /* LaunchAgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B163 /* LaunchAgentService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -29,6 +32,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = AAAA0000000000000000B101;
 			remoteInfo = Pidly;
+		};
+		AAAA0000000000000000B165 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AAAA0000000000000000B100 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AAAA0000000000000000B150;
+			remoteInfo = PidlyHelper;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -47,6 +57,8 @@
 		AAAA0000000000000000B151 /* PidlyHelper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = PidlyHelper; sourceTree = BUILT_PRODUCTS_DIR; };
 		AAAA0000000000000000B152 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		AAAA0000000000000000B15C /* HelperConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperConfigTests.swift; sourceTree = "<group>"; };
+		AAAA0000000000000000B15E /* com.fakeneuron.pidly.helper.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "com.fakeneuron.pidly.helper.plist"; sourceTree = "<group>"; };
+		AAAA0000000000000000B163 /* LaunchAgentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAgentService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,6 +88,31 @@
 		};
 /* End PBXFrameworksBuildPhase section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		AAAA0000000000000000B160 /* Copy LaunchAgents */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "Contents/Library/LaunchAgents";
+			dstSubfolderSpec = 1;
+			files = (
+				AAAA0000000000000000B15F /* com.fakeneuron.pidly.helper.plist in CopyFiles */,
+			);
+			name = "Copy LaunchAgents";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AAAA0000000000000000B162 /* Copy Helpers */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "Contents/Helpers";
+			dstSubfolderSpec = 1;
+			files = (
+				AAAA0000000000000000B161 /* PidlyHelper in CopyFiles */,
+			);
+			name = "Copy Helpers";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXGroup section */
 		AAAA0000000000000000B103 = {
 			isa = PBXGroup;
@@ -96,8 +133,10 @@
 				AAAA0000000000000000B117 /* ScanEngine.swift */,
 				AAAA0000000000000000B128 /* KillService.swift */,
 				AAAA0000000000000000B130 /* SettingsView.swift */,
+				AAAA0000000000000000B163 /* LaunchAgentService.swift */,
 				AAAA0000000000000000B108 /* Assets.xcassets */,
 				AAAA0000000000000000B109 /* Info.plist */,
+				AAAA0000000000000000B15E /* com.fakeneuron.pidly.helper.plist */,
 			);
 			path = Pidly;
 			sourceTree = "<group>";
@@ -139,10 +178,13 @@
 				AAAA0000000000000000B10D /* Sources */,
 				AAAA0000000000000000B10F /* Frameworks */,
 				AAAA0000000000000000B10E /* Resources */,
+				AAAA0000000000000000B160 /* Copy LaunchAgents */,
+				AAAA0000000000000000B162 /* Copy Helpers */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				AAAA0000000000000000B166 /* PBXTargetDependency */,
 			);
 			name = Pidly;
 			packageProductDependencies = (
@@ -266,6 +308,7 @@
 				AAAA0000000000000000B119 /* ScanEngine.swift in Sources */,
 				AAAA0000000000000000B127 /* KillService.swift in Sources */,
 				AAAA0000000000000000B131 /* SettingsView.swift in Sources */,
+				AAAA0000000000000000B164 /* LaunchAgentService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -293,6 +336,11 @@
 			isa = PBXTargetDependency;
 			target = AAAA0000000000000000B101 /* Pidly */;
 			targetProxy = AAAA0000000000000000B122 /* PBXContainerItemProxy */;
+		};
+		AAAA0000000000000000B166 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AAAA0000000000000000B150 /* PidlyHelper */;
+			targetProxy = AAAA0000000000000000B165 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 

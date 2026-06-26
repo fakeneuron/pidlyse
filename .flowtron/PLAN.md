@@ -20,7 +20,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-27.1** [heavy]🧠 | discovery — Completed 2026-06-26.
   - [x] **PID-27.2** [medium]🧠 | shared-scan-core — Completed 2026-06-26.
   - [x] **PID-27.3** [heavy]🧠 | helper-target — Completed 2026-06-26.
-  - [ ] **PID-27.4** [medium]🔧 | launchd-registration — Author the LaunchAgent `.plist` (`StartInterval`), install it under the app bundle, and register/unregister/query status via `SMAppService.agent(plistName:)`.
+  - [x] **PID-27.4** [medium]🔧 | launchd-registration — Completed 2026-06-26.
   - [ ] **PID-27.5** [heavy]🧠 | notify-and-handoff — Helper posts new-stray notifications (UN authorization + persisted dedupe baseline); share config and last-scan results between app and helper so the two never double-alert.
   - [ ] **PID-27.6** [medium]🧠 | settings-and-signing — Add a "Background scanning" toggle in `SettingsView` gating registration; configure helper signing/notarization (Developer-ID, unsandboxed); update SPEC Non-Goals + Tech Stack.
   - [ ] **PID-27.7** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line); verifies the launchd-agent cohort integrates cleanly.

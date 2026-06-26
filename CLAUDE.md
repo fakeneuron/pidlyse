@@ -19,3 +19,4 @@ Open `Pidly.xcodeproj` in Xcode, ⌘R to run. App appears in menu bar only (`LSU
 - Two classification buckets only: `safe` and `needsReview` — never kill without explicit user action
 - Port registry lives in `PortRegistry.swift` (in the `PidlyCore` package); keep in sync with CLAUDE.md global port table when ports are added
 - Kill flow is always SIGTERM first, SIGKILL fallback after 2 s — never skip the grace period
+- LaunchAgent registration lives in `Pidly/LaunchAgentService.swift` (`enum LaunchAgentService`, wraps `SMAppService.agent(plistName:)`); the plist is at `Pidly/com.fakeneuron.pidly.helper.plist` (embedded into `Contents/Library/LaunchAgents/` at build time); the helper executable is embedded at `Contents/Helpers/PidlyHelper` via a Copy Helpers build phase. The settings toggle gating registration lands in PID-27.6.
