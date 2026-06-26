@@ -15,8 +15,7 @@ Open `Pidly.xcodeproj` in Xcode, ⌘R to run. App appears in menu bar only (`LSU
 
 ### Conventions
 
-- All scan + classification logic lives in the `PidlyCore` package (`ScanCore.swift`, `ProcessItem.swift`, `PortRegistry.swift`, plus shared scan config in `HelperConfig.swift`) — the shared core the app and the background `PidlyHelper` executable (`PidlyHelper/main.swift`, a `tool` target built via `-scheme PidlyHelper`) both link; do not scatter it. App-side `ScanEngine.swift` owns only the timer / persistence / notification lifecycle and calls `ScanCore.enumerate(...)`.
+- All scan + classification logic lives in the `PidlyCore` package (`ScanCore.swift`, `ProcessItem.swift`, `PortRegistry.swift`) — the shared core the app links; do not scatter it. App-side `ScanEngine.swift` owns only the timer / persistence / notification lifecycle and calls `ScanCore.enumerate(...)`.
 - Two classification buckets only: `safe` and `needsReview` — never kill without explicit user action
 - Port registry lives in `PortRegistry.swift` (in the `PidlyCore` package); keep in sync with CLAUDE.md global port table when ports are added
 - Kill flow is always SIGTERM first, SIGKILL fallback after 2 s — never skip the grace period
-- LaunchAgent registration lives in `Pidly/LaunchAgentService.swift` (`enum LaunchAgentService`, wraps `SMAppService.agent(plistName:)`); the plist is at `Pidly/com.fakeneuron.pidly.helper.plist` (embedded into `Contents/Library/LaunchAgents/` at build time); the helper executable is embedded at `Contents/Helpers/PidlyHelper` via a Copy Helpers build phase. The settings toggle gating registration lands in PID-27.6.

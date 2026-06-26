@@ -6,8 +6,7 @@ import PidlyCore
 /// `UserDefaults`-backed config, the dismissed/previous baselines, and the
 /// new-stray notification. The pure enumeration + classification it drives lives
 /// in `PidlyCore.ScanCore` (per CLAUDE.md, all scan + classification logic stays
-/// in one place) so the LaunchAgent helper (PID-EPIC-27) can share it without
-/// linking the SwiftUI app.
+/// in one place).
 final class ScanEngine: ObservableObject {
     static let defaultScanInterval: TimeInterval = 120
 

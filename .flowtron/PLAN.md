@@ -16,7 +16,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- [ ] **PID-029** [medium]🔧 | drop-background-helper — Tear out the dormant background-helper machinery from the abandoned EPIC-27: remove the `PidlyHelper` target + `PidlyHelper/main.swift`, `Pidly/com.fakeneuron.pidly.helper.plist`, `Pidly/LaunchAgentService.swift`, the two Copy Files build phases, and the `PidlyHelper` target dependency from `Pidly.xcodeproj`. Keep `PidlyCore`. Verify `make build-release` + `make test` green.
 - [ ] **PID-EPIC-28** [heavy]🧠 | docker-panel — Docker/container management panel: list running containers with stop/remove actions, building on `KillService`'s existing docker paths. Epic shell — run `/ft-epic-discovery` to break into children.
 
 ## Future Opportunities
@@ -25,6 +24,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-029** [medium]🔧 | drop-background-helper — Completed 2026-06-26.
 - [x] **PID-EPIC-27** [heavy]🧠 | xpc-background-scan — Abandoned 2026-06-26 — background scanning dropped (a background component felt too intrusive; Pidly stays a simple foreground-only menu-bar scanner). `.2` PidlyCore extraction kept as a benign refactor; `.3`/`.4` machinery removed in [[PID-029]].
   - [x] **PID-27.1** [heavy]🧠 | discovery — Completed 2026-06-26.
   - [x] **PID-27.2** [medium]🧠 | shared-scan-core — Completed 2026-06-26.
