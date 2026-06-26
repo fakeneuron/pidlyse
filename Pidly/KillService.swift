@@ -106,36 +106,16 @@ enum KillService {
 
     // MARK: - Docker stop path
 
-    /// Return the path to the Docker CLI, or `nil` if not installed.
-    private static func dockerCLIPath() -> String? {
-        let candidates = ["/usr/local/bin/docker", "/opt/homebrew/bin/docker"]
-        return candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
-    }
-
-    /// Shell out to the Docker CLI, reading stdout to EOF before `waitUntilExit`
-    /// to prevent pipe-buffer deadlock. Returns stdout as UTF-8 ("" on failure)
-    /// and whether the process exited with status 0.
-    private static func runDocker(_ docker: String, _ args: [String]) -> (output: String, ok: Bool) {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: docker)
-        task.arguments = args
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = Pipe()
-        guard (try? task.run()) != nil else { return ("", false) }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        task.waitUntilExit()
-        return (String(data: data, encoding: .utf8) ?? "", task.terminationStatus == 0)
-    }
-
     /// Try to stop the container whose root PID (`State.Pid`) matches `pid` via
     /// `docker stop`. Succeeds only when `pid` is a container's init process on
     /// the host; Docker daemon and helper PIDs never match and fall through to
-    /// POSIX signals. Returns `true` if a container was found and stopped.
+    /// POSIX signals. Returns `true` if a container was found and stopped. The
+    /// Docker CLI access is delegated to `DockerService` (shared with the
+    /// container panel).
     private static func dockerStopByPID(_ pid: Int32) -> Bool {
-        guard let docker = dockerCLIPath(),
-              let containerID = findContainerID(docker: docker, for: pid),
-              dockerStop(docker: docker, containerID: containerID) else {
+        guard DockerService.isInstalled,
+              let containerID = findContainerID(for: pid),
+              DockerService.run(["stop", containerID]).ok else {
             return false
         }
         return true
@@ -143,23 +123,18 @@ enum KillService {
 
     /// Return the container ID of the running container whose root PID matches
     /// `pid`, or `nil` if no match is found.
-    private static func findContainerID(docker: String, for pid: Int32) -> String? {
-        let listOutput = runDocker(docker, ["ps", "-q"]).output
+    private static func findContainerID(for pid: Int32) -> String? {
+        let listOutput = DockerService.run(["ps", "-q"]).output
         for id in listOutput.split(separator: "\n", omittingEmptySubsequences: true).map(String.init) {
-            if containerPID(docker: docker, containerID: id) == pid { return id }
+            if containerPID(containerID: id) == pid { return id }
         }
         return nil
     }
 
     /// Return the root PID of a running container via `docker inspect`
     /// (`State.Pid` — the container's init process as seen on the host).
-    private static func containerPID(docker: String, containerID: String) -> Int32? {
-        let output = runDocker(docker, ["inspect", "--format", "{{.State.Pid}}", containerID]).output
+    private static func containerPID(containerID: String) -> Int32? {
+        let output = DockerService.run(["inspect", "--format", "{{.State.Pid}}", containerID]).output
         return Int32(output.trimmingCharacters(in: .whitespacesAndNewlines))
-    }
-
-    /// Run `docker stop <containerID>`. Returns `true` on exit status 0.
-    private static func dockerStop(docker: String, containerID: String) -> Bool {
-        runDocker(docker, ["stop", containerID]).ok
     }
 }

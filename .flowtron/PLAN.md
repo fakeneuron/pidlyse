@@ -18,7 +18,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 - [ ] **PID-EPIC-28** [heavy]🧠 | docker-panel — Docker/container management panel: list running containers with stop/remove actions, building on `KillService`'s existing docker paths. Children scoped at `.1` Discovery.
   - [x] **PID-28.1** [medium]🧠 | discovery — Completed 2026-06-26.
-  - [ ] **PID-28.2** [medium]🔧 | docker-service — Extract `KillService`'s docker CLI access into a shared app-side `DockerService` (list running containers via `docker ps`); add a pure `docker ps` parser + typed `Container` model in `PidlyCore` with unit tests.
+  - [x] **PID-28.2** [medium]🔧 | docker-service — Completed 2026-06-26.
   - [ ] **PID-28.3** [light]🔧 | container-actions — Add stop + remove (`docker stop` / `docker rm`) to `DockerService`, each an explicit-click safe action (no auto-action, per CLAUDE.md), refreshing the container list on completion.
   - [ ] **PID-28.4** [medium]🧠 | container-panel-ui — Add a Processes/Containers segmented tab to the popover; new SwiftUI view lists running containers (name/image/status/ports) with per-row stop/remove buttons + a docker-absent empty state.
   - [ ] **PID-28.5** [medium]🔧 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed as the highest `.N` child.

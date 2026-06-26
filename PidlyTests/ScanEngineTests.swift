@@ -482,3 +482,68 @@ final class KillServiceTests: XCTestCase {
         XCTAssertNil(KillService.startTime(of: 2_000_000_000))
     }
 }
+
+/// Tests for the pure `docker ps` parser added in PID-28.2. The impure
+/// `DockerService` shell-out is not unit-tested (mirrors `ScanCore.runPS`).
+final class DockerCoreTests: XCTestCase {
+
+    // MARK: - parseLine
+
+    func testParseLine_fullRow() {
+        let line = "abc123\tpg-db\tpostgres:16\tUp 3 minutes\t0.0.0.0:5432->5432/tcp"
+        let c = DockerCore.parseLine(line)
+        XCTAssertEqual(c?.id, "abc123")
+        XCTAssertEqual(c?.name, "pg-db")
+        XCTAssertEqual(c?.image, "postgres:16")
+        XCTAssertEqual(c?.status, "Up 3 minutes")
+        XCTAssertEqual(c?.ports, "0.0.0.0:5432->5432/tcp")
+    }
+
+    func testParseLine_emptyPorts_kept() {
+        // Container with no published ports → trailing empty field, still valid.
+        let line = "def456\tworker\talpine:latest\tUp 10 seconds\t"
+        let c = DockerCore.parseLine(line)
+        XCTAssertEqual(c?.id, "def456")
+        XCTAssertEqual(c?.ports, "")
+    }
+
+    func testParseLine_tooFewFields_isNil() {
+        XCTAssertNil(DockerCore.parseLine("abc123\tname\timage\tUp"))
+    }
+
+    func testParseLine_emptyID_isNil() {
+        XCTAssertNil(DockerCore.parseLine("\tname\timage\tUp 1 minute\t8080/tcp"))
+    }
+
+    func testParseLine_blank_isNil() {
+        XCTAssertNil(DockerCore.parseLine(""))
+    }
+
+    // MARK: - parsePS
+
+    func testParsePS_multipleContainers() {
+        let output = """
+        abc123\tpg-db\tpostgres:16\tUp 3 minutes\t0.0.0.0:5432->5432/tcp
+        def456\tredis\tredis:7\tUp 1 hour\t6379/tcp
+        """
+        let containers = DockerCore.parsePS(output)
+        XCTAssertEqual(containers.count, 2)
+        XCTAssertEqual(containers[0].name, "pg-db")
+        XCTAssertEqual(containers[1].image, "redis:7")
+    }
+
+    func testParsePS_skipsBlankAndMalformedLines() {
+        let output = """
+        abc123\tpg-db\tpostgres:16\tUp 3 minutes\t5432/tcp
+
+        garbage-no-tabs
+        """
+        let containers = DockerCore.parsePS(output)
+        XCTAssertEqual(containers.count, 1)
+        XCTAssertEqual(containers.first?.id, "abc123")
+    }
+
+    func testParsePS_empty_returnsEmpty() {
+        XCTAssertTrue(DockerCore.parsePS("").isEmpty)
+    }
+}
