@@ -16,12 +16,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- [ ] **PID-EPIC-28** [heavy]🧠 | docker-panel — Docker/container management panel: list running containers with stop/remove actions, building on `KillService`'s existing docker paths. Children scoped at `.1` Discovery.
-  - [x] **PID-28.1** [medium]🧠 | discovery — Completed 2026-06-26.
-  - [x] **PID-28.2** [medium]🔧 | docker-service — Completed 2026-06-26.
-  - [x] **PID-28.3** [light]🔧 | container-actions — Completed 2026-06-26.
-  - [x] **PID-28.4** [medium]🧠 | container-panel-ui — Completed 2026-06-26.
-  - [ ] **PID-28.5** [medium]🔧 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed as the highest `.N` child.
+(none)
 
 ## Future Opportunities
 
@@ -29,6 +24,12 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-EPIC-28** [heavy]🧠 | docker-panel — Completed 2026-06-26.
+  - [x] **PID-28.1** [medium]🧠 | discovery — Completed 2026-06-26.
+  - [x] **PID-28.2** [medium]🔧 | docker-service — Completed 2026-06-26.
+  - [x] **PID-28.3** [light]🔧 | container-actions — Completed 2026-06-26.
+  - [x] **PID-28.4** [medium]🧠 | container-panel-ui — Completed 2026-06-26.
+  - [x] **PID-28.5** [medium]🔧 | audit — Completed 2026-06-26.
 - [x] **PID-029** [medium]🔧 | drop-background-helper — Completed 2026-06-26.
 - [x] **PID-EPIC-27** [heavy]🧠 | xpc-background-scan — Abandoned 2026-06-26 — background scanning dropped (a background component felt too intrusive; Pidly stays a simple foreground-only menu-bar scanner). `.2` PidlyCore extraction kept as a benign refactor; `.3`/`.4` machinery removed in [[PID-029]].
   - [x] **PID-27.1** [heavy]🧠 | discovery — Completed 2026-06-26.
