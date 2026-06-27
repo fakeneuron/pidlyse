@@ -43,6 +43,18 @@ enum DockerService {
         return DockerCore.parsePS(result.output)
     }
 
+    /// Async wrapper over `listContainers()`: runs the (blocking) `docker ps`
+    /// shell-out off the main queue and delivers the result on the main queue so
+    /// SwiftUI can load/refresh the container list without freezing the popover.
+    /// Keeps the shell-out inside `DockerService` (the view never touches
+    /// `docker` or `DispatchQueue`), per CLAUDE.md.
+    static func list(onComplete: @escaping ([Container]) -> Void) {
+        DispatchQueue.global().async {
+            let containers = listContainers()
+            DispatchQueue.main.async { onComplete(containers) }
+        }
+    }
+
     // MARK: - Container actions (explicit-click only, per CLAUDE.md)
 
     /// Stop a running container via `docker stop` (Docker's own graceful

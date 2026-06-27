@@ -7,8 +7,15 @@ import PidlyCore
 /// Kills route through `KillService` (SIGTERM → 2 s → SIGKILL) and trigger a
 /// rescan. Never auto-kills — every kill is an explicit click (per CLAUDE.md).
 struct MenuBarView: View {
+    /// The two popover tabs, switched via the segmented control below the header.
+    private enum Tab { case processes, containers }
+
     @ObservedObject var engine: ScanEngine
     @Environment(\.openSettings) private var openSettings
+    @State private var selectedTab: Tab = .processes
+    /// Bumped by the shared header refresh while the Containers tab is active so
+    /// the one `↻` reloads the locally-stateful `ContainersView`.
+    @State private var containerRefreshToken = 0
     @State private var expandedPIDs: Set<Int32> = []
     /// Kinds that are collapsed. Populated lazily when each kind first appears:
     /// high-risk groups start collapsed; easy/moderate start expanded.
@@ -19,10 +26,16 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 0) {
             header
             Divider()
-            if engine.items.isEmpty {
-                emptyState
-            } else {
-                content
+            tabPicker
+            switch selectedTab {
+            case .processes:
+                if engine.items.isEmpty {
+                    emptyState
+                } else {
+                    content
+                }
+            case .containers:
+                ContainersView(refreshToken: containerRefreshToken)
             }
         }
         .frame(width: 320)
@@ -52,12 +65,15 @@ struct MenuBarView: View {
             Text("Pidly").font(.headline)
             Spacer()
             Button {
-                engine.rescan()
+                switch selectedTab {
+                case .processes:  engine.rescan()
+                case .containers: containerRefreshToken += 1
+                }
             } label: {
                 Image(systemName: "arrow.clockwise")
             }
             .buttonStyle(.borderless)
-            .help("Rescan (restores hidden items)")
+            .help(selectedTab == .processes ? "Rescan (restores hidden items)" : "Refresh containers")
             Button {
                 openSettings()
             } label: {
@@ -75,6 +91,17 @@ struct MenuBarView: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
+    }
+
+    private var tabPicker: some View {
+        Picker("", selection: $selectedTab) {
+            Text("Processes").tag(Tab.processes)
+            Text("Containers").tag(Tab.containers)
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .padding(.horizontal)
+        .padding(.vertical, 6)
     }
 
     private var emptyState: some View {

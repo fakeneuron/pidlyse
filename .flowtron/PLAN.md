@@ -20,7 +20,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-28.1** [medium]🧠 | discovery — Completed 2026-06-26.
   - [x] **PID-28.2** [medium]🔧 | docker-service — Completed 2026-06-26.
   - [x] **PID-28.3** [light]🔧 | container-actions — Completed 2026-06-26.
-  - [ ] **PID-28.4** [medium]🧠 | container-panel-ui — Add a Processes/Containers segmented tab to the popover; new SwiftUI view lists running containers (name/image/status/ports) with per-row stop/remove buttons + a docker-absent empty state.
+  - [x] **PID-28.4** [medium]🧠 | container-panel-ui — Completed 2026-06-26.
   - [ ] **PID-28.5** [medium]🔧 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed as the highest `.N` child.
 
 ## Future Opportunities

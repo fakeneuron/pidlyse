@@ -11,6 +11,7 @@ Sits beside the clock. Periodically scans for known process junk — orphaned te
 - **Two-section layout** — *Safe to clean* (easy-tier orphaned/old/no-tty strays) and *Needs review* (ambiguous processes tied to real dev infra)
 - **"Clean all"** sweeps the safe section in one click; per-row kill button for surgical cleanup
 - **Session dismiss** — hide a process until restart without killing it (↺ rescan restores all dismissed items)
+- **Docker containers tab** — a Processes / Containers segmented toggle in the popover; the Containers tab lists running containers (name, image, status, ports) with per-row **stop** and **stop + remove** buttons, and a clear empty state when Docker isn't installed
 - **Kill flow**: SIGTERM first, SIGKILL fallback after 2 s — always explicit, never automatic
 - **Settings**: scan interval (default 2 min), stale-process threshold (default 30 min), ignored command substrings, launch at login, notification alerts (opt-in)
 
