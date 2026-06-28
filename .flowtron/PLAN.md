@@ -24,6 +24,11 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-EPIC-34** [light]🔧 | doc-hygiene — Completed 2026-06-28. Surfaced by audit-repo 2026-06-28 (Theme: Docs lag the last refactor wave).
+  - [x] **PID-34.2** [light]🔧 | spec-structure-refresh — Completed 2026-06-28.
+  - [x] **PID-34.3** [light]🔧 | settings-scene-comment — Completed 2026-06-28.
+  - [x] **PID-34.4** [light]🔧 | worktree-hygiene — Completed 2026-06-28.
+  - [x] **PID-34.N** [light]🔧 | audit — Completed 2026-06-28.
 - [x] **PID-031** [light]🔧 | public-download-page — Completed 2026-06-28.
 - [x] **PID-033** [light]🔧 | doc-footprint-accuracy — Completed 2026-06-28.
 - [x] **PID-032** [medium]🔧 | settings-wont-open — Completed 2026-06-28.
