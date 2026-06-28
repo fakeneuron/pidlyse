@@ -11,7 +11,10 @@ struct MenuBarView: View {
     private enum Tab { case processes, containers }
 
     @ObservedObject var engine: ScanEngine
-    @Environment(\.openSettings) private var openSettings
+    /// Opens the Settings window. Injected by `AppDelegate`, which presents a
+    /// self-managed AppKit window (see `AppDelegate.openSettings()`) — the SwiftUI
+    /// `Settings` scene can't be opened from this out-of-scene-graph popover.
+    let openSettings: () -> Void
     @State private var selectedTab: Tab = .processes
     /// Bumped by the shared header refresh while the Containers tab is active so
     /// the one `↻` reloads the locally-stateful `ContainersView`.

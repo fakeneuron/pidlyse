@@ -17,6 +17,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let popover = NSPopover()
     private var cancellable: AnyCancellable?
 
+    /// Self-managed Settings window (see `openSettings()`). Retained so repeated
+    /// opens reuse the same window instead of spawning duplicates.
+    private var settingsWindow: NSWindow?
+
     /// Last stray count (`safe + review`) the icon rendered. Used to fire a one-shot
     /// attention pulse only when the count *increases* (a new stray appeared), not on
     /// every redraw — a continuously animating menu bar icon would be distracting.
@@ -32,7 +36,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(rootView: MenuBarView(engine: engine))
+        popover.contentViewController = NSHostingController(
+            rootView: MenuBarView(engine: engine, openSettings: { [weak self] in self?.openSettings() })
+        )
 
         // Redraw the icon whenever the engine's scan state changes. `receive(on:)`
         // defers to the next main-loop tick so the @Published values are already
@@ -124,6 +130,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         }
+    }
+
+    /// Presents the Settings UI in a self-managed AppKit window.
+    ///
+    /// Pidlyse is an `LSUIElement` accessory app driven from an `NSStatusItem`,
+    /// so the popover's `MenuBarView` lives in a standalone `NSHostingController`
+    /// outside the SwiftUI `App` scene graph. From there, none of the sanctioned
+    /// ways to open the SwiftUI `Settings` scene present reliably: the deprecated
+    /// `@Environment(\.openSettings)` action is a no-op, the `showSettingsWindow:`
+    /// selector no-ops on macOS 14 ("Please use SettingsLink"), and `SettingsLink`
+    /// fires but never surfaces a window. Hosting `SettingsView` in a window we own
+    /// sidesteps the scene machinery entirely and gives reliable activation/focus.
+    func openSettings() {
+        if settingsWindow == nil {
+            let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(engine: engine)))
+            window.title = "Pidlyse Settings"
+            window.styleMask = [.titled, .closable, .resizable]
+            window.isReleasedWhenClosed = false
+            // A `.grouped` Form has no intrinsic height, so the hosting controller's
+            // fitting size collapses the window to its title bar. Give it an explicit
+            // content size tall enough to show all sections without scrolling;
+            // `.resizable` lets the user adjust if content ever clips.
+            window.setContentSize(NSSize(width: 360, height: 620))
+            window.center()
+            settingsWindow = window
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow?.makeKeyAndOrderFront(nil)
     }
 
     private func showContextMenu(from button: NSStatusBarButton) {
