@@ -46,13 +46,18 @@ Pidlyse sends real kill signals, so its trust story matters. The source is publi
 
 - **Runs as you, never root.** Kills use `Darwin.kill(pid, …)` and only succeed against your own processes; anything owned by another user (e.g. the root Docker daemon) returns `EPERM` and is left untouched. Pidlyse never escalates, never asks for an admin password.
 - **No network, no telemetry, no analytics.** Pidlyse makes zero network connections. It reads local process state and writes nothing back out.
-- **Writes only to `~/Library/Application Support/Pidlyse/`** — the optional `ports.json` override. No other disk writes; settings live in `UserDefaults`.
+- **Minimal disk footprint.** Reads `~/Library/Application Support/Pidlyse/ports.json` if the user-created file exists (the app never writes it); its only disk write is the settings plist via `UserDefaults` (`~/Library/Preferences/com.fakeneuron.pidlyse.plist`).
+- **Launch at login is opt-in.** Enabling it registers a login item via `SMAppService`. The registration persists until the app is removed or you disable the option in Settings.
 - **Never auto-kills.** Every kill is an explicit click; the flow is always SIGTERM → 2 s grace → SIGKILL, with a PID-reuse guard that refuses to escalate if the PID was recycled. Processes tied to a registered port are demoted to *Needs review* and excluded from "Clean all".
 - **Narrow, injection-free shell-out surface.** Pidlyse shells out to exactly three pinned, absolute-path binaries — `/bin/ps`, `/usr/sbin/lsof`, and `docker` (`/usr/local/bin/docker` or `/opt/homebrew/bin/docker`) — always with arguments passed as an array, never via a shell string. There is no `sh -c`, no `$PATH` lookup of the binary, and no user input interpolated into a command. Read it for yourself in [`ScanCore.swift`](Packages/PidlyseCore/Sources/PidlyseCore/ScanCore.swift), [`PortRegistry.swift`](Packages/PidlyseCore/Sources/PidlyseCore/PortRegistry.swift), [`DockerService.swift`](Pidlyse/DockerService.swift), and [`KillService.swift`](Pidlyse/KillService.swift).
 
 ### Verifying the download
 
 Release DMGs are **ad-hoc signed, not yet Apple-notarized**, so on first launch macOS Gatekeeper shows "Apple could not verify…". To open it: **right-click the app → Open** (once), or clear the quarantine flag with `xattr -d com.apple.quarantine /Applications/Pidlyse.app`. Because the source is public, you can also just build it yourself (`make build-release`). Each release publishes a **SHA-256 checksum** alongside the DMG — verify with `shasum -a 256 Pidlyse.dmg` and compare.
+
+### Uninstalling
+
+Drag Pidlyse.app to the Trash. The only residue is `~/Library/Preferences/com.fakeneuron.pidlyse.plist` (tiny settings file) and, if "Launch at login" was enabled, a login-item registration. Remove the prefs manually with `rm ~/Library/Preferences/com.fakeneuron.pidlyse.plist`; the login-item clears on its own once the app is gone.
 
 ## Design
 

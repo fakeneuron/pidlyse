@@ -16,7 +16,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- **PID-033** [light]🔧 | doc-footprint-accuracy — README "Security" section claims Pidlyse "Writes only to `~/Library/Application Support/Pidlyse/`". Footprint audit (2026-06-28) shows the app only *reads* an optional, user-created `ports.json` there and writes nothing to it — its sole persistence is small prefs via `UserDefaults` (`~/Library/Preferences/com.fakeneuron.pidlyse.plist`). Correct the wording; add the opt-in launch-at-login (SMAppService login item) note and a clean-uninstall line (drag to Trash; residue = tiny prefs plist + login-item registration only if enabled). Filed 2026-06-28.
+(none)
 
 ## Future Opportunities
 
@@ -25,6 +25,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-033** [light]🔧 | doc-footprint-accuracy — Completed 2026-06-28.
 - [x] **PID-032** [medium]🔧 | settings-wont-open — Completed 2026-06-28.
 - [x] **PID-EPIC-28** [heavy]🧠 | docker-panel — Completed 2026-06-26.
   - [x] **PID-28.1** [medium]🧠 | discovery — Completed 2026-06-26.
