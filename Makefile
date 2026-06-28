@@ -15,9 +15,12 @@ install:
 	ditto build/Release/Pidly.app /Applications/Pidly.app
 
 # Package the Release build into a drag-install DMG with an /Applications symlink.
+# Also emits build/Pidly.dmg.sha256 so a public download can publish a checksum
+# users verify with `shasum -a 256 -c Pidly.dmg.sha256`.
 dmg:
 	mkdir -p build/dmg-staging
 	cp -R build/Release/Pidly.app build/dmg-staging/
 	ln -sf /Applications build/dmg-staging/Applications
 	hdiutil create -volname Pidly -srcfolder build/dmg-staging -ov -format UDZO build/Pidly.dmg
 	rm -rf build/dmg-staging
+	cd build && shasum -a 256 Pidly.dmg | tee Pidly.dmg.sha256

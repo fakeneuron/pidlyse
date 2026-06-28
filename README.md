@@ -40,6 +40,20 @@ Build a Release `.app` with ad-hoc signing: `make build-release` (output: `build
 
 The icon pulses once when a new stray appears (suppressed under Reduce Motion).
 
+## Security — what Pidly can (and can't) touch
+
+Pidly sends real kill signals, so its trust story matters. The source is public precisely so you can verify all of the below:
+
+- **Runs as you, never root.** Kills use `Darwin.kill(pid, …)` and only succeed against your own processes; anything owned by another user (e.g. the root Docker daemon) returns `EPERM` and is left untouched. Pidly never escalates, never asks for an admin password.
+- **No network, no telemetry, no analytics.** Pidly makes zero network connections. It reads local process state and writes nothing back out.
+- **Writes only to `~/Library/Application Support/Pidly/`** — the optional `ports.json` override. No other disk writes; settings live in `UserDefaults`.
+- **Never auto-kills.** Every kill is an explicit click; the flow is always SIGTERM → 2 s grace → SIGKILL, with a PID-reuse guard that refuses to escalate if the PID was recycled. Processes tied to a registered port are demoted to *Needs review* and excluded from "Clean all".
+- **Narrow, injection-free shell-out surface.** Pidly shells out to exactly three pinned, absolute-path binaries — `/bin/ps`, `/usr/sbin/lsof`, and `docker` (`/usr/local/bin/docker` or `/opt/homebrew/bin/docker`) — always with arguments passed as an array, never via a shell string. There is no `sh -c`, no `$PATH` lookup of the binary, and no user input interpolated into a command. Read it for yourself in [`ScanCore.swift`](Packages/PidlyCore/Sources/PidlyCore/ScanCore.swift), [`PortRegistry.swift`](Packages/PidlyCore/Sources/PidlyCore/PortRegistry.swift), [`DockerService.swift`](Pidly/DockerService.swift), and [`KillService.swift`](Pidly/KillService.swift).
+
+### Verifying the download
+
+Release DMGs are **ad-hoc signed, not yet Apple-notarized**, so on first launch macOS Gatekeeper shows "Apple could not verify…". To open it: **right-click the app → Open** (once), or clear the quarantine flag with `xattr -d com.apple.quarantine /Applications/Pidly.app`. Because the source is public, you can also just build it yourself (`make build-release`). Each release publishes a **SHA-256 checksum** alongside the DMG — verify with `shasum -a 256 Pidly.dmg` and compare.
+
 ## Design
 
 See [`SPEC.md`](SPEC.md) for the full technical specification, scan logic, classification rules, and project structure.

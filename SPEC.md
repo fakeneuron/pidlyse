@@ -132,7 +132,7 @@ Configurable at runtime:
 
 ## Non-Goals (v1)
 
-- Docker / container management
+- ~~Docker / container management~~ — **delivered post-v1** (PID-EPIC-28): a Processes / Containers segmented toggle whose Containers tab lists running containers with per-row stop / stop+remove. All `docker` access stays in the app-side `DockerService`; pure parsing in `PidlyCore.DockerCore`.
 - Full Supabase stack awareness
 - Auto-start on login (deferred — add via `SMAppService` post-v1)
 - Animated menu bar icon beyond simple badge (partially delivered post-v1: a one-shot stray-found pulse, PID-026; continuous animation / scanning spinner remain out)

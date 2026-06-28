@@ -20,7 +20,8 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Future Opportunities
 
-(none)
+- **PID-030** [medium]🧠 | notarize-and-sign — Replace ad-hoc signing with Developer ID + Apple notarization + stapling (and the Hardened Runtime entitlement notarization requires). Removes the Gatekeeper "Apple could not verify…" warning on the public download. **Deferred 2026-06-28** — gated on $99/yr Apple Developer Program enrollment (operator opted to defer). Until then the public-trust story rests on the public source + SHA-256 checksum (shipped via `make dmg` + release.yml) + the honest right-click→Open install note in the README "Security" section.
+- **PID-031** [light]🔧 | public-download-page — Build the `/pidly` landing + download page in the **fakeneuron** repo (not here — pidly stays a clean code artifact). Page surfaces: DMG download, SHA-256 checksum, a demo GIF, a link to the public source, and a "what Pidly can touch" safety section (no root, no network, explicit-click kills). Cross-repo: pidly's only responsibility is producing the DMG + `.sha256` via `make dmg`. Filed 2026-06-28.
 
 ## Completed
 
