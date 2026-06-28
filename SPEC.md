@@ -10,7 +10,7 @@ A native macOS menu bar app for Apple Silicon that surfaces stray and zombie pro
 
 - **Language / UI**: Swift + SwiftUI, macOS 14+ target
 - **Menu bar**: AppKit `NSStatusItem` bridge (managed by `AppDelegate`) hosting SwiftUI views — left-click opens the popover, right-click shows a Quit menu. (`MenuBarExtra` was retired in PID-023 because it exposes only left-click.)
-- **Process enumeration**: `sysctl` or `ps aux` shell-out
+- **Process enumeration**: `ps -axww` shell-out (column-formatted); port-listener detection via `lsof -nPi -sTCP:LISTEN`. (`sysctl` is used in `KillService` for the PID-reuse start-time guard, not for enumeration.)
 - **No helper daemon** for v1. XPC service / `launchd` plist deferred to post-v1 if background scanning proves necessary.
 
 ---
@@ -20,22 +20,32 @@ A native macOS menu bar app for Apple Silicon that surfaces stray and zombie pro
 ```
 Pidlyse/
   Pidlyse.xcodeproj
+  Packages/
+    PidlyseCore/                  # pure, injectable, unit-tested core (SPM package)
+      Sources/PidlyseCore/
+        ScanCore.swift            # ps parse + stray detection + risk-tier classification
+        ProcessItem.swift         # model: pid, ppid, command, elapsed, tty, kind, riskTier, cpu%, rss; derived bucket
+        PortRegistry.swift        # compiled port table + user-override merge + lsof listener parse
+        DockerCore.swift          # pure `docker ps` output parsing
+        Container.swift           # model: id, name, image, status, ports
   Pidlyse/
-    PidlyseApp.swift          # @main, Settings scene + NSApplicationDelegateAdaptor
-    AppDelegate.swift       # NSStatusItem bridge: icon, popover, right-click Quit menu
-    MenuBarView.swift       # popover UI — process list
-    ScanEngine.swift        # ps enumeration + classification logic
-    ProcessItem.swift       # model: pid, name, age, tty, bucket
-    PortRegistry.swift      # hardcoded + parseable port table
-    KillService.swift       # safe kill wrapper (SIGTERM → SIGKILL fallback)
-    SettingsView.swift      # scan interval, thresholds, ignored pids
+    PidlyseApp.swift          # @main; required (inert) Settings scene + NSApplicationDelegateAdaptor
+    AppDelegate.swift         # NSStatusItem bridge: icon, popover, right-click Quit, self-managed Settings window
+    MenuBarView.swift         # popover UI — Processes/Containers toggle + process list
+    ContainersView.swift      # popover UI — running-container list with stop / stop+remove
+    ScanEngine.swift          # app-side scan lifecycle: timer, persistence, notifications (drives ScanCore)
+    DockerService.swift       # app-side docker CLI access: path resolution, shell-out, container listing
+    KillService.swift         # safe kill wrapper (SIGTERM → 2 s grace → SIGKILL; PID-reuse guard; docker-stop path)
+    SettingsView.swift        # scan interval, thresholds, ignored substrings, launch-at-login, notifications
+  PidlyseTests/
+    ScanEngineTests.swift     # unit tests for the PidlyseCore pipeline
 ```
 
 ---
 
 ## Scan Engine
 
-Runs on a configurable timer (default: every 2 min). Shells out to `ps aux` or uses `sysctl` directly to enumerate processes. Matches against a pattern set:
+Runs on a configurable timer (default: every 2 min). Shells out to `ps -axww -o pid=,ppid=,etime=,tty=,pcpu=,rss=,args=` to enumerate processes. Matches against a pattern set:
 
 | Pattern | `kind` | Category |
 |---------|--------|----------|
