@@ -1,5 +1,5 @@
 import SwiftUI
-import PidlyCore
+import PidlyseCore
 
 /// The popover content: a live two-section list (Safe / Needs Review) bound to
 /// `ScanEngine`, with rows grouped by `kind`. Safe items can be swept with one
@@ -62,7 +62,7 @@ struct MenuBarView: View {
 
     private var header: some View {
         HStack {
-            Text("Pidly").font(.headline)
+            Text("Pidlyse").font(.headline)
             Spacer()
             Button {
                 switch selectedTab {
@@ -87,7 +87,7 @@ struct MenuBarView: View {
                 Image(systemName: "power")
             }
             .buttonStyle(.borderless)
-            .help("Quit Pidly")
+            .help("Quit Pidlyse")
         }
         .padding(.horizontal)
         .padding(.vertical, 8)

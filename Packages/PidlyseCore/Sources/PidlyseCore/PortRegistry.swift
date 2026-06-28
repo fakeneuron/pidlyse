@@ -40,13 +40,13 @@ public enum PortRegistry {
     // MARK: - User port overrides (PID-025)
 
     /// User-editable override file, keyed by project: `{"siteguy": [3001, 8003], …}`.
-    /// Lives at `~/Library/Application Support/Pidly/ports.json`. Extend-only — its
+    /// Lives at `~/Library/Application Support/Pidlyse/ports.json`. Extend-only — its
     /// flattened ports are unioned with the compiled `registeredPorts`, so a user can
     /// add ports without recompiling but cannot remove a built-in. Decouples the manual
     /// CLAUDE.md ↔ `registeredPorts` sync burden for project-specific ports.
     static let userPortsFileURL: URL = {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return base.appendingPathComponent("Pidly/ports.json")
+        return base.appendingPathComponent("Pidlyse/ports.json")
     }()
 
     /// Compiled defaults merged with the user override file, computed once at startup.

@@ -1,4 +1,4 @@
-# Pidly
+# Pidlyse
 
 Native macOS menu bar app that spots stray dev processes and clears them in one click.
 
@@ -23,11 +23,11 @@ Sits beside the clock. Periodically scans for known process junk — orphaned te
 
 ## Build & Run
 
-Open `Pidly.xcodeproj` in Xcode and run (⌘R). The app lives in the menu bar — no Dock icon (`LSUIElement = YES`). Left-click the icon to open the popover; right-click (or two-finger tap) for a quick Quit menu.
+Open `Pidlyse.xcodeproj` in Xcode and run (⌘R). The app lives in the menu bar — no Dock icon (`LSUIElement = YES`). Left-click the icon to open the popover; right-click (or two-finger tap) for a quick Quit menu.
 
 Run the test suite from the command line with `make test`. The same suite runs automatically on every push to `main` via GitHub Actions (`.github/workflows/test.yml`).
 
-Build a Release `.app` with ad-hoc signing: `make build-release` (output: `build/Release/Pidly.app`). Copy it to `/Applications` with `make install`. Package a distributable DMG (drag-install, with `/Applications` symlink): `make dmg` (output: `build/Pidly.dmg`). Push a `v*` tag to trigger the release workflow (`.github/workflows/release.yml`), which builds the Release app, packages the DMG, and attaches it to a GitHub Release automatically.
+Build a Release `.app` with ad-hoc signing: `make build-release` (output: `build/Release/Pidlyse.app`). Copy it to `/Applications` with `make install`. Package a distributable DMG (drag-install, with `/Applications` symlink): `make dmg` (output: `build/Pidlyse.dmg`). Push a `v*` tag to trigger the release workflow (`.github/workflows/release.yml`), which builds the Release app, packages the DMG, and attaches it to a GitHub Release automatically.
 
 ## Menu Bar States
 
@@ -40,19 +40,19 @@ Build a Release `.app` with ad-hoc signing: `make build-release` (output: `build
 
 The icon pulses once when a new stray appears (suppressed under Reduce Motion).
 
-## Security — what Pidly can (and can't) touch
+## Security — what Pidlyse can (and can't) touch
 
-Pidly sends real kill signals, so its trust story matters. The source is public precisely so you can verify all of the below:
+Pidlyse sends real kill signals, so its trust story matters. The source is public precisely so you can verify all of the below:
 
-- **Runs as you, never root.** Kills use `Darwin.kill(pid, …)` and only succeed against your own processes; anything owned by another user (e.g. the root Docker daemon) returns `EPERM` and is left untouched. Pidly never escalates, never asks for an admin password.
-- **No network, no telemetry, no analytics.** Pidly makes zero network connections. It reads local process state and writes nothing back out.
-- **Writes only to `~/Library/Application Support/Pidly/`** — the optional `ports.json` override. No other disk writes; settings live in `UserDefaults`.
+- **Runs as you, never root.** Kills use `Darwin.kill(pid, …)` and only succeed against your own processes; anything owned by another user (e.g. the root Docker daemon) returns `EPERM` and is left untouched. Pidlyse never escalates, never asks for an admin password.
+- **No network, no telemetry, no analytics.** Pidlyse makes zero network connections. It reads local process state and writes nothing back out.
+- **Writes only to `~/Library/Application Support/Pidlyse/`** — the optional `ports.json` override. No other disk writes; settings live in `UserDefaults`.
 - **Never auto-kills.** Every kill is an explicit click; the flow is always SIGTERM → 2 s grace → SIGKILL, with a PID-reuse guard that refuses to escalate if the PID was recycled. Processes tied to a registered port are demoted to *Needs review* and excluded from "Clean all".
-- **Narrow, injection-free shell-out surface.** Pidly shells out to exactly three pinned, absolute-path binaries — `/bin/ps`, `/usr/sbin/lsof`, and `docker` (`/usr/local/bin/docker` or `/opt/homebrew/bin/docker`) — always with arguments passed as an array, never via a shell string. There is no `sh -c`, no `$PATH` lookup of the binary, and no user input interpolated into a command. Read it for yourself in [`ScanCore.swift`](Packages/PidlyCore/Sources/PidlyCore/ScanCore.swift), [`PortRegistry.swift`](Packages/PidlyCore/Sources/PidlyCore/PortRegistry.swift), [`DockerService.swift`](Pidly/DockerService.swift), and [`KillService.swift`](Pidly/KillService.swift).
+- **Narrow, injection-free shell-out surface.** Pidlyse shells out to exactly three pinned, absolute-path binaries — `/bin/ps`, `/usr/sbin/lsof`, and `docker` (`/usr/local/bin/docker` or `/opt/homebrew/bin/docker`) — always with arguments passed as an array, never via a shell string. There is no `sh -c`, no `$PATH` lookup of the binary, and no user input interpolated into a command. Read it for yourself in [`ScanCore.swift`](Packages/PidlyseCore/Sources/PidlyseCore/ScanCore.swift), [`PortRegistry.swift`](Packages/PidlyseCore/Sources/PidlyseCore/PortRegistry.swift), [`DockerService.swift`](Pidlyse/DockerService.swift), and [`KillService.swift`](Pidlyse/KillService.swift).
 
 ### Verifying the download
 
-Release DMGs are **ad-hoc signed, not yet Apple-notarized**, so on first launch macOS Gatekeeper shows "Apple could not verify…". To open it: **right-click the app → Open** (once), or clear the quarantine flag with `xattr -d com.apple.quarantine /Applications/Pidly.app`. Because the source is public, you can also just build it yourself (`make build-release`). Each release publishes a **SHA-256 checksum** alongside the DMG — verify with `shasum -a 256 Pidly.dmg` and compare.
+Release DMGs are **ad-hoc signed, not yet Apple-notarized**, so on first launch macOS Gatekeeper shows "Apple could not verify…". To open it: **right-click the app → Open** (once), or clear the quarantine flag with `xattr -d com.apple.quarantine /Applications/Pidlyse.app`. Because the source is public, you can also just build it yourself (`make build-release`). Each release publishes a **SHA-256 checksum** alongside the DMG — verify with `shasum -a 256 Pidlyse.dmg` and compare.
 
 ## Design
 

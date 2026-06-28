@@ -1,11 +1,11 @@
 import Foundation
 import UserNotifications
-import PidlyCore
+import PidlyseCore
 
 /// App-side scan lifecycle: owns the auto-scan `Timer`, the published `items`,
 /// `UserDefaults`-backed config, the dismissed/previous baselines, and the
 /// new-stray notification. The pure enumeration + classification it drives lives
-/// in `PidlyCore.ScanCore` (per CLAUDE.md, all scan + classification logic stays
+/// in `PidlyseCore.ScanCore` (per CLAUDE.md, all scan + classification logic stays
 /// in one place).
 final class ScanEngine: ObservableObject {
     static let defaultScanInterval: TimeInterval = 120

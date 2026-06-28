@@ -1,5 +1,5 @@
 import SwiftUI
-import PidlyCore
+import PidlyseCore
 
 /// The Containers tab of the popover: a list of running Docker containers
 /// (name / image / status / ports) with per-row stop and remove buttons.

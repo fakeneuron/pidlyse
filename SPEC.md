@@ -1,4 +1,4 @@
-# Pidly — Technical Specification
+# Pidlyse — Technical Specification
 
 ## Overview
 
@@ -18,10 +18,10 @@ A native macOS menu bar app for Apple Silicon that surfaces stray and zombie pro
 ## Project Structure
 
 ```
-Pidly/
-  Pidly.xcodeproj
-  Pidly/
-    PidlyApp.swift          # @main, Settings scene + NSApplicationDelegateAdaptor
+Pidlyse/
+  Pidlyse.xcodeproj
+  Pidlyse/
+    PidlyseApp.swift          # @main, Settings scene + NSApplicationDelegateAdaptor
     AppDelegate.swift       # NSStatusItem bridge: icon, popover, right-click Quit menu
     MenuBarView.swift       # popover UI — process list
     ScanEngine.swift        # ps enumeration + classification logic
@@ -93,7 +93,7 @@ Dismiss / ignore: snoozes that PID for the session (does not survive restart).
 
 `PortRegistry.swift` holds the canonical compiled port table (mirrored from CLAUDE.md global table). Loaded at startup.
 
-**User override file ([[PID-025]]):** at startup the app also reads an optional, user-editable JSON file at `~/Library/Application Support/Pidly/ports.json`, keyed by project:
+**User override file ([[PID-025]]):** at startup the app also reads an optional, user-editable JSON file at `~/Library/Application Support/Pidlyse/ports.json`, keyed by project:
 
 ```json
 { "siteguy": [3001, 8003], "bidviz": [5181, 8005] }
@@ -132,7 +132,7 @@ Configurable at runtime:
 
 ## Non-Goals (v1)
 
-- ~~Docker / container management~~ — **delivered post-v1** (PID-EPIC-28): a Processes / Containers segmented toggle whose Containers tab lists running containers with per-row stop / stop+remove. All `docker` access stays in the app-side `DockerService`; pure parsing in `PidlyCore.DockerCore`.
+- ~~Docker / container management~~ — **delivered post-v1** (PID-EPIC-28): a Processes / Containers segmented toggle whose Containers tab lists running containers with per-row stop / stop+remove. All `docker` access stays in the app-side `DockerService`; pure parsing in `PidlyseCore.DockerCore`.
 - Full Supabase stack awareness
 - Auto-start on login (deferred — add via `SMAppService` post-v1)
 - Animated menu bar icon beyond simple badge (partially delivered post-v1: a one-shot stray-found pulse, PID-026; continuous animation / scanning spinner remain out)

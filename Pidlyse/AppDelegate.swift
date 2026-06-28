@@ -2,7 +2,7 @@ import AppKit
 import Combine
 import SwiftUI
 
-/// Owns Pidly's menu bar presence. Pidly retired SwiftUI's `MenuBarExtra` in favor
+/// Owns Pidlyse's menu bar presence. Pidlyse retired SwiftUI's `MenuBarExtra` in favor
 /// of an AppKit `NSStatusItem` so the icon can respond to right-click — `MenuBarExtra`
 /// surfaces only left-click. The popover content reuses the SwiftUI `MenuBarView`
 /// (hosted in an `NSHostingController`); the icon is drawn natively on the status
@@ -10,7 +10,7 @@ import SwiftUI
 /// adapts to the menu bar appearance. Left-click toggles the popover; right-click
 /// shows a minimal context menu (Quit).
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    /// Single shared scan engine — also read by the `Settings` scene in `PidlyApp`.
+    /// Single shared scan engine — also read by the `Settings` scene in `PidlyseApp`.
     let engine = ScanEngine()
 
     private var statusItem: NSStatusItem!
@@ -65,7 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             symbol = "cpu"; badge = nil
         }
 
-        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Pidly")
+        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Pidlyse")
         image?.isTemplate = true
         button.image = image
 
@@ -129,7 +129,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showContextMenu(from button: NSStatusBarButton) {
         let menu = NSMenu()
         menu.addItem(
-            withTitle: "Quit Pidly",
+            withTitle: "Quit Pidlyse",
             action: #selector(NSApplication.terminate(_:)),
             keyEquivalent: "q"
         )

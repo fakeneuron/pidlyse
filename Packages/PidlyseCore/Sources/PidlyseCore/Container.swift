@@ -1,7 +1,7 @@
 import Foundation
 
 /// One running Docker container, parsed from `docker ps` output by `DockerCore`.
-/// A pure value type in `PidlyCore` so the parser stays unit-testable; the
+/// A pure value type in `PidlyseCore` so the parser stays unit-testable; the
 /// app-side `DockerService` owns the impure `docker` shell-outs that produce it
 /// (mirroring the `ProcessItem` / `ScanCore` / `ScanEngine` split).
 public struct Container: Identifiable, Equatable {

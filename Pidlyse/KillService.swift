@@ -1,5 +1,5 @@
 import Foundation
-import PidlyCore
+import PidlyseCore
 
 /// Safe kill wrapper: SIGTERM first, then a SIGKILL fallback after a 2 s grace
 /// period if the process is still alive. Docker processes route through

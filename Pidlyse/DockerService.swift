@@ -1,11 +1,11 @@
 import Foundation
-import PidlyCore
+import PidlyseCore
 
 /// Shared app-side access to the Docker CLI: path resolution, a single
 /// shell-out primitive, and a running-container listing. Owns the impure
 /// `docker` invocations (extracted from `KillService`) so the kill path and the
 /// upcoming container panel share one code path; the pure parsing lives in
-/// `PidlyCore.DockerCore` (mirrors the `ScanEngine` / `ScanCore` split).
+/// `PidlyseCore.DockerCore` (mirrors the `ScanEngine` / `ScanCore` split).
 enum DockerService {
     /// Path to the Docker CLI, or `nil` if not installed.
     static func cliPath() -> String? {

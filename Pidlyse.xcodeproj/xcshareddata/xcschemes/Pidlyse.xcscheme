@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "AAAA0000000000000000B101"
-               BuildableName = "Pidly.app"
-               BlueprintName = "Pidly"
-               ReferencedContainer = "container:Pidly.xcodeproj">
+               BuildableName = "Pidlyse.app"
+               BlueprintName = "Pidlyse"
+               ReferencedContainer = "container:Pidlyse.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "AAAA0000000000000000B11E"
-               BuildableName = "PidlyTests.xctest"
-               BlueprintName = "PidlyTests"
-               ReferencedContainer = "container:Pidly.xcodeproj">
+               BuildableName = "PidlyseTests.xctest"
+               BlueprintName = "PidlyseTests"
+               ReferencedContainer = "container:Pidlyse.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "AAAA0000000000000000B101"
-            BuildableName = "Pidly.app"
-            BlueprintName = "Pidly"
-            ReferencedContainer = "container:Pidly.xcodeproj">
+            BuildableName = "Pidlyse.app"
+            BlueprintName = "Pidlyse"
+            ReferencedContainer = "container:Pidlyse.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "AAAA0000000000000000B101"
-            BuildableName = "Pidly.app"
-            BlueprintName = "Pidly"
-            ReferencedContainer = "container:Pidly.xcodeproj">
+            BuildableName = "Pidlyse.app"
+            BlueprintName = "Pidlyse"
+            ReferencedContainer = "container:Pidlyse.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

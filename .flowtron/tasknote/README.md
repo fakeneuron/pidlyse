@@ -36,7 +36,7 @@ Project-specific prefixes:
 
 | Prefix | Area | Notes |
 |--------|------|-------|
-| `PID-` | Pidly (process scanner) | macOS menu bar app tasks |
+| `PID-` | Pidlyse (process scanner) | macOS menu bar app tasks |
 
 ## Archive layout
 
@@ -68,8 +68,8 @@ notes, API specs, DB schema docs, ADRs, inventories).
 
 ## Project quick commands
 
-- Build (Release, ad-hoc signed): `make build-release` → `build/Release/Pidly.app`; or `xcodebuild build -scheme Pidly` for a debug build
-- Package DMG: `make dmg` → `build/Pidly.dmg` (drag-install with /Applications symlink)
-- Tests: `xcodebuild test -scheme Pidly -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
+- Build (Release, ad-hoc signed): `make build-release` → `build/Release/Pidlyse.app`; or `xcodebuild build -scheme Pidlyse` for a debug build
+- Package DMG: `make dmg` → `build/Pidlyse.dmg` (drag-install with /Applications symlink)
+- Tests: `xcodebuild test -scheme Pidlyse -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
   (`CODE_SIGNING_ALLOWED=NO` is required for CLI test runs — pre-existing code-signing limitation in this environment)
-- Type check: `xcodebuild build -scheme Pidly` (Swift compiler surfaces all type errors; no separate linter)
+- Type check: `xcodebuild build -scheme Pidlyse` (Swift compiler surfaces all type errors; no separate linter)

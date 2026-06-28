@@ -1,6 +1,6 @@
 import XCTest
-import PidlyCore
-@testable import Pidly
+import PidlyseCore
+@testable import Pidlyse
 
 final class ScanEngineTests: XCTestCase {
 

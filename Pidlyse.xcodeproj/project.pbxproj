@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		AAAA0000000000000000B10A /* PidlyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B106 /* PidlyApp.swift */; };
+		AAAA0000000000000000B10A /* PidlyseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B106 /* PidlyseApp.swift */; };
 		AAAA0000000000000000B10B /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B107 /* MenuBarView.swift */; };
 		AAAA0000000000000000B10C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B108 /* Assets.xcassets */; };
 		AAAA0000000000000000B119 /* ScanEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B117 /* ScanEngine.swift */; };
@@ -17,8 +17,8 @@
 		AAAA0000000000000000B150 /* ContainersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B151 /* ContainersView.swift */; };
 		AAAA0000000000000000B131 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B130 /* SettingsView.swift */; };
 		AAAA0000000000000000B132 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B133 /* AppDelegate.swift */; };
-		AAAA0000000000000000B142 /* PidlyCore in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA0000000000000000B141 /* PidlyCore */; };
-		AAAA0000000000000000B144 /* PidlyCore in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA0000000000000000B143 /* PidlyCore */; };
+		AAAA0000000000000000B142 /* PidlyseCore in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA0000000000000000B141 /* PidlyseCore */; };
+		AAAA0000000000000000B144 /* PidlyseCore in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA0000000000000000B143 /* PidlyseCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -27,18 +27,18 @@
 			containerPortal = AAAA0000000000000000B100 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = AAAA0000000000000000B101;
-			remoteInfo = Pidly;
+			remoteInfo = Pidlyse;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		AAAA0000000000000000B102 /* Pidly.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pidly.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		AAAA0000000000000000B106 /* PidlyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PidlyApp.swift; sourceTree = "<group>"; };
+		AAAA0000000000000000B102 /* Pidlyse.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pidlyse.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AAAA0000000000000000B106 /* PidlyseApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PidlyseApp.swift; sourceTree = "<group>"; };
 		AAAA0000000000000000B107 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		AAAA0000000000000000B108 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AAAA0000000000000000B109 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AAAA0000000000000000B117 /* ScanEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanEngine.swift; sourceTree = "<group>"; };
-		AAAA0000000000000000B11A /* PidlyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PidlyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AAAA0000000000000000B11A /* PidlyseTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PidlyseTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AAAA0000000000000000B11B /* ScanEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanEngineTests.swift; sourceTree = "<group>"; };
 		AAAA0000000000000000B128 /* KillService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KillService.swift; sourceTree = "<group>"; };
 		AAAA0000000000000000B146 /* DockerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DockerService.swift; sourceTree = "<group>"; };
@@ -52,7 +52,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AAAA0000000000000000B142 /* PidlyCore in Frameworks */,
+				AAAA0000000000000000B142 /* PidlyseCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -60,7 +60,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AAAA0000000000000000B144 /* PidlyCore in Frameworks */,
+				AAAA0000000000000000B144 /* PidlyseCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -70,16 +70,16 @@
 		AAAA0000000000000000B103 = {
 			isa = PBXGroup;
 			children = (
-				AAAA0000000000000000B104 /* Pidly */,
-				AAAA0000000000000000B11D /* PidlyTests */,
+				AAAA0000000000000000B104 /* Pidlyse */,
+				AAAA0000000000000000B11D /* PidlyseTests */,
 				AAAA0000000000000000B105 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		AAAA0000000000000000B104 /* Pidly */ = {
+		AAAA0000000000000000B104 /* Pidlyse */ = {
 			isa = PBXGroup;
 			children = (
-				AAAA0000000000000000B106 /* PidlyApp.swift */,
+				AAAA0000000000000000B106 /* PidlyseApp.swift */,
 				AAAA0000000000000000B133 /* AppDelegate.swift */,
 				AAAA0000000000000000B107 /* MenuBarView.swift */,
 				AAAA0000000000000000B117 /* ScanEngine.swift */,
@@ -90,32 +90,32 @@
 				AAAA0000000000000000B108 /* Assets.xcassets */,
 				AAAA0000000000000000B109 /* Info.plist */,
 			);
-			path = Pidly;
+			path = Pidlyse;
 			sourceTree = "<group>";
 		};
 		AAAA0000000000000000B105 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				AAAA0000000000000000B102 /* Pidly.app */,
-				AAAA0000000000000000B11A /* PidlyTests.xctest */,
+				AAAA0000000000000000B102 /* Pidlyse.app */,
+				AAAA0000000000000000B11A /* PidlyseTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		AAAA0000000000000000B11D /* PidlyTests */ = {
+		AAAA0000000000000000B11D /* PidlyseTests */ = {
 			isa = PBXGroup;
 			children = (
 				AAAA0000000000000000B11B /* ScanEngineTests.swift */,
 			);
-			path = PidlyTests;
+			path = PidlyseTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		AAAA0000000000000000B101 /* Pidly */ = {
+		AAAA0000000000000000B101 /* Pidlyse */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = AAAA0000000000000000B115 /* Build configuration list for PBXNativeTarget "Pidly" */;
+			buildConfigurationList = AAAA0000000000000000B115 /* Build configuration list for PBXNativeTarget "Pidlyse" */;
 			buildPhases = (
 				AAAA0000000000000000B10D /* Sources */,
 				AAAA0000000000000000B10F /* Frameworks */,
@@ -125,17 +125,17 @@
 			);
 			dependencies = (
 			);
-			name = Pidly;
+			name = Pidlyse;
 			packageProductDependencies = (
-				AAAA0000000000000000B141 /* PidlyCore */,
+				AAAA0000000000000000B141 /* PidlyseCore */,
 			);
-			productName = Pidly;
-			productReference = AAAA0000000000000000B102 /* Pidly.app */;
+			productName = Pidlyse;
+			productReference = AAAA0000000000000000B102 /* Pidlyse.app */;
 			productType = "com.apple.product-type.application";
 		};
-		AAAA0000000000000000B11E /* PidlyTests */ = {
+		AAAA0000000000000000B11E /* PidlyseTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = AAAA0000000000000000B126 /* Build configuration list for PBXNativeTarget "PidlyTests" */;
+			buildConfigurationList = AAAA0000000000000000B126 /* Build configuration list for PBXNativeTarget "PidlyseTests" */;
 			buildPhases = (
 				AAAA0000000000000000B11F /* Sources */,
 				AAAA0000000000000000B120 /* Frameworks */,
@@ -146,12 +146,12 @@
 			dependencies = (
 				AAAA0000000000000000B123 /* PBXTargetDependency */,
 			);
-			name = PidlyTests;
+			name = PidlyseTests;
 			packageProductDependencies = (
-				AAAA0000000000000000B143 /* PidlyCore */,
+				AAAA0000000000000000B143 /* PidlyseCore */,
 			);
-			productName = PidlyTests;
-			productReference = AAAA0000000000000000B11A /* PidlyTests.xctest */;
+			productName = PidlyseTests;
+			productReference = AAAA0000000000000000B11A /* PidlyseTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -173,7 +173,7 @@
 					};
 				};
 			};
-			buildConfigurationList = AAAA0000000000000000B114 /* Build configuration list for PBXProject "Pidly" */;
+			buildConfigurationList = AAAA0000000000000000B114 /* Build configuration list for PBXProject "Pidlyse" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -183,14 +183,14 @@
 			);
 			mainGroup = AAAA0000000000000000B103;
 			packageReferences = (
-				AAAA0000000000000000B140 /* XCLocalSwiftPackageReference "Packages/PidlyCore" */,
+				AAAA0000000000000000B140 /* XCLocalSwiftPackageReference "Packages/PidlyseCore" */,
 			);
 			productRefGroup = AAAA0000000000000000B105 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				AAAA0000000000000000B101 /* Pidly */,
-				AAAA0000000000000000B11E /* PidlyTests */,
+				AAAA0000000000000000B101 /* Pidlyse */,
+				AAAA0000000000000000B11E /* PidlyseTests */,
 			);
 		};
 /* End PBXProject section */
@@ -218,7 +218,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AAAA0000000000000000B10A /* PidlyApp.swift in Sources */,
+				AAAA0000000000000000B10A /* PidlyseApp.swift in Sources */,
 				AAAA0000000000000000B132 /* AppDelegate.swift in Sources */,
 				AAAA0000000000000000B10B /* MenuBarView.swift in Sources */,
 				AAAA0000000000000000B119 /* ScanEngine.swift in Sources */,
@@ -242,7 +242,7 @@
 /* Begin PBXTargetDependency section */
 		AAAA0000000000000000B123 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = AAAA0000000000000000B101 /* Pidly */;
+			target = AAAA0000000000000000B101 /* Pidlyse */;
 			targetProxy = AAAA0000000000000000B122 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -378,13 +378,13 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = Pidly/Info.plist;
+				INFOPLIST_FILE = Pidlyse/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.fakeneuron.pidly;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fakeneuron.pidlyse;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -401,13 +401,13 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = Pidly/Info.plist;
+				INFOPLIST_FILE = Pidlyse/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.fakeneuron.pidly;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fakeneuron.pidlyse;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -424,11 +424,11 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.fakeneuron.PidlyTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fakeneuron.PidlyseTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Pidly.app/Contents/MacOS/Pidly";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Pidlyse.app/Contents/MacOS/Pidlyse";
 			};
 			name = Debug;
 		};
@@ -442,18 +442,18 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.fakeneuron.PidlyTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fakeneuron.PidlyseTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Pidly.app/Contents/MacOS/Pidly";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Pidlyse.app/Contents/MacOS/Pidlyse";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		AAAA0000000000000000B114 /* Build configuration list for PBXProject "Pidly" */ = {
+		AAAA0000000000000000B114 /* Build configuration list for PBXProject "Pidlyse" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				AAAA0000000000000000B110 /* Debug */,
@@ -462,7 +462,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		AAAA0000000000000000B115 /* Build configuration list for PBXNativeTarget "Pidly" */ = {
+		AAAA0000000000000000B115 /* Build configuration list for PBXNativeTarget "Pidlyse" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				AAAA0000000000000000B112 /* Debug */,
@@ -471,7 +471,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		AAAA0000000000000000B126 /* Build configuration list for PBXNativeTarget "PidlyTests" */ = {
+		AAAA0000000000000000B126 /* Build configuration list for PBXNativeTarget "PidlyseTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				AAAA0000000000000000B124 /* Debug */,
@@ -483,20 +483,20 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		AAAA0000000000000000B140 /* XCLocalSwiftPackageReference "Packages/PidlyCore" */ = {
+		AAAA0000000000000000B140 /* XCLocalSwiftPackageReference "Packages/PidlyseCore" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/PidlyCore;
+			relativePath = Packages/PidlyseCore;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		AAAA0000000000000000B141 /* PidlyCore */ = {
+		AAAA0000000000000000B141 /* PidlyseCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = PidlyCore;
+			productName = PidlyseCore;
 		};
-		AAAA0000000000000000B143 /* PidlyCore */ = {
+		AAAA0000000000000000B143 /* PidlyseCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = PidlyCore;
+			productName = PidlyseCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -1,8 +1,8 @@
-# Pidly — PLAN.md
+# Pidlyse — PLAN.md
 
 ## Vision
 
-Pidly is a native macOS menu bar app (Swift + SwiftUI, M-series) that scans for stray and zombie processes — orphaned test runners, playwright-mcp instances, zombie Chrome helpers — and surfaces them with a badge count. One click expands a tray UI with categorised candidates, kill buttons for safe ones, and a "needs review" section for anything tied to a registered port or recently started. The goal is to replace the manual `ps aux | grep` ritual with a permanent, low-friction process hygiene tool that lives beside the clock.
+Pidlyse is a native macOS menu bar app (Swift + SwiftUI, M-series) that scans for stray and zombie processes — orphaned test runners, playwright-mcp instances, zombie Chrome helpers — and surfaces them with a badge count. One click expands a tray UI with categorised candidates, kill buttons for safe ones, and a "needs review" section for anything tied to a registered port or recently started. The goal is to replace the manual `ps aux | grep` ritual with a permanent, low-friction process hygiene tool that lives beside the clock.
 
 See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
@@ -21,7 +21,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## Future Opportunities
 
 - **PID-030** [medium]🧠 | notarize-and-sign — Replace ad-hoc signing with Developer ID + Apple notarization + stapling (and the Hardened Runtime entitlement notarization requires). Removes the Gatekeeper "Apple could not verify…" warning on the public download. **Deferred 2026-06-28** — gated on $99/yr Apple Developer Program enrollment (operator opted to defer). Until then the public-trust story rests on the public source + SHA-256 checksum (shipped via `make dmg` + release.yml) + the honest right-click→Open install note in the README "Security" section.
-- **PID-031** [light]🔧 | public-download-page — Build the `/pidly` landing + download page in the **fakeneuron** repo (not here — pidly stays a clean code artifact). Page surfaces: DMG download, SHA-256 checksum, a demo GIF, a link to the public source, and a "what Pidly can touch" safety section (no root, no network, explicit-click kills). Cross-repo: pidly's only responsibility is producing the DMG + `.sha256` via `make dmg`. Filed 2026-06-28.
+- **PID-031** [light]🔧 | public-download-page — Build the `/pidlyse` landing + download page in the **fakeneuron** repo (not here — pidlyse stays a clean code artifact). Page surfaces: DMG download, SHA-256 checksum, a demo GIF, a link to the public source, and a "what Pidlyse can touch" safety section (no root, no network, explicit-click kills). Cross-repo: pidlyse's only responsibility is producing the DMG + `.sha256` via `make dmg`. Filed 2026-06-28.
 
 ## Completed
 
@@ -32,7 +32,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-28.4** [medium]🧠 | container-panel-ui — Completed 2026-06-26.
   - [x] **PID-28.5** [medium]🔧 | audit — Completed 2026-06-26.
 - [x] **PID-029** [medium]🔧 | drop-background-helper — Completed 2026-06-26.
-- [x] **PID-EPIC-27** [heavy]🧠 | xpc-background-scan — Abandoned 2026-06-26 — background scanning dropped (a background component felt too intrusive; Pidly stays a simple foreground-only menu-bar scanner). `.2` PidlyCore extraction kept as a benign refactor; `.3`/`.4` machinery removed in [[PID-029]].
+- [x] **PID-EPIC-27** [heavy]🧠 | xpc-background-scan — Abandoned 2026-06-26 — background scanning dropped (a background component felt too intrusive; Pidlyse stays a simple foreground-only menu-bar scanner). `.2` PidlyseCore extraction kept as a benign refactor; `.3`/`.4` machinery removed in [[PID-029]].
   - [x] **PID-27.1** [heavy]🧠 | discovery — Completed 2026-06-26.
   - [x] **PID-27.2** [medium]🧠 | shared-scan-core — Completed 2026-06-26.
   - [x] **PID-27.3** [heavy]🧠 | helper-target — Completed 2026-06-26.

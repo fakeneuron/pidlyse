@@ -72,6 +72,6 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .frame(width: 360)
-        .navigationTitle("Pidly")
+        .navigationTitle("Pidlyse")
     }
 }

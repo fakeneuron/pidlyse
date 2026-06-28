@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct PidlyApp: App {
+struct PidlyseApp: App {
     /// The menu bar item, popover, and scan engine are owned by `AppDelegate`
     /// (an AppKit `NSStatusItem` bridge — see AppDelegate.swift). This scene only
     /// declares the `Settings` window, which reads the delegate's shared engine.
