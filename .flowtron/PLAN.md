@@ -12,11 +12,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-- [ ] **PID-EPIC-036** [medium]🧠 | process-provenance-hints — Surface process-provenance hints per row in the Processes tab — port→project (PortRegistry), ppid→parent command, and Docker container-ownership (reuse KillService.findContainerID) — rendered uniformly and degrading gracefully when data is absent. Generalizes the docker cross-tab linkage idea. (Filed via /ft-epic-discovery; refined at .1 closure.)
-  - [x] **PID-036.1** [medium]🧠 | discovery — Completed 2026-06-28.
-  - [x] **PID-036.2** [medium]🧠 | provenance-core — Completed 2026-06-28.
-  - [x] **PID-036.3** [medium]🧠 | hints-ui — Completed 2026-06-28.
-  - [ ] **PID-036.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
+(none)
 
 ## Low
 
@@ -29,6 +25,11 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-EPIC-036** [medium]🧠 | process-provenance-hints — Completed 2026-06-29.
+  - [x] **PID-036.1** [medium]🧠 | discovery — Completed 2026-06-28.
+  - [x] **PID-036.2** [medium]🧠 | provenance-core — Completed 2026-06-28.
+  - [x] **PID-036.3** [medium]🧠 | hints-ui — Completed 2026-06-28.
+  - [x] **PID-036.4** [medium]🧠 | audit — Completed 2026-06-29.
 - [x] **PID-EPIC-35** [heavy]🧠 | security-sweep — Completed 2026-06-28.
   - [x] **PID-35.1** [heavy]🧠 | discovery — Completed 2026-06-28.
   - [x] **PID-35.2** [medium]🔧 | stderr-drain — Completed 2026-06-28.
