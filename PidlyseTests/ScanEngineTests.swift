@@ -367,6 +367,55 @@ final class ScanEngineTests: XCTestCase {
         XCTAssertEqual(pids, [1234])
     }
 
+    // MARK: - PortRegistry.parseListenerLine
+
+    func testParseListenerLine_registeredPort_returnsPIDAndPort() {
+        let line = "node       1234 user  22u  IPv4 0x0  0t0  TCP *:3001 (LISTEN)"
+        let match = PortRegistry.parseListenerLine(line)
+        XCTAssertEqual(match?.pid, 1234)
+        XCTAssertEqual(match?.port, 3001)
+    }
+
+    func testParseListenerLine_unregisteredPort_returnsNil() {
+        let line = "ruby       5678 user  11u  IPv4 0x0  0t0  TCP *:9999 (LISTEN)"
+        XCTAssertNil(PortRegistry.parseListenerLine(line))
+    }
+
+    // MARK: - PortRegistry.listeningPorts (PID-036.2 — PID→port map)
+
+    func testListeningPorts_multiLine_mapsEachPIDToItsPort() {
+        let output = """
+        node       1234 user  22u  IPv4 0x0  0t0  TCP *:3001 (LISTEN)
+        python     5678 user  11u  IPv4 0x0  0t0  TCP *:5173 (LISTEN)
+        """
+        let ports = PortRegistry.listeningPorts(lsofOutput: output)
+        XCTAssertEqual(ports, [1234: [3001], 5678: [5173]])
+    }
+
+    func testListeningPorts_samePIDmultiplePorts_accumulates() {
+        // One PID listening on two registered ports → both collected under that PID.
+        let output = """
+        node       1234 user  22u  IPv4 0x0  0t0  TCP *:3001 (LISTEN)
+        node       1234 user  23u  IPv4 0x0  0t0  TCP *:3002 (LISTEN)
+        """
+        let ports = PortRegistry.listeningPorts(lsofOutput: output)
+        XCTAssertEqual(ports, [1234: [3001, 3002]])
+    }
+
+    func testListeningPorts_headerAndUnregistered_skipped() {
+        let output = """
+        COMMAND    PID   USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
+        node       1234 user  22u  IPv4 0x0  0t0  TCP *:3001 (LISTEN)
+        ruby       5678 user  11u  IPv4 0x0  0t0  TCP *:9999 (LISTEN)
+        """
+        let ports = PortRegistry.listeningPorts(lsofOutput: output)
+        XCTAssertEqual(ports, [1234: [3001]])
+    }
+
+    func testListeningPorts_empty_returnsEmpty() {
+        XCTAssertTrue(PortRegistry.listeningPorts(lsofOutput: "").isEmpty)
+    }
+
     // MARK: - PortRegistry.registeredPorts (anti-drift canary)
 
     /// Tripwire for the manually-synced port table. `registeredPorts` mirrors
@@ -641,5 +690,35 @@ final class ScanCoreStartTimeTests: XCTestCase {
         let items = ScanCore.enumerate(elapsedThreshold: 30 * 60, psOutput: line,
                                        registeredPIDs: [])
         XCTAssertNil(items.first?.startTime)
+    }
+}
+
+/// Tests for the PID-036.2 ppid→parent-command resolver: looks the parent up by PID
+/// within the scan result set, returning its `displayPath` or nil when the parent
+/// isn't itself a candidate (the graceful-degrade case the UI relies on).
+final class ScanCoreParentResolutionTests: XCTestCase {
+
+    private func item(pid: Int32, ppid: Int32, command: String) -> ProcessItem {
+        ProcessItem(pid: pid, ppid: ppid, command: command, elapsed: 0,
+                    tty: "??", kind: .node, riskTier: .high, cpuPercent: 0, rssKB: 0)
+    }
+
+    func testParentCommand_parentInSet_returnsParentDisplayPath() {
+        let parent = item(pid: 200, ppid: 1, command: "/usr/local/bin/npm run dev")
+        let child = item(pid: 300, ppid: 200, command: "node node_modules/.bin/vite")
+        let resolved = ScanCore.parentCommand(ofPPID: child.ppid, in: [parent, child])
+        XCTAssertEqual(resolved, "bin/npm")
+    }
+
+    func testParentCommand_parentNotACandidate_returnsNil() {
+        // Parent (a shell) isn't a scanned candidate → graceful degrade to nil.
+        let child = item(pid: 300, ppid: 999, command: "node server.js")
+        XCTAssertNil(ScanCore.parentCommand(ofPPID: child.ppid, in: [child]))
+    }
+
+    func testParentCommand_launchd_returnsNil() {
+        // ppid 1 = launchd; orphans surface via isOrphan, not as a parent hint.
+        let child = item(pid: 300, ppid: 1, command: "node server.js")
+        XCTAssertNil(ScanCore.parentCommand(ofPPID: child.ppid, in: [child]))
     }
 }

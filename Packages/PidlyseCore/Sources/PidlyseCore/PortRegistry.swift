@@ -87,11 +87,19 @@ public enum PortRegistry {
     /// Parse one line of `lsof -nPi -sTCP:LISTEN` output, returning the PID only if
     /// the line's port appears in `ports` (defaults to the current `effectivePorts` when
     /// nil). Returns nil for the header line or ports not in the registry.
+    public static func parsePIDAndPort(_ line: String, ports: Set<Int>? = nil) -> Int32? {
+        parseListenerLine(line, ports: ports)?.pid
+    }
+
+    /// Parse one line of `lsof -nPi -sTCP:LISTEN` output into its (PID, registered port)
+    /// pair, or nil for the header line / ports not in `ports` (defaults to the current
+    /// `effectivePorts` when nil). Single source of truth for the listener-line column
+    /// layout; `parsePIDAndPort` and `listeningPorts` both build on it.
     ///
     /// Expected column layout (fields split on whitespace):
     ///   COMMAND(0) PID(1) USER(2) FD(3) TYPE(4) DEVICE(5) SIZE/OFF(6) NODE(7) NAME(8) [(LISTEN)]
     /// NAME format: `*:3001`, `127.0.0.1:3001`, or `[::1]:3001`
-    public static func parsePIDAndPort(_ line: String, ports: Set<Int>? = nil) -> Int32? {
+    public static func parseListenerLine(_ line: String, ports: Set<Int>? = nil) -> (pid: Int32, port: Int)? {
         let activePorts = ports ?? effectivePorts
         let fields = line.split(separator: " ", omittingEmptySubsequences: true)
         guard fields.count >= 9 else { return nil }
@@ -100,7 +108,24 @@ public enum PortRegistry {
         guard let colonIdx = name.lastIndex(of: ":") else { return nil }
         let portStr = String(name[name.index(after: colonIdx)...])
         guard let port = Int(portStr), activePorts.contains(port) else { return nil }
-        return pid
+        return (pid, port)
+    }
+
+    /// Map each listening PID to the set of registered ports it listens on, mirroring
+    /// `listeningPIDs`' injectable pipeline. A PID on multiple registered ports
+    /// accumulates them; header lines and unregistered ports are skipped. Exposed for
+    /// the per-row provenance hint (PID-036.3); the classifier still uses the bare PID
+    /// set from `listeningPIDs` for demotion.
+    public static func listeningPorts(lsofOutput: String? = nil) -> [Int32: Set<Int>] {
+        let output = lsofOutput ?? runLSOF()
+        let ports = effectivePorts  // capture once per scan; effectivePorts re-reads disk each call
+        var result = [Int32: Set<Int>]()
+        for line in output.split(separator: "\n", omittingEmptySubsequences: true) {
+            if let match = parseListenerLine(String(line), ports: ports) {
+                result[match.pid, default: []].insert(match.port)
+            }
+        }
+        return result
     }
 
     // MARK: - lsof shell-out

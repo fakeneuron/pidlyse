@@ -70,6 +70,18 @@ public enum ScanCore {
                            cpuPercent: cpuPercent, rssKB: rssKB, startTime: startTime)
     }
 
+    // MARK: - Provenance resolution
+
+    /// Resolve a child's parent to the parent candidate's compact `displayPath`,
+    /// looking only within the scan result set. Returns nil when the parent isn't
+    /// itself a scanned candidate (a shell, launchd, or any non-stray process) — the
+    /// common case, which the UI degrades gracefully (PID-036.3). launchd (`ppid == 1`)
+    /// is never resolved: orphans surface via `ProcessItem.isOrphan`, not here.
+    public static func parentCommand(ofPPID ppid: Int32, in items: [ProcessItem]) -> String? {
+        guard ppid > 1 else { return nil }
+        return items.first { $0.pid == ppid }?.displayPath
+    }
+
     // MARK: - Pure parsing helpers
 
     /// Split a `ps -o pid=,ppid=,etime=,tty=,pcpu=,rss=,args=` line into its fields. The
