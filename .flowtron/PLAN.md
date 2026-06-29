@@ -12,13 +12,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-- [ ] **PID-EPIC-35** [heavy]🧠 | security-sweep — Deep sweep of security practices, exploitability, and general code smells across the ~2.1k-LOC Swift surface (shell-out to docker/ps/sysctl, untrusted process-metadata parsing, kill/PID-reuse/privilege, port-registry JSON, distribution/trust). Findings-driven (filed via /ft-epic-discovery; refined at .1 closure).
-  - [x] **PID-35.1** [heavy]🧠 | discovery — Completed 2026-06-28.
-  - [x] **PID-35.2** [medium]🔧 | stderr-drain — Completed 2026-06-28.
-  - [x] **PID-35.3** [medium]🧠 | kill-path-hardening — Completed 2026-06-28.
-  - [x] **PID-35.4** [light]🔧 | smells-cleanup — Completed 2026-06-28.
-  - [x] **PID-35.5** [light]🔧 | ci-sha-pinning — Completed 2026-06-28.
-  - [ ] **PID-35.6** [heavy]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Verifies the remediation children sit well together; covers the F3/F4 fold into PID-030.
+(none)
 
 ## Low
 
@@ -30,6 +24,13 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-EPIC-35** [heavy]🧠 | security-sweep — Completed 2026-06-28.
+  - [x] **PID-35.1** [heavy]🧠 | discovery — Completed 2026-06-28.
+  - [x] **PID-35.2** [medium]🔧 | stderr-drain — Completed 2026-06-28.
+  - [x] **PID-35.3** [medium]🧠 | kill-path-hardening — Completed 2026-06-28.
+  - [x] **PID-35.4** [light]🔧 | smells-cleanup — Completed 2026-06-28.
+  - [x] **PID-35.5** [light]🔧 | ci-sha-pinning — Completed 2026-06-28.
+  - [x] **PID-35.6** [heavy]🧠 | audit — Completed 2026-06-28.
 - [x] **PID-EPIC-34** [light]🔧 | doc-hygiene — Completed 2026-06-28. Surfaced by audit-repo 2026-06-28 (Theme: Docs lag the last refactor wave).
   - [x] **PID-34.2** [light]🔧 | spec-structure-refresh — Completed 2026-06-28.
   - [x] **PID-34.3** [light]🔧 | settings-scene-comment — Completed 2026-06-28.
