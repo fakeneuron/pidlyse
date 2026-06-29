@@ -281,6 +281,12 @@ struct MenuBarView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1).truncationMode(.middle)
             }
+            if let owner = engine.containerOwners[item.pid] {
+                Text("owned by container \(owner)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1).truncationMode(.middle)
+            }
         }
         .padding(.leading, 4)
         .padding(.bottom, 4)

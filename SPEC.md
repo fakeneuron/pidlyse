@@ -95,7 +95,7 @@ Bulk action: "Kill all safe" applies the same flow to every safe-bucket process.
 
 Dismiss / ignore: snoozes that PID for the session (does not survive restart).
 
-"Why is this here?" expands inline classification reasoning: the stray signals that fired (no TTY / orphan / old) plus raw `tty · ppid · age`, and — when resolvable — provenance hints: the registered port(s) the PID listens on (`:5173 listening`, [[PID-005]] demotion) and its parent within the scan set (`child of <command>`). Hints are omitted when absent (no registered-port listener, or a parent that isn't itself a scanned candidate). (PID-EPIC-036)
+"Why is this here?" expands inline classification reasoning: the stray signals that fired (no TTY / orphan / old) plus raw `tty · ppid · age`, and — when resolvable — provenance hints: the registered port(s) the PID listens on (`:5173 listening`, [[PID-005]] demotion), its parent within the scan set (`child of <command>`), and the Docker container that owns it (`owned by container <name>`, [[PID-EPIC-037]]). Hints are omitted when absent (no registered-port listener, a parent that isn't itself a scanned candidate, or no owning container resolved). (PID-EPIC-036)
 
 ---
 
