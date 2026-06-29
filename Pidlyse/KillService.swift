@@ -143,19 +143,23 @@ enum KillService {
     }
 
     /// Return the container ID of the running container whose root PID matches
-    /// `pid`, or `nil` if no match is found.
+    /// `pid`, or `nil` if no match is found. Resolves all running containers in
+    /// a single `docker inspect` call (vs. one per container) to avoid O(N) CLI
+    /// round-trips when many containers are running.
     private static func findContainerID(for pid: Int32) -> String? {
         let listOutput = DockerService.run(["ps", "-q"]).output
-        for id in listOutput.split(separator: "\n", omittingEmptySubsequences: true).map(String.init) {
-            if containerPID(containerID: id) == pid { return id }
+        let ids = listOutput.split(separator: "\n", omittingEmptySubsequences: true).map(String.init)
+        guard !ids.isEmpty else { return nil }
+        // Bulk inspect: each output line is "<full-id>\t<State.Pid>"; docker prints
+        // nothing for IDs it can't resolve, so we parse by content, not by index.
+        let inspectOutput = DockerService.run(["inspect", "--format", "{{.Id}}\t{{.State.Pid}}"] + ids).output
+        for line in inspectOutput.split(separator: "\n", omittingEmptySubsequences: true) {
+            let parts = line.split(separator: "\t").map(String.init)
+            guard parts.count == 2,
+                  let containerPID = Int32(parts[1]),
+                  containerPID == pid else { continue }
+            return parts[0]
         }
         return nil
-    }
-
-    /// Return the root PID of a running container via `docker inspect`
-    /// (`State.Pid` — the container's init process as seen on the host).
-    private static func containerPID(containerID: String) -> Int32? {
-        let output = DockerService.run(["inspect", "--format", "{{.State.Pid}}", containerID]).output
-        return Int32(output.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 }

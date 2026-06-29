@@ -16,7 +16,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-35.1** [heavy]🧠 | discovery — Completed 2026-06-28.
   - [x] **PID-35.2** [medium]🔧 | stderr-drain — Completed 2026-06-28.
   - [x] **PID-35.3** [medium]🧠 | kill-path-hardening — Completed 2026-06-28.
-  - [ ] **PID-35.4** [light]🔧 | smells-cleanup — Code-smell cleanup (F6/F7/F9): recompute PortRegistry.effectivePorts per scan so ports.json edits apply without restart, tighten detectKind substring matching toward token boundaries, and resolve PID→container once per docker-kill instead of inspecting every running container.
+  - [x] **PID-35.4** [light]🔧 | smells-cleanup — Completed 2026-06-28.
   - [ ] **PID-35.5** [light]🔧 | ci-sha-pinning — Supply-chain hardening (F5): pin actions/checkout to a commit SHA instead of the mutable @v4 tag in release.yml and test.yml.
   - [ ] **PID-35.6** [heavy]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Verifies the remediation children sit well together; covers the F3/F4 fold into PID-030.
 

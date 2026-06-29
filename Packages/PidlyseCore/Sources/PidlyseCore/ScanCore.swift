@@ -124,16 +124,32 @@ public enum ScanCore {
         if s.contains("playwright") && s.contains("test") {
             return .playwrightTest
         }
-        if s.contains("pytest") { return .pytest }
-        if s.contains("vitest") { return .vitest }
-        if s.contains("vite") { return .vite }
-        if s.contains("jest") { return .jest }
-        if s.contains("uvicorn") { return .uvicorn }
-        if s.contains("docker") { return .docker }
-        if s.contains("npm") { return .npm }
+        if hasTokenBoundary(s, "pytest")  { return .pytest }
+        if hasTokenBoundary(s, "vitest")  { return .vitest }
+        if hasTokenBoundary(s, "vite")    { return .vite }
+        if hasTokenBoundary(s, "jest")    { return .jest }
+        if hasTokenBoundary(s, "uvicorn") { return .uvicorn }
+        if hasTokenBoundary(s, "docker")  { return .docker }
+        if hasTokenBoundary(s, "npm")     { return .npm }
         if s.hasPrefix("bun ") || s == "bun" || s.contains("/bun ") || s.hasSuffix("/bun") { return .bun }
         if s.contains("node ") || s.hasSuffix("node") { return .node }
         return nil
+    }
+
+    /// True when `token` appears at a word boundary in `s` — preceded by the
+    /// start of string, a slash, a period, or a space; followed by the end of
+    /// string, a slash, a period, or a space. Prevents tokens like "npm" from
+    /// matching "pnpm", or "jest" from matching "/path/jest-examples/server".
+    private static func hasTokenBoundary(_ s: String, _ token: String) -> Bool {
+        // Standalone command: "npm run dev" / "uvicorn …" / bare "bun"
+        if s.hasPrefix(token + " ") || s == token { return true }
+        // Path segment: "/usr/bin/npm …" or "node_modules/.bin/jest --watch"
+        if s.contains("/" + token + " ") || s.hasSuffix("/" + token) { return true }
+        // Reverse-DNS component: "com.docker.backend"
+        if s.contains("." + token + ".") || s.hasSuffix("." + token) { return true }
+        // Argument position: "python -m pytest tests/"
+        if s.contains(" " + token + " ") || s.hasSuffix(" " + token) { return true }
+        return false
     }
 
     /// Risk tier = base risk by kind, adjusted by stray signals. A process is a

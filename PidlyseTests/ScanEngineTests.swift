@@ -98,6 +98,17 @@ final class ScanEngineTests: XCTestCase {
         XCTAssertNil(ScanCore.detectKind("/usr/sbin/cfprefsd agent"))
     }
 
+    func testDetectKind_pnpmIsNotNpm() {
+        // pnpm contains "npm" as a substring — the token-boundary guard must prevent a match.
+        XCTAssertNil(ScanCore.detectKind("pnpm run dev"))
+        XCTAssertNil(ScanCore.detectKind("pnpm install"))
+    }
+
+    func testDetectKind_jestPathIsNotJest() {
+        // A user project directory named "jest-examples" must not match the jest guard.
+        XCTAssertNil(ScanCore.detectKind("/Users/user/jest-examples/server start"))
+    }
+
     // MARK: - riskTier / bucket
 
     func testOrphanedOldPytest_isEasyKill() {

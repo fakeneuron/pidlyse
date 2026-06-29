@@ -49,9 +49,9 @@ public enum PortRegistry {
         return base.appendingPathComponent("Pidlyse/ports.json")
     }()
 
-    /// Compiled defaults merged with the user override file, computed once at startup.
-    /// Port classification consults this set, not the raw `registeredPorts`.
-    static let effectivePorts: Set<Int> = mergedPorts(userJSON: loadUserPortsJSON())
+    /// Compiled defaults merged with the user override file, recomputed on each access so
+    /// edits to `ports.json` take effect on the next scan without an app restart.
+    static var effectivePorts: Set<Int> { mergedPorts(userJSON: loadUserPortsJSON()) }
 
     /// Pure merge: decode the keyed-by-project JSON, flatten its port lists, and union
     /// with the built-in set. Malformed or absent JSON yields the built-ins unchanged —
@@ -74,9 +74,10 @@ public enum PortRegistry {
     /// `lsofOutput` is injectable so the pure pipeline can be unit-tested without shelling out.
     public static func listeningPIDs(lsofOutput: String? = nil) -> Set<Int32> {
         let output = lsofOutput ?? runLSOF()
+        let ports = effectivePorts  // capture once per scan; effectivePorts re-reads disk each call
         var result = Set<Int32>()
         for line in output.split(separator: "\n", omittingEmptySubsequences: true) {
-            if let pid = parsePIDAndPort(String(line)) {
+            if let pid = parsePIDAndPort(String(line), ports: ports) {
                 result.insert(pid)
             }
         }
@@ -84,20 +85,21 @@ public enum PortRegistry {
     }
 
     /// Parse one line of `lsof -nPi -sTCP:LISTEN` output, returning the PID only if
-    /// the line's port appears in `effectivePorts` (compiled defaults ∪ user override
-    /// file). Returns nil for the header line or ports not in the registry.
+    /// the line's port appears in `ports` (defaults to the current `effectivePorts` when
+    /// nil). Returns nil for the header line or ports not in the registry.
     ///
     /// Expected column layout (fields split on whitespace):
     ///   COMMAND(0) PID(1) USER(2) FD(3) TYPE(4) DEVICE(5) SIZE/OFF(6) NODE(7) NAME(8) [(LISTEN)]
     /// NAME format: `*:3001`, `127.0.0.1:3001`, or `[::1]:3001`
-    public static func parsePIDAndPort(_ line: String) -> Int32? {
+    public static func parsePIDAndPort(_ line: String, ports: Set<Int>? = nil) -> Int32? {
+        let activePorts = ports ?? effectivePorts
         let fields = line.split(separator: " ", omittingEmptySubsequences: true)
         guard fields.count >= 9 else { return nil }
         guard let pid = Int32(fields[1]) else { return nil }
         let name = String(fields[8])
         guard let colonIdx = name.lastIndex(of: ":") else { return nil }
         let portStr = String(name[name.index(after: colonIdx)...])
-        guard let port = Int(portStr), effectivePorts.contains(port) else { return nil }
+        guard let port = Int(portStr), activePorts.contains(port) else { return nil }
         return pid
     }
 
