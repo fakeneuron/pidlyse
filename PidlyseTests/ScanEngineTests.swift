@@ -843,3 +843,84 @@ final class CwdResolverTests: XCTestCase {
         XCTAssertEqual(result, [200: ProcessCwd(label: "scratch", fullPath: "~/scratch")])
     }
 }
+
+/// Tests for the PID-039 wrapper collapse: an npm/npx launcher and its single
+/// scanned child fold into one row that keeps the wrapper's *identity* (pid →
+/// kill target) but the child's *kind/command* (label). Only the 1:1 case folds.
+final class ScanCoreWrapperCollapseTests: XCTestCase {
+
+    private func item(pid: Int32, ppid: Int32, command: String, kind: ProcessKind,
+                      riskTier: RiskTier = .moderate, cpu: Double = 0, rss: Int = 0,
+                      startTime: ProcStartTime? = nil) -> ProcessItem {
+        ProcessItem(pid: pid, ppid: ppid, command: command, elapsed: 0, tty: "ttys000",
+                    kind: kind, riskTier: riskTier, cpuPercent: cpu, rssKB: rss, startTime: startTime)
+    }
+
+    func testCollapse_npmExecPlaywright_mergesKeepingWrapperIdentity() {
+        // Both wrapper and child classify as .playwrightMCP (the in-group double).
+        let token = ProcStartTime(sec: 11, usec: 22)
+        let wrapper = item(pid: 105, ppid: 99945, command: "npm exec @playwright/mcp@latest --headless",
+                           kind: .playwrightMCP, cpu: 0.2, rss: 336, startTime: token)
+        let child = item(pid: 160, ppid: 105, command: "node /Users/x/.npm/_npx/abc/.bin/playwright-mcp --headless",
+                         kind: .playwrightMCP, cpu: 1.0, rss: 80)
+        let result = ScanCore.collapseWrappers([wrapper, child])
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.pid, 105)              // identity/kill target = wrapper root
+        XCTAssertEqual(result.first?.startTime, token)      // PID-reuse guard validates the root
+        XCTAssertEqual(result.first?.kind, .playwrightMCP)
+        XCTAssertEqual(result.first?.command, child.command) // label/displayPath = child
+        XCTAssertEqual(result.first?.rssKB, 416)            // summed
+        XCTAssertEqual(result.first?.cpuPercent ?? 0, 1.2, accuracy: 0.0001)
+    }
+
+    func testCollapse_npmRunDevVite_mergesToSingleViteRow() {
+        let wrapper = item(pid: 200, ppid: 1, command: "npm run dev", kind: .npm, rss: 2704)
+        let child = item(pid: 300, ppid: 200,
+                         command: "node /Users/x/code/bananapeel/frontend/node_modules/.bin/vite",
+                         kind: .vite, rss: 12432)
+        let result = ScanCore.collapseWrappers([wrapper, child])
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.pid, 200)
+        XCTAssertEqual(result.first?.kind, .vite)
+        XCTAssertEqual(result.first?.rssKB, 2704 + 12432)
+    }
+
+    func testCollapse_wrapperWithNoScannedChild_unchanged() {
+        // Orphaned `npm run dev` whose server died — nothing to fold into.
+        let wrapper = item(pid: 200, ppid: 1, command: "npm run dev", kind: .npm)
+        let result = ScanCore.collapseWrappers([wrapper])
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.pid, 200)
+        XCTAssertEqual(result.first?.kind, .npm)
+    }
+
+    func testCollapse_wrapperWithTwoScannedChildren_unchanged() {
+        // >1 scanned child → leave untouched (unique row ids, unambiguous kill).
+        let wrapper = item(pid: 200, ppid: 1, command: "npm run dev", kind: .npm)
+        let viteChild = item(pid: 300, ppid: 200, command: "node .bin/vite", kind: .vite)
+        let vitestChild = item(pid: 400, ppid: 200, command: "node .bin/vitest run", kind: .vitest)
+        let result = ScanCore.collapseWrappers([wrapper, viteChild, vitestChild])
+        XCTAssertEqual(result.count, 3)
+        XCTAssertEqual(Set(result.map { $0.pid }), [200, 300, 400])
+    }
+
+    func testCollapse_nonWrapperParentWithChild_unchanged() {
+        // A pytest parent is not an npm/npx launcher → no collapse.
+        let parent = item(pid: 3000, ppid: 2999, command: "python -m pytest tests/", kind: .pytest)
+        let child = item(pid: 3001, ppid: 3000, command: "node .bin/vite", kind: .vite)
+        let result = ScanCore.collapseWrappers([parent, child])
+        XCTAssertEqual(result.count, 2)
+    }
+
+    func testCollapse_endToEndThroughEnumerate() {
+        // The collapse runs as the final enumerate step on real `ps`-shaped output.
+        let output = """
+          105 99945 14:55:40 ttys000 0.0 336 npm exec @playwright/mcp@latest --headless --output-dir /tmp/playwright-mcp
+          160   105 14:55:40 ttys000 0.0 80 node /Users/x/.npm/_npx/abc/node_modules/.bin/playwright-mcp --headless
+        """
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60, psOutput: output)
+        XCTAssertEqual(items.count, 1)
+        XCTAssertEqual(items.first?.pid, 105)
+        XCTAssertEqual(items.first?.kind, .playwrightMCP)
+    }
+}

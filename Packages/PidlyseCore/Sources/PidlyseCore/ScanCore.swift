@@ -39,7 +39,61 @@ public enum ScanCore {
         if !dismissedPIDs.isEmpty {
             all = all.filter { !dismissedPIDs.contains($0.pid) }
         }
-        return all
+        return collapseWrappers(all)
+    }
+
+    // MARK: - Wrapper collapse (PID-039)
+
+    /// Fold each npm/npx *wrapper* parent and its single scanned child into one
+    /// row. A wrapper (`npm run dev`, `npm exec @playwright/mcp`) is just a
+    /// launcher whose meaningful payload is the child it spawned (vite, the
+    /// playwright-mcp node process); surfacing both reads as a duplicate — the
+    /// same `npm` appearing as its own row and again under its child. The merged
+    /// row takes its **identity** (pid/ppid/tty/startTime — i.e. the kill target
+    /// and the PID-reuse guard) from the wrapper root, so killing it tears down
+    /// the whole subtree; but its **kind/command/riskTier** come from the child,
+    /// so it groups and labels as the real process. CPU + RAM are summed.
+    ///
+    /// Only the 1:1 case collapses. A wrapper with zero scanned children (e.g. an
+    /// orphaned `npm run dev` whose server already died) or with more than one is
+    /// left untouched — that keeps every row's `id` (its pid) unique and the kill
+    /// target unambiguous. All observed real trees are 1:1.
+    public static func collapseWrappers(_ items: [ProcessItem]) -> [ProcessItem] {
+        let childrenByPPID = Dictionary(grouping: items, by: { $0.ppid })
+        var consumed = Set<Int32>()
+        var mergedByWrapperPID: [Int32: ProcessItem] = [:]
+        for wrapper in items where isNpmWrapper(wrapper.command) {
+            guard !consumed.contains(wrapper.pid) else { continue }
+            let children = (childrenByPPID[wrapper.pid] ?? []).filter { !consumed.contains($0.pid) }
+            guard children.count == 1, let child = children.first else { continue }
+            consumed.insert(wrapper.pid)
+            consumed.insert(child.pid)
+            mergedByWrapperPID[wrapper.pid] = ProcessItem(
+                pid: wrapper.pid, ppid: wrapper.ppid, command: child.command,
+                elapsed: wrapper.elapsed, tty: wrapper.tty, kind: child.kind,
+                riskTier: child.riskTier,
+                cpuPercent: wrapper.cpuPercent + child.cpuPercent,
+                rssKB: wrapper.rssKB + child.rssKB, startTime: wrapper.startTime)
+        }
+        guard !consumed.isEmpty else { return items }
+        return items.compactMap { item in
+            if let merged = mergedByWrapperPID[item.pid] { return merged }
+            if consumed.contains(item.pid) { return nil }
+            return item
+        }
+    }
+
+    /// True when `command` is an npm/npx launcher invocation — the wrapper-process
+    /// shape `collapseWrappers` folds into its child. Matches a bare `npm`/`npx`,
+    /// a path-qualified launcher (`/usr/local/bin/npm run …`), or the
+    /// `npm-cli.js` / `npx-cli.js` form. Deliberately command-based, not
+    /// `kind`-based: `npm exec @playwright/mcp` classifies as `.playwrightMCP`
+    /// (its args contain `@playwright/mcp`), so the wrapper is not always `.npm`.
+    private static func isNpmWrapper(_ command: String) -> Bool {
+        let s = command.lowercased()
+        return s.hasPrefix("npm ") || s == "npm" || s.contains("/npm ") || s.hasSuffix("/npm")
+            || s.hasPrefix("npx ") || s == "npx" || s.contains("/npx ") || s.hasSuffix("/npx")
+            || s.contains("npm-cli.js") || s.contains("npx-cli.js")
     }
 
     /// Build one classified `ProcessItem` from a `ps` line, or `nil` if the line

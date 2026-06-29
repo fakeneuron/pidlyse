@@ -12,7 +12,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-- [ ] **PID-039** [medium]🧠 | npm-surface-dedup — `npm` reads as confusing in the UI: it appears both as its own process row/group and nested under others (e.g. playwright), so the same `npm` looks duplicated. Investigate the process grouping/labeling ([[PID-13.3]] process-patterns) and disambiguate. Surfaced by the PID-037.3 visual confirm.
 - [ ] **PID-040** [medium]🧠 | popover-realign — Bug: when a process disappears (e.g. closing playwright-mcp) the menu-bar popover content height changes and the window/notch shifts and misaligns under the status item. Re-anchor the popover on content-size change. Surfaced by the PID-037.3 visual confirm.
 
 ## Low
@@ -24,6 +23,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - **PID-030** [medium]🧠 | notarize-and-sign — Replace ad-hoc signing with Developer ID + Apple notarization + stapling (and the Hardened Runtime entitlement notarization requires). Removes the Gatekeeper "Apple could not verify…" warning on the public download. **Deferred 2026-06-28** — gated on $99/yr Apple Developer Program enrollment (operator opted to defer). Until then the public-trust story rests on the public source + SHA-256 checksum (shipped via `make dmg` + release.yml) + the honest right-click→Open install note in the README "Security" section. (Confirmed home for the no-sandbox / Hardened-Runtime posture by the [[PID-EPIC-35]] security sweep — F3/F4 folded here, no duplicate child filed.)
 ## Completed
 
+- [x] **PID-039** [medium]🧠 | npm-surface-dedup — Completed 2026-06-29.
 - [x] **PID-038** [medium]🧠 | cwd-provenance — Completed 2026-06-29.
 - [x] **PID-EPIC-037** [medium]🧠 | docker-ownership-hint — Completed 2026-06-29.
   - [x] **PID-037.1** [medium]🧠 | discovery — Completed 2026-06-29.
