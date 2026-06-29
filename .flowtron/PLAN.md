@@ -18,6 +18,10 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-037.3** [medium]🧠 | ownership-ui — Completed 2026-06-29.
   - [ ] **PID-037.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest `.N` child.
 
+- [ ] **PID-038** [medium]🧠 | cwd-provenance — Deepen the row-expansion provenance: for bare `npm`/`node`/`python` rows, hint the working directory / project folder the process runs in (e.g. `in ~/code/bidviz`), so the owner is identifiable beyond the executable name. Needs a cwd resolver (`proc_pidinfo` PROC_PIDVNODEPATHINFO or `lsof -p`). Extends the [[PID-EPIC-037]] / [[PID-EPIC-036]] provenance hints. Surfaced by the PID-037.3 visual confirm.
+- [ ] **PID-039** [medium]🧠 | npm-surface-dedup — `npm` reads as confusing in the UI: it appears both as its own process row/group and nested under others (e.g. playwright), so the same `npm` looks duplicated. Investigate the process grouping/labeling ([[PID-13.3]] process-patterns) and disambiguate. Surfaced by the PID-037.3 visual confirm.
+- [ ] **PID-040** [medium]🧠 | popover-realign — Bug: when a process disappears (e.g. closing playwright-mcp) the menu-bar popover content height changes and the window/notch shifts and misaligns under the status item. Re-anchor the popover on content-size change. Surfaced by the PID-037.3 visual confirm.
+
 ## Low
 
 (none)
