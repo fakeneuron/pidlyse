@@ -12,12 +12,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-- [ ] **PID-EPIC-037** [medium]🧠 | docker-ownership-hint — Show "owned by container <name>" in the Processes-tab row expansion for docker-owned PIDs. Promoted from the deferred PID-037 line; adds a scan-time container PID→name cache (single bulk `docker inspect`, reused by the kill path) to retire the O(n) `findContainerID` smell (F9). Deferred from [[PID-EPIC-036]] (port+ppid shipped first).
-  - [x] **PID-037.1** [medium]🧠 | discovery — Completed 2026-06-29.
-  - [x] **PID-037.2** [medium]🧠 | owner-cache — Completed 2026-06-29.
-  - [x] **PID-037.3** [medium]🧠 | ownership-ui — Completed 2026-06-29.
-  - [ ] **PID-037.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest `.N` child.
-
 - [ ] **PID-038** [medium]🧠 | cwd-provenance — Deepen the row-expansion provenance: for bare `npm`/`node`/`python` rows, hint the working directory / project folder the process runs in (e.g. `in ~/code/bidviz`), so the owner is identifiable beyond the executable name. Needs a cwd resolver (`proc_pidinfo` PROC_PIDVNODEPATHINFO or `lsof -p`). Extends the [[PID-EPIC-037]] / [[PID-EPIC-036]] provenance hints. Surfaced by the PID-037.3 visual confirm.
 - [ ] **PID-039** [medium]🧠 | npm-surface-dedup — `npm` reads as confusing in the UI: it appears both as its own process row/group and nested under others (e.g. playwright), so the same `npm` looks duplicated. Investigate the process grouping/labeling ([[PID-13.3]] process-patterns) and disambiguate. Surfaced by the PID-037.3 visual confirm.
 - [ ] **PID-040** [medium]🧠 | popover-realign — Bug: when a process disappears (e.g. closing playwright-mcp) the menu-bar popover content height changes and the window/notch shifts and misaligns under the status item. Re-anchor the popover on content-size change. Surfaced by the PID-037.3 visual confirm.
@@ -31,6 +25,11 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - **PID-030** [medium]🧠 | notarize-and-sign — Replace ad-hoc signing with Developer ID + Apple notarization + stapling (and the Hardened Runtime entitlement notarization requires). Removes the Gatekeeper "Apple could not verify…" warning on the public download. **Deferred 2026-06-28** — gated on $99/yr Apple Developer Program enrollment (operator opted to defer). Until then the public-trust story rests on the public source + SHA-256 checksum (shipped via `make dmg` + release.yml) + the honest right-click→Open install note in the README "Security" section. (Confirmed home for the no-sandbox / Hardened-Runtime posture by the [[PID-EPIC-35]] security sweep — F3/F4 folded here, no duplicate child filed.)
 ## Completed
 
+- [x] **PID-EPIC-037** [medium]🧠 | docker-ownership-hint — Completed 2026-06-29.
+  - [x] **PID-037.1** [medium]🧠 | discovery — Completed 2026-06-29.
+  - [x] **PID-037.2** [medium]🧠 | owner-cache — Completed 2026-06-29.
+  - [x] **PID-037.3** [medium]🧠 | ownership-ui — Completed 2026-06-29.
+  - [x] **PID-037.4** [medium]🧠 | audit — Completed 2026-06-29.
 - [x] **PID-EPIC-036** [medium]🧠 | process-provenance-hints — Completed 2026-06-29.
   - [x] **PID-036.1** [medium]🧠 | discovery — Completed 2026-06-28.
   - [x] **PID-036.2** [medium]🧠 | provenance-core — Completed 2026-06-28.
