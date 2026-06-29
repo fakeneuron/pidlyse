@@ -17,7 +17,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-(none)
+- [ ] **PID-041** [light]🔧 | onchange-deprecation — Migrate the two deprecated `onChange(of:perform:)` call sites (MenuBarView.swift, ContainersView.swift) to the macOS-14 zero/two-parameter `onChange` closure to clear the build warnings.
 
 ## Future Opportunities
 
