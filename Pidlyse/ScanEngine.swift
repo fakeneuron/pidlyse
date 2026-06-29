@@ -13,6 +13,11 @@ final class ScanEngine: ObservableObject {
     @Published private(set) var items: [ProcessItem] = []
     @Published private(set) var isScanning: Bool = false
 
+    /// PID → the registered ports it listens on, captured at scan time for the
+    /// per-row provenance hint (PID-036.3). Computed once per scan; its keys are
+    /// the same set `enumerate` uses for port-demotion (so no second `lsof` runs).
+    @Published private(set) var listeningPorts: [Int32: Set<Int>] = [:]
+
     /// How often (seconds) the background timer auto-scans. Persisted to UserDefaults.
     @Published var scanInterval: TimeInterval = 120 {
         didSet {
@@ -88,15 +93,23 @@ final class ScanEngine: ObservableObject {
         let ignored = ignoredNames
         let dismissed = dismissedPIDs
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            // Resolve the registered-port listeners once: its keys feed the
+            // classifier's port-demotion (passed as registeredPIDs so enumerate
+            // doesn't re-run lsof), and the full map drives the per-row port hint
+            // (PID-036.3).
+            let portMap = PortRegistry.listeningPorts()
             // Capture each candidate's start time at scan so the kill path can detect
             // a PID recycled between this scan and a later kill click. (PID-35.3)
-            let result = ScanCore.enumerate(elapsedThreshold: threshold, ignoredNames: ignored,
+            let result = ScanCore.enumerate(elapsedThreshold: threshold,
+                                            registeredPIDs: Set(portMap.keys),
+                                            ignoredNames: ignored,
                                             dismissedPIDs: dismissed,
                                             startTimeProvider: KillService.startTime)
             DispatchQueue.main.async {
                 let oldPIDs = self?.previousPIDs
                 self?.previousPIDs = Set(result.map { $0.pid })
                 self?.items = result
+                self?.listeningPorts = portMap
                 self?.isScanning = false
                 self?.fireNotificationIfNeeded(newItems: result, previousPIDs: oldPIDs)
             }

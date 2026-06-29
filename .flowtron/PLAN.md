@@ -15,7 +15,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - [ ] **PID-EPIC-036** [medium]🧠 | process-provenance-hints — Surface process-provenance hints per row in the Processes tab — port→project (PortRegistry), ppid→parent command, and Docker container-ownership (reuse KillService.findContainerID) — rendered uniformly and degrading gracefully when data is absent. Generalizes the docker cross-tab linkage idea. (Filed via /ft-epic-discovery; refined at .1 closure.)
   - [x] **PID-036.1** [medium]🧠 | discovery — Completed 2026-06-28.
   - [x] **PID-036.2** [medium]🧠 | provenance-core — Completed 2026-06-28.
-  - [ ] **PID-036.3** [medium]🧠 | hints-ui — Render port (':5173 listening') and parent ('child of <cmd>') hints in the expansion reasoningBlock (MenuBarView), reusing the PID-008 criterionTag/secondary-text vocabulary; degrade gracefully when absent. Update SPEC.md 'Why is this here?' contract.
+  - [x] **PID-036.3** [medium]🧠 | hints-ui — Completed 2026-06-28.
   - [ ] **PID-036.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 
 ## Low

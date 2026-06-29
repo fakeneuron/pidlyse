@@ -7,7 +7,7 @@ Sits beside the clock. Periodically scans for known process junk — orphaned te
 ## Features
 
 - **12 process kinds** detected: `pytest`, `vitest`, `vite`, `jest`, `npm`, `docker`, `uvicorn`, `playwright`, `playwright-mcp`, `Chrome (playwright-mcp)`, `bun`, `node`
-- **Per-row signals** — CPU%, RAM, age, risk-tier color dot (green / orange / red), expandable "why is this here?" detail (tty status, orphan flag, age criteria)
+- **Per-row signals** — CPU%, RAM, age, risk-tier color dot (green / orange / red), expandable "why is this here?" detail (tty status, orphan flag, age criteria, plus provenance hints: the registered port it listens on and its scanned parent process)
 - **Two-section layout** — *Safe to clean* (easy-tier orphaned/old/no-tty strays) and *Needs review* (ambiguous processes tied to real dev infra)
 - **"Clean all"** sweeps the safe section in one click; per-row kill button for surgical cleanup
 - **Session dismiss** — hide a process until restart without killing it (↺ rescan restores all dismissed items)

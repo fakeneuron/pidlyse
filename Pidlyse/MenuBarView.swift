@@ -267,6 +267,20 @@ struct MenuBarView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .monospaced()
+            // Provenance hints (PID-036.3): rendered only when resolvable, so a
+            // process with no registered-port listener / no scanned parent simply
+            // shows fewer lines (graceful degrade).
+            if let ports = engine.listeningPorts[item.pid], !ports.isEmpty {
+                Text("\(ports.sorted().map { ":\($0)" }.joined(separator: ", ")) listening")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            if let parent = ScanCore.parentCommand(ofPPID: item.ppid, in: engine.items) {
+                Text("child of \(parent)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1).truncationMode(.middle)
+            }
         }
         .padding(.leading, 4)
         .padding(.bottom, 4)
