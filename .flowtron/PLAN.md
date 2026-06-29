@@ -12,7 +12,11 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-(none)
+- [ ] **PID-EPIC-036** [medium]🧠 | process-provenance-hints — Surface process-provenance hints per row in the Processes tab — port→project (PortRegistry), ppid→parent command, and Docker container-ownership (reuse KillService.findContainerID) — rendered uniformly and degrading gracefully when data is absent. Generalizes the docker cross-tab linkage idea. (Filed via /ft-epic-discovery; refined at .1 closure.)
+  - [x] **PID-036.1** [medium]🧠 | discovery — Completed 2026-06-28.
+  - [ ] **PID-036.2** [medium]🧠 | provenance-core — Resolve provenance in PidlyseCore: extend PortRegistry to map listening PID→port number(s), and add ppid→parent-command resolution over the scan result set. Expose for the UI; tests for both.
+  - [ ] **PID-036.3** [medium]🧠 | hints-ui — Render port (':5173 listening') and parent ('child of <cmd>') hints in the expansion reasoningBlock (MenuBarView), reusing the PID-008 criterionTag/secondary-text vocabulary; degrade gracefully when absent. Update SPEC.md 'Why is this here?' contract.
+  - [ ] **PID-036.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 
 ## Low
 
@@ -21,7 +25,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## Future Opportunities
 
 - **PID-030** [medium]🧠 | notarize-and-sign — Replace ad-hoc signing with Developer ID + Apple notarization + stapling (and the Hardened Runtime entitlement notarization requires). Removes the Gatekeeper "Apple could not verify…" warning on the public download. **Deferred 2026-06-28** — gated on $99/yr Apple Developer Program enrollment (operator opted to defer). Until then the public-trust story rests on the public source + SHA-256 checksum (shipped via `make dmg` + release.yml) + the honest right-click→Open install note in the README "Security" section. (Confirmed home for the no-sandbox / Hardened-Runtime posture by the [[PID-EPIC-35]] security sweep — F3/F4 folded here, no duplicate child filed.)
-- [ ] **PID-036** [medium]🧠 | process-provenance-hints — Surface process-provenance hints per Processes-tab row — port→project (PortRegistry), ppid→parent command, Docker container ownership (reuse findContainerID) — rendered uniformly, degrading gracefully when data absent. Generalizes the docker cross-tab idea; likely an epic.
+- [ ] **PID-037** [medium]🧠 | docker-ownership-hint — Show "owned by container <name>" in the Processes-tab expansion for docker-owned PIDs. Deferred from [[PID-EPIC-036]] (port+ppid shipped first); needs a scan-time container PID→ID cache to avoid the O(n) findContainerID docker-inspect shell-out (smell F9).
 
 ## Completed
 
