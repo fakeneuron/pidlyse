@@ -17,7 +17,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-35.2** [medium]🔧 | stderr-drain — Completed 2026-06-28.
   - [x] **PID-35.3** [medium]🧠 | kill-path-hardening — Completed 2026-06-28.
   - [x] **PID-35.4** [light]🔧 | smells-cleanup — Completed 2026-06-28.
-  - [ ] **PID-35.5** [light]🔧 | ci-sha-pinning — Supply-chain hardening (F5): pin actions/checkout to a commit SHA instead of the mutable @v4 tag in release.yml and test.yml.
+  - [x] **PID-35.5** [light]🔧 | ci-sha-pinning — Completed 2026-06-28.
   - [ ] **PID-35.6** [heavy]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Verifies the remediation children sit well together; covers the F3/F4 fold into PID-030.
 
 ## Low
