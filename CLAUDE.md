@@ -15,7 +15,7 @@ Open `Pidlyse.xcodeproj` in Xcode, ⌘R to run. App appears in menu bar only (`L
 
 ### Conventions
 
-- All scan + classification logic lives in the `PidlyseCore` package (`ScanCore.swift`, `ProcessItem.swift`, `PortRegistry.swift`) — the shared core the app links; do not scatter it. App-side `ScanEngine.swift` owns only the timer / persistence / notification lifecycle and calls `ScanCore.enumerate(...)`.
+- All scan + classification logic lives in the `PidlyseCore` package (`ScanCore.swift`, `ProcessItem.swift`, `PortRegistry.swift`, `CwdResolver.swift`) — the shared core the app links; do not scatter it. App-side `ScanEngine.swift` owns only the timer / persistence / notification lifecycle and calls `ScanCore.enumerate(...)`.
 - Docker plumbing mirrors the same split: pure `docker ps` parsing + the `Container` model live in `PidlyseCore` (`DockerCore.swift`, `Container.swift`); the app-side `DockerService.swift` owns the impure `docker` CLI access (path resolution, shell-out, `listContainers()`). `KillService`'s docker-stop path delegates to `DockerService` — keep all `docker` invocations there, don't scatter.
 - Two classification buckets only: `safe` and `needsReview` — never kill without explicit user action
 - Port registry lives in `PortRegistry.swift` (in the `PidlyseCore` package); keep in sync with CLAUDE.md global port table when ports are added

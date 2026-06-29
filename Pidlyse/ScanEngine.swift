@@ -25,6 +25,14 @@ final class ScanEngine: ObservableObject {
     /// (PID-037.3). Empty when Docker is absent. Mirrors `listeningPorts`.
     @Published private(set) var containerOwners: [Int32: String] = [:]
 
+    /// PID → its working-directory provenance (project label + abbreviated full path),
+    /// captured at scan time (PID-038). Resolved once per scan via a single bulk `lsof`
+    /// over the scanned PIDs; consumed by the row descriptor (showing the git-project
+    /// `bidviz`/`bidviz/frontend`) so a bare `npm`/`node` row is identifiable beyond the
+    /// executable name. Empty when nothing resolves. Mirrors `listeningPorts` /
+    /// `containerOwners`.
+    @Published private(set) var cwds: [Int32: ProcessCwd] = [:]
+
     /// How often (seconds) the background timer auto-scans. Persisted to UserDefaults.
     @Published var scanInterval: TimeInterval = 120 {
         didSet {
@@ -116,12 +124,16 @@ final class ScanEngine: ObservableObject {
                                             ignoredNames: ignored,
                                             dismissedPIDs: dismissed,
                                             startTimeProvider: KillService.startTime)
+            // Resolve each candidate's working directory once per scan (single bulk
+            // lsof over the matched PIDs); the row-expansion hint reads it (PID-038).
+            let cwdMap = CwdResolver.processCwds(forPIDs: result.map { $0.pid })
             DispatchQueue.main.async {
                 let oldPIDs = self?.previousPIDs
                 self?.previousPIDs = Set(result.map { $0.pid })
                 self?.items = result
                 self?.listeningPorts = portMap
                 self?.containerOwners = owners
+                self?.cwds = cwdMap
                 self?.isScanning = false
                 self?.fireNotificationIfNeeded(newItems: result, previousPIDs: oldPIDs)
             }

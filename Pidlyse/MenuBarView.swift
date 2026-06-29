@@ -201,6 +201,15 @@ struct MenuBarView: View {
         }
     }
 
+    /// Always-visible secondary line under the PID: the git-project the process runs in
+    /// (`bidviz` / `bidviz/frontend`) when resolvable — the owner hint PID-038 targets.
+    /// Falls back to the compact executable path when cwd can't be resolved. The group
+    /// header already carries the kind, so a bare `npm`/`node` `displayPath` is
+    /// redundant; the project answers "which app / dev server is this?".
+    private func rowDescriptor(_ item: ProcessItem) -> String {
+        engine.cwds[item.pid]?.label ?? item.displayPath
+    }
+
     private func row(_ item: ProcessItem) -> some View {
         let isOld = item.elapsed >= engine.elapsedThreshold
         let isExpanded = expandedPIDs.contains(item.pid)
@@ -211,9 +220,10 @@ struct MenuBarView: View {
                     .frame(width: 8, height: 8)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("PID \(item.pid)").font(.caption).monospaced()
-                    Text(item.displayPath)
+                    Text(rowDescriptor(item))
                         .font(.caption2).foregroundStyle(.secondary)
-                        .lineLimit(1).truncationMode(.middle)
+                        .lineLimit(1).truncationMode(.tail)
+                        .help(engine.cwds[item.pid]?.fullPath ?? item.command)
                 }
                 Spacer()
                 Text(String(format: "%.1f%%", item.cpuPercent))
@@ -269,7 +279,9 @@ struct MenuBarView: View {
                 .monospaced()
             // Provenance hints (PID-036.3): rendered only when resolvable, so a
             // process with no registered-port listener / no scanned parent simply
-            // shows fewer lines (graceful degrade).
+            // shows fewer lines (graceful degrade). The cwd / project-folder hint
+            // (PID-038) is promoted to the always-visible row descriptor instead of a
+            // line here — see `rowDescriptor`.
             if let ports = engine.listeningPorts[item.pid], !ports.isEmpty {
                 Text("\(ports.sorted().map { ":\($0)" }.joined(separator: ", ")) listening")
                     .font(.caption2)

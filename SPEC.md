@@ -26,6 +26,7 @@ Pidlyse/
         ScanCore.swift            # ps parse + stray detection + risk-tier classification
         ProcessItem.swift         # model: pid, ppid, command, elapsed, tty, kind, riskTier, cpu%, rss; derived bucket
         PortRegistry.swift        # compiled port table + user-override merge + lsof listener parse
+        CwdResolver.swift         # lsof cwd parse + git-root project label (row descriptor)
         DockerCore.swift          # pure `docker ps` output parsing
         Container.swift           # model: id, name, image, status, ports
   Pidlyse/
@@ -94,6 +95,8 @@ Port registry awareness ([[PID-005]]): any process listening on a port in the CL
 Bulk action: "Kill all safe" applies the same flow to every safe-bucket process.
 
 Dismiss / ignore: snoozes that PID for the session (does not survive restart).
+
+Each process row's descriptor line shows the **project it runs in** — the enclosing git repo (`bidviz`, or `bidviz/frontend` when the process runs in a subfolder) resolved from the process's working directory via `lsof`, so a bare `npm`/`node` is identifiable beyond its executable name. It falls back to the compact executable path when no cwd resolves (with the full path on hover). (PID-038)
 
 "Why is this here?" expands inline classification reasoning: the stray signals that fired (no TTY / orphan / old) plus raw `tty · ppid · age`, and — when resolvable — provenance hints: the registered port(s) the PID listens on (`:5173 listening`, [[PID-005]] demotion), its parent within the scan set (`child of <command>`), and the Docker container that owns it (`owned by container <name>`, [[PID-EPIC-037]]). Hints are omitted when absent (no registered-port listener, a parent that isn't itself a scanned candidate, or no owning container resolved). (PID-EPIC-036)
 
