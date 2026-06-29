@@ -7,10 +7,42 @@ import PidlyseCore
 /// upcoming container panel share one code path; the pure parsing lives in
 /// `PidlyseCore.DockerCore` (mirrors the `ScanEngine` / `ScanCore` split).
 enum DockerService {
-    /// Path to the Docker CLI, or `nil` if not installed.
+    /// Path to the Docker CLI, or `nil` if not installed. A candidate is only
+    /// accepted when its resolved binary passes the trust check below, so a trojan
+    /// `docker` planted in a world-writable or foreign-owned location can't be
+    /// exec'd on a docker-kill. (PID-35.3 / F2)
     static func cliPath() -> String? {
         let candidates = ["/usr/local/bin/docker", "/opt/homebrew/bin/docker"]
-        return candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
+        return candidates.first { isTrustedExecutable($0) }
+    }
+
+    /// Whether `path` is an executable whose resolved target is owned by root or
+    /// the current user and is not world-writable — the impure half of the F2
+    /// trust check (filesystem read; the policy is the pure `isTrustedOwnership`).
+    ///
+    /// Residual risk (accepted, see README §Security): `/usr/local/bin` is
+    /// group-writable by `admin` on Intel by design, so a same-group attacker could
+    /// still replace the binary there. Rejecting group-writable paths would silently
+    /// break Docker detection on those machines, so it's deliberately out of scope.
+    static func isTrustedExecutable(_ path: String) -> Bool {
+        let fm = FileManager.default
+        guard fm.isExecutableFile(atPath: path) else { return false }
+        let resolved = (path as NSString).resolvingSymlinksInPath
+        guard let attrs = try? fm.attributesOfItem(atPath: resolved),
+              let owner = attrs[.ownerAccountID] as? NSNumber,
+              let perms = attrs[.posixPermissions] as? NSNumber else { return false }
+        return isTrustedOwnership(ownerUID: owner.uint32Value,
+                                  permissions: perms.uint16Value,
+                                  currentUID: getuid())
+    }
+
+    /// Pure ownership/permission policy for the docker-binary trust check (the
+    /// testable half of `isTrustedExecutable`). Trusted only when the binary is
+    /// owned by root or the current user AND is not world-writable.
+    static func isTrustedOwnership(ownerUID: UInt32, permissions: UInt16, currentUID: UInt32) -> Bool {
+        let ownedByRootOrUser = (ownerUID == 0 || ownerUID == currentUID)
+        let worldWritable = (permissions & 0o002) != 0
+        return ownedByRootOrUser && !worldWritable
     }
 
     /// Whether the Docker CLI is available on this machine.
@@ -28,7 +60,10 @@ enum DockerService {
         task.arguments = args
         let pipe = Pipe()
         task.standardOutput = pipe
-        task.standardError = Pipe()
+        // Discard stderr via the null device, not an undrained Pipe(): we only ever
+        // read stdout, so a captured-but-unread stderr pipe could fill its ~64 KB
+        // buffer and wedge waitUntilExit() forever. /dev/null can't fill. (PID-35.2)
+        task.standardError = FileHandle.nullDevice
         guard (try? task.run()) != nil else { return ("", false) }
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         task.waitUntilExit()

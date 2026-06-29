@@ -481,6 +481,37 @@ final class KillServiceTests: XCTestCase {
         // Beyond any assignable PID (kern.maxproc) → kernel returns no process.
         XCTAssertNil(KillService.startTime(of: 2_000_000_000))
     }
+
+    // MARK: - shouldSendSIGTERM decision matrix (PID-35.3 — pre-SIGTERM identity guard)
+
+    func testShouldSendSIGTERM_sameStartTime_sends() {
+        // PID still maps to the scanned process → safe to SIGTERM.
+        let same = KillService.ProcStartTime(sec: 1000, usec: 500)
+        XCTAssertTrue(KillService.shouldSendSIGTERM(expected: a, current: same))
+    }
+
+    func testShouldSendSIGTERM_recycledPID_doesNotSend() {
+        // PID recycled between scan and click → must NOT SIGTERM the bystander.
+        let reused = KillService.ProcStartTime(sec: 2000, usec: 0)
+        XCTAssertFalse(KillService.shouldSendSIGTERM(expected: a, current: reused))
+    }
+
+    func testShouldSendSIGTERM_differingOnlyByMicroseconds_doesNotSend() {
+        let nearMiss = KillService.ProcStartTime(sec: 1000, usec: 501)
+        XCTAssertFalse(KillService.shouldSendSIGTERM(expected: a, current: nearMiss))
+    }
+
+    func testShouldSendSIGTERM_processGoneSinceScan_doesNotSend() {
+        // Had a scan-time token but the PID is gone now → nothing to kill.
+        XCTAssertFalse(KillService.shouldSendSIGTERM(expected: a, current: nil))
+    }
+
+    func testShouldSendSIGTERM_noScanToken_sends() {
+        // No identity captured at scan → legacy fallback: send (never worse than
+        // pre-PID-35.3, and a wiring miss can't silently no-op every kill).
+        XCTAssertTrue(KillService.shouldSendSIGTERM(expected: nil, current: a))
+        XCTAssertTrue(KillService.shouldSendSIGTERM(expected: nil, current: nil))
+    }
 }
 
 /// Tests for the pure `docker ps` parser added in PID-28.2. The impure
@@ -545,5 +576,59 @@ final class DockerCoreTests: XCTestCase {
 
     func testParsePS_empty_returnsEmpty() {
         XCTAssertTrue(DockerCore.parsePS("").isEmpty)
+    }
+}
+
+/// Tests for the pure docker-binary trust policy added in PID-35.3 (F2). The impure
+/// `isTrustedExecutable` filesystem read is not unit-tested (mirrors `ScanCore.runPS`).
+final class DockerServiceTests: XCTestCase {
+
+    private let user: UInt32 = 501
+
+    func testTrust_rootOwned_notWorldWritable_trusted() {
+        XCTAssertTrue(DockerService.isTrustedOwnership(ownerUID: 0, permissions: 0o755, currentUID: user))
+    }
+
+    func testTrust_currentUserOwned_notWorldWritable_trusted() {
+        XCTAssertTrue(DockerService.isTrustedOwnership(ownerUID: user, permissions: 0o755, currentUID: user))
+    }
+
+    func testTrust_groupWritable_stillTrusted() {
+        // Lenient policy: group-writable is allowed (e.g. /usr/local/bin admin group
+        // on Intel) — only world-writable and foreign ownership are rejected.
+        XCTAssertTrue(DockerService.isTrustedOwnership(ownerUID: 0, permissions: 0o775, currentUID: user))
+    }
+
+    func testTrust_worldWritable_rejected() {
+        XCTAssertFalse(DockerService.isTrustedOwnership(ownerUID: 0, permissions: 0o757, currentUID: user))
+    }
+
+    func testTrust_rootOwnedButWorldWritable_rejected() {
+        XCTAssertFalse(DockerService.isTrustedOwnership(ownerUID: 0, permissions: 0o777, currentUID: user))
+    }
+
+    func testTrust_foreignOwner_rejected() {
+        XCTAssertFalse(DockerService.isTrustedOwnership(ownerUID: 999, permissions: 0o755, currentUID: user))
+    }
+}
+
+/// Test for the PID-35.3 scan-time start-time capture: an injected provider
+/// populates `ProcessItem.startTime`; the default (no provider) leaves it `nil`.
+final class ScanCoreStartTimeTests: XCTestCase {
+
+    private let line = "1234 1 10:00 ?? 0.0 1000 pytest tests/"
+
+    func testEnumerate_withProvider_populatesStartTime() {
+        let token = ProcStartTime(sec: 42, usec: 7)
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60, psOutput: line,
+                                       registeredPIDs: [],
+                                       startTimeProvider: { _ in token })
+        XCTAssertEqual(items.first?.startTime, token)
+    }
+
+    func testEnumerate_withoutProvider_startTimeNil() {
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60, psOutput: line,
+                                       registeredPIDs: [])
+        XCTAssertNil(items.first?.startTime)
     }
 }

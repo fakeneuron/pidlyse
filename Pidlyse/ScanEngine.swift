@@ -88,8 +88,11 @@ final class ScanEngine: ObservableObject {
         let ignored = ignoredNames
         let dismissed = dismissedPIDs
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            // Capture each candidate's start time at scan so the kill path can detect
+            // a PID recycled between this scan and a later kill click. (PID-35.3)
             let result = ScanCore.enumerate(elapsedThreshold: threshold, ignoredNames: ignored,
-                                            dismissedPIDs: dismissed)
+                                            dismissedPIDs: dismissed,
+                                            startTimeProvider: KillService.startTime)
             DispatchQueue.main.async {
                 let oldPIDs = self?.previousPIDs
                 self?.previousPIDs = Set(result.map { $0.pid })

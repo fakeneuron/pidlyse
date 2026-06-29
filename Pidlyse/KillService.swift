@@ -27,11 +27,11 @@ enum KillService {
                     DispatchQueue.main.async { onComplete() }
                     return
                 }
-                killPosix(item.pid, onComplete: onComplete)
+                killPosix(item.pid, expected: item.startTime, onComplete: onComplete)
             }
             return
         }
-        killPosix(item.pid, onComplete: onComplete)
+        killPosix(item.pid, expected: item.startTime, onComplete: onComplete)
     }
 
     /// Terminate many processes concurrently; each follows the same per-item
@@ -49,14 +49,10 @@ enum KillService {
 
     // MARK: - Process identity (PID-reuse guard)
 
-    /// A process's start time, used as an identity token across the SIGTERM →
-    /// SIGKILL grace window. If the original process exits and the kernel recycles
-    /// its PID for an unrelated process, the start time differs — so an unchanged
-    /// start time confirms the PID still maps to the *same* process.
-    struct ProcStartTime: Equatable {
-        let sec: Int
-        let usec: Int
-    }
+    /// The process-identity token. Defined in `PidlyseCore` so `ProcessItem` can
+    /// carry a scan-time snapshot; aliased here so `KillService.ProcStartTime` and
+    /// the `sysctl` reader below keep their existing call shape. (PID-18.3, PID-35.3)
+    typealias ProcStartTime = PidlyseCore.ProcStartTime
 
     /// Read a process's start time (`kinfo_proc.kp_proc.p_starttime`) via `sysctl`,
     /// or `nil` if the process no longer exists or can't be queried (the kernel
@@ -82,12 +78,34 @@ enum KillService {
         return snapshot == current
     }
 
+    /// Whether the *initial* SIGTERM should fire, given the scan-time identity token
+    /// (`expected`, carried on the `ProcessItem`) and the start time re-read now
+    /// (`current`). Guards the scan→click window the SIGKILL-escalation check can't
+    /// see: a PID recycled between the scan and the user's click would map to an
+    /// unrelated process. Rules:
+    /// - `expected == nil` (no scan-time token captured) → send (legacy behavior;
+    ///   nothing to enforce against, so this is never worse than pre-PID-35.3).
+    /// - `expected` set, `current == nil` → don't send (the process is gone).
+    /// - both set → send only when identical (same process as scanned).
+    static func shouldSendSIGTERM(expected: ProcStartTime?, current: ProcStartTime?) -> Bool {
+        guard let expected else { return true }
+        guard let current else { return false }
+        return expected == current
+    }
+
     // MARK: - POSIX signal path
 
-    private static func killPosix(_ pid: Int32, onComplete: @escaping () -> Void) {
-        // Snapshot identity before SIGTERM so the grace-period SIGKILL can verify
-        // the PID still maps to the same process (guards against PID reuse).
-        let startSnapshot = startTime(of: pid)
+    private static func killPosix(_ pid: Int32, expected: ProcStartTime?,
+                                  onComplete: @escaping () -> Void) {
+        // Re-verify identity before SIGTERM: a PID recycled between the scan (when
+        // `expected` was captured) and this click would otherwise take the signal.
+        let current = startTime(of: pid)
+        guard shouldSendSIGTERM(expected: expected, current: current) else {
+            // Recycled or gone since the scan — don't signal a bystander. Fire
+            // onComplete so the caller rescans and the stale row drops away.
+            DispatchQueue.main.async { onComplete() }
+            return
+        }
         let result = Darwin.kill(pid, SIGTERM)
         if result == -1 && errno == EPERM {
             // Process is owned by another user (e.g. root Docker daemon).
@@ -96,6 +114,9 @@ enum KillService {
             DispatchQueue.main.async { onComplete() }
             return
         }
+        // Reuse the just-read token as the SIGKILL-escalation snapshot (it matched
+        // `expected`, so the PID still maps to the scanned process at SIGTERM time).
+        let startSnapshot = current
         DispatchQueue.global().asyncAfter(deadline: .now() + gracePeriod) {
             if shouldEscalateToSIGKILL(snapshot: startSnapshot, current: startTime(of: pid)) {
                 Darwin.kill(pid, SIGKILL)

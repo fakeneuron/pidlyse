@@ -51,6 +51,23 @@ public enum Bucket {
     case needsReview
 }
 
+/// A process's start time, used as an identity token to detect PID reuse: if the
+/// original process exits and the kernel recycles its PID for an unrelated process,
+/// the start time differs. Captured at scan time (carried on `ProcessItem`) and
+/// re-read at kill time so the kill path can confirm the PID still maps to the
+/// *same* process. Lives here in `PidlyseCore` so `ProcessItem` can hold it; the
+/// `sysctl` reader that produces it stays app-side in `KillService` (see the
+/// `KillService.ProcStartTime` typealias). (PID-18.3, PID-35.3)
+public struct ProcStartTime: Equatable {
+    public let sec: Int
+    public let usec: Int
+
+    public init(sec: Int, usec: Int) {
+        self.sec = sec
+        self.usec = usec
+    }
+}
+
 /// One process surfaced by the scan engine.
 public struct ProcessItem: Identifiable {
     public let pid: Int32
@@ -67,10 +84,14 @@ public struct ProcessItem: Identifiable {
     public let cpuPercent: Double
     /// Resident set size in KB from `ps rss` column.
     public let rssKB: Int
+    /// Process start-time identity token captured at scan, or `nil` when not
+    /// captured (tests, or a sysctl miss). The kill path re-verifies it before the
+    /// initial SIGTERM to refuse killing a PID recycled since the scan. (PID-35.3)
+    public let startTime: ProcStartTime?
 
     public init(pid: Int32, ppid: Int32, command: String, elapsed: TimeInterval,
                 tty: String, kind: ProcessKind, riskTier: RiskTier,
-                cpuPercent: Double, rssKB: Int) {
+                cpuPercent: Double, rssKB: Int, startTime: ProcStartTime? = nil) {
         self.pid = pid
         self.ppid = ppid
         self.command = command
@@ -80,6 +101,7 @@ public struct ProcessItem: Identifiable {
         self.riskTier = riskTier
         self.cpuPercent = cpuPercent
         self.rssKB = rssKB
+        self.startTime = startTime
     }
 
     public var id: Int32 { pid }

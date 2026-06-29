@@ -21,13 +21,14 @@ public enum ScanCore {
                                  psOutput: String? = nil,
                                  registeredPIDs: Set<Int32>? = nil,
                                  ignoredNames: [String] = [],
-                                 dismissedPIDs: Set<Int32> = []) -> [ProcessItem] {
+                                 dismissedPIDs: Set<Int32> = [],
+                                 startTimeProvider: ((Int32) -> ProcStartTime?)? = nil) -> [ProcessItem] {
         let output = psOutput ?? runPS()
         let portPIDs = registeredPIDs ?? PortRegistry.listeningPIDs()
         var all = output
             .split(separator: "\n", omittingEmptySubsequences: true)
             .compactMap { makeItem(from: String($0), elapsedThreshold: elapsedThreshold,
-                                   registeredPIDs: portPIDs) }
+                                   registeredPIDs: portPIDs, startTimeProvider: startTimeProvider) }
         if !ignoredNames.isEmpty {
             all = all.filter { item in
                 !ignoredNames.contains { prefix in
@@ -46,7 +47,8 @@ public enum ScanCore {
     /// A process whose PID is in `registeredPIDs` is demoted from `.easy` to `.moderate`
     /// so it always lands in the Needs Review bucket.
     public static func makeItem(from line: String, elapsedThreshold: TimeInterval,
-                                registeredPIDs: Set<Int32> = []) -> ProcessItem? {
+                                registeredPIDs: Set<Int32> = [],
+                                startTimeProvider: ((Int32) -> ProcStartTime?)? = nil) -> ProcessItem? {
         guard let p = parsePSLine(line) else { return nil }
         guard let kind = detectKind(p.args) else { return nil }
 
@@ -60,9 +62,12 @@ public enum ScanCore {
                             isOrphan: isOrphan,
                             isOld: elapsed >= elapsedThreshold)
         if registeredPIDs.contains(p.pid) && tier == .easy { tier = .moderate }
+        // Capture the scan-time start-time identity token (when a provider is
+        // supplied) so the kill path can detect PID reuse before SIGTERM. (PID-35.3)
+        let startTime = startTimeProvider.flatMap { $0(p.pid) }
         return ProcessItem(pid: p.pid, ppid: p.ppid, command: p.args,
                            elapsed: elapsed, tty: p.tty, kind: kind, riskTier: tier,
-                           cpuPercent: cpuPercent, rssKB: rssKB)
+                           cpuPercent: cpuPercent, rssKB: rssKB, startTime: startTime)
     }
 
     // MARK: - Pure parsing helpers
@@ -158,7 +163,10 @@ public enum ScanCore {
         task.arguments = args
         let pipe = Pipe()
         task.standardOutput = pipe
-        task.standardError = Pipe()
+        // Discard stderr via the null device, not an undrained Pipe(): we only ever
+        // read stdout, so a captured-but-unread stderr pipe could fill its ~64 KB
+        // buffer and wedge waitUntilExit() forever. /dev/null can't fill. (PID-35.2)
+        task.standardError = FileHandle.nullDevice
         do {
             try task.run()
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
