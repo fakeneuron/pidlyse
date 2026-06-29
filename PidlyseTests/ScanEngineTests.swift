@@ -637,6 +637,31 @@ final class DockerCoreTests: XCTestCase {
     func testParsePS_empty_returnsEmpty() {
         XCTAssertTrue(DockerCore.parsePS("").isEmpty)
     }
+
+    // MARK: - parseContainerOwners
+
+    func testParseContainerOwners_mapsPIDToName_stripsLeadingSlash() {
+        // `docker inspect {{.Name}}` carries a leading slash; it must be stripped.
+        let output = "12345\t/pg-db\n67890\t/redis"
+        let owners = DockerCore.parseContainerOwners(output)
+        XCTAssertEqual(owners, [12345: "pg-db", 67890: "redis"])
+    }
+
+    func testParseContainerOwners_skipsPIDZero() {
+        // State.Pid 0 = container not running → owns no host process.
+        let owners = DockerCore.parseContainerOwners("0\t/stopped\n12345\t/live")
+        XCTAssertEqual(owners, [12345: "live"])
+    }
+
+    func testParseContainerOwners_skipsMalformedAndBlankLines() {
+        let output = "12345\t/ok\nno-tab-here\n\tabc\nnotanumber\t/x"
+        let owners = DockerCore.parseContainerOwners(output)
+        XCTAssertEqual(owners, [12345: "ok"])
+    }
+
+    func testParseContainerOwners_empty_returnsEmpty() {
+        XCTAssertTrue(DockerCore.parseContainerOwners("").isEmpty)
+    }
 }
 
 /// Tests for the pure docker-binary trust policy added in PID-35.3 (F2). The impure

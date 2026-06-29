@@ -18,6 +18,13 @@ final class ScanEngine: ObservableObject {
     /// the same set `enumerate` uses for port-demotion (so no second `lsof` runs).
     @Published private(set) var listeningPorts: [Int32: Set<Int>] = [:]
 
+    /// PID → the Docker container name that owns it, captured at scan time
+    /// (PID-037.2). Resolved once per scan via a single bulk `docker inspect`;
+    /// consumed by the kill path (`docker stop <name>`, retiring the per-click
+    /// `findContainerID` inspect — F9) and the row-expansion ownership hint
+    /// (PID-037.3). Empty when Docker is absent. Mirrors `listeningPorts`.
+    @Published private(set) var containerOwners: [Int32: String] = [:]
+
     /// How often (seconds) the background timer auto-scans. Persisted to UserDefaults.
     @Published var scanInterval: TimeInterval = 120 {
         didSet {
@@ -98,6 +105,10 @@ final class ScanEngine: ObservableObject {
             // doesn't re-run lsof), and the full map drives the per-row port hint
             // (PID-036.3).
             let portMap = PortRegistry.listeningPorts()
+            // Resolve the Docker container-owner map once per scan (single bulk
+            // inspect); the kill path and the row hint read it instead of a
+            // per-click inspect (PID-037.2, retiring F9).
+            let owners = DockerService.containerOwners()
             // Capture each candidate's start time at scan so the kill path can detect
             // a PID recycled between this scan and a later kill click. (PID-35.3)
             let result = ScanCore.enumerate(elapsedThreshold: threshold,
@@ -110,6 +121,7 @@ final class ScanEngine: ObservableObject {
                 self?.previousPIDs = Set(result.map { $0.pid })
                 self?.items = result
                 self?.listeningPorts = portMap
+                self?.containerOwners = owners
                 self?.isScanning = false
                 self?.fireNotificationIfNeeded(newItems: result, previousPIDs: oldPIDs)
             }

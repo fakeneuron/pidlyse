@@ -14,7 +14,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 - [ ] **PID-EPIC-037** [medium]🧠 | docker-ownership-hint — Show "owned by container <name>" in the Processes-tab row expansion for docker-owned PIDs. Promoted from the deferred PID-037 line; adds a scan-time container PID→name cache (single bulk `docker inspect`, reused by the kill path) to retire the O(n) `findContainerID` smell (F9). Deferred from [[PID-EPIC-036]] (port+ppid shipped first).
   - [x] **PID-037.1** [medium]🧠 | discovery — Completed 2026-06-29.
-  - [ ] **PID-037.2** [medium]🧠 | owner-cache — Add a scan-time container PID→name cache: `DockerCore` pure parser + `DockerService` single bulk `docker inspect`, plumbed onto `ScanEngine` as a `@Published` map (mirrors `listeningPorts`). Refactor `KillService.findContainerID` to consume it, retiring the O(n) per-kill inspect (smell F9).
+  - [x] **PID-037.2** [medium]🧠 | owner-cache — Completed 2026-06-29.
   - [ ] **PID-037.3** [medium]🧠 | ownership-ui — Render an "owned by container <name>" line in the Processes-tab row expansion when the scan-time owner map resolves the PID, mirroring the PID-036.3 port/parent hints (caption2, secondary, expansion-gated, graceful-degrade). Sync SPEC/README provenance vocabulary.
   - [ ] **PID-037.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest `.N` child.
 

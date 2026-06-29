@@ -15,15 +15,19 @@ enum KillService {
 
     // MARK: - Public kill API
 
-    /// Terminate one process. Docker items whose PID is a container root process
-    /// route through `docker stop` first; docker daemon/helper PIDs and all other
-    /// processes use SIGTERM → grace → SIGKILL. EPERM is handled silently:
-    /// `onComplete` fires and the next rescan reflects the unchanged process.
-    /// `onComplete` always fires on the main queue.
-    static func kill(_ item: ProcessItem, onComplete: @escaping () -> Void = {}) {
+    /// Terminate one process. Docker items whose PID maps to a container root
+    /// process (per the scan-time `containerOwners` map) route through
+    /// `docker stop` first; docker daemon/helper PIDs and all other processes
+    /// use SIGTERM → grace → SIGKILL. EPERM is handled silently: `onComplete`
+    /// fires and the next rescan reflects the unchanged process. `onComplete`
+    /// always fires on the main queue. `containerOwners` is the
+    /// `ScanEngine.containerOwners` cache; an empty map (its default) means no
+    /// container resolution is available and docker items fall through to POSIX.
+    static func kill(_ item: ProcessItem, containerOwners: [Int32: String] = [:],
+                     onComplete: @escaping () -> Void = {}) {
         if item.kind == .docker {
             DispatchQueue.global().async {
-                if dockerStopByPID(item.pid) {
+                if dockerStopByName(containerOwners[item.pid]) {
                     DispatchQueue.main.async { onComplete() }
                     return
                 }
@@ -35,14 +39,15 @@ enum KillService {
     }
 
     /// Terminate many processes concurrently; each follows the same per-item
-    /// routing. `onComplete` fires once, on the main queue, after every kill
-    /// has resolved.
-    static func kill(_ items: [ProcessItem], onComplete: @escaping () -> Void = {}) {
+    /// routing and shares the same scan-time `containerOwners` map. `onComplete`
+    /// fires once, on the main queue, after every kill has resolved.
+    static func kill(_ items: [ProcessItem], containerOwners: [Int32: String] = [:],
+                     onComplete: @escaping () -> Void = {}) {
         guard !items.isEmpty else { onComplete(); return }
         let group = DispatchGroup()
         for item in items {
             group.enter()
-            kill(item) { group.leave() }
+            kill(item, containerOwners: containerOwners) { group.leave() }
         }
         group.notify(queue: .main) { onComplete() }
     }
@@ -127,39 +132,17 @@ enum KillService {
 
     // MARK: - Docker stop path
 
-    /// Try to stop the container whose root PID (`State.Pid`) matches `pid` via
-    /// `docker stop`. Succeeds only when `pid` is a container's init process on
-    /// the host; Docker daemon and helper PIDs never match and fall through to
-    /// POSIX signals. Returns `true` if a container was found and stopped. The
-    /// Docker CLI access is delegated to `DockerService` (shared with the
-    /// container panel).
-    private static func dockerStopByPID(_ pid: Int32) -> Bool {
-        guard DockerService.isInstalled,
-              let containerID = findContainerID(for: pid),
-              DockerService.run(["stop", containerID]).ok else {
+    /// Try to stop a container by name via `docker stop`. `name` is the scan-time
+    /// `containerOwners` lookup for the killed PID — non-`nil` only when the PID
+    /// matched a running container's root process at scan time; Docker daemon and
+    /// helper PIDs (and unmatched PIDs) pass `nil` and fall through to POSIX
+    /// signals. Returns `true` if the container was stopped. The Docker CLI access
+    /// is delegated to `DockerService` (shared with the container panel).
+    private static func dockerStopByName(_ name: String?) -> Bool {
+        guard let name, DockerService.isInstalled,
+              DockerService.run(["stop", name]).ok else {
             return false
         }
         return true
-    }
-
-    /// Return the container ID of the running container whose root PID matches
-    /// `pid`, or `nil` if no match is found. Resolves all running containers in
-    /// a single `docker inspect` call (vs. one per container) to avoid O(N) CLI
-    /// round-trips when many containers are running.
-    private static func findContainerID(for pid: Int32) -> String? {
-        let listOutput = DockerService.run(["ps", "-q"]).output
-        let ids = listOutput.split(separator: "\n", omittingEmptySubsequences: true).map(String.init)
-        guard !ids.isEmpty else { return nil }
-        // Bulk inspect: each output line is "<full-id>\t<State.Pid>"; docker prints
-        // nothing for IDs it can't resolve, so we parse by content, not by index.
-        let inspectOutput = DockerService.run(["inspect", "--format", "{{.Id}}\t{{.State.Pid}}"] + ids).output
-        for line in inspectOutput.split(separator: "\n", omittingEmptySubsequences: true) {
-            let parts = line.split(separator: "\t").map(String.init)
-            guard parts.count == 2,
-                  let containerPID = Int32(parts[1]),
-                  containerPID == pid else { continue }
-            return parts[0]
-        }
-        return nil
     }
 }

@@ -78,6 +78,21 @@ enum DockerService {
         return DockerCore.parsePS(result.output)
     }
 
+    /// Resolve every running container's host root PID to its name in a single
+    /// bulk `docker inspect` over `docker ps -q`. Returns an empty map when
+    /// Docker is absent or no containers run. Captured once per scan (see
+    /// `ScanEngine.containerOwners`) so the kill path and the row-expansion
+    /// ownership hint avoid a per-click inspect (retires the F9 `findContainerID`
+    /// smell). The pure parse lives in `DockerCore.parseContainerOwners`.
+    static func containerOwners() -> [Int32: String] {
+        let ids = run(["ps", "-q"]).output
+            .split(separator: "\n", omittingEmptySubsequences: true).map(String.init)
+        guard !ids.isEmpty else { return [:] }
+        let result = run(["inspect", "--format", DockerCore.inspectOwnerFormat] + ids)
+        guard result.ok else { return [:] }
+        return DockerCore.parseContainerOwners(result.output)
+    }
+
     /// Async wrapper over `listContainers()`: runs the (blocking) `docker ps`
     /// shell-out off the main queue and delivers the result on the main queue so
     /// SwiftUI can load/refresh the container list without freezing the popover.

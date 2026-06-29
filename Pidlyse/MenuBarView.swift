@@ -136,7 +136,7 @@ struct MenuBarView: View {
                     .font(.subheadline).bold()
                 Spacer()
                 Button("Clean all") {
-                    KillService.kill(safeItems) { engine.scan() }
+                    KillService.kill(safeItems, containerOwners: engine.containerOwners) { engine.scan() }
                 }
                 .buttonStyle(.borderless)
                 .foregroundStyle(.red)
@@ -243,7 +243,7 @@ struct MenuBarView: View {
                 .buttonStyle(.borderless)
                 .help("Ignore for session")
                 Button {
-                    KillService.kill(item) { engine.scan() }
+                    KillService.kill(item, containerOwners: engine.containerOwners) { engine.scan() }
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                 }
