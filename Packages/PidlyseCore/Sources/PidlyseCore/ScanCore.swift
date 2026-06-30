@@ -197,8 +197,8 @@ public enum ScanCore {
         if hasTokenBoundary(s, "uvicorn") { return .uvicorn }
         if hasTokenBoundary(s, "docker")  { return .docker }
         if hasTokenBoundary(s, "npm")     { return .npm }
-        if s.hasPrefix("bun ") || s == "bun" || s.contains("/bun ") || s.hasSuffix("/bun") { return .bun }
-        if s.contains("node ") || s.hasSuffix("node") { return .node }
+        if hasTokenBoundary(s, "bun")     { return .bun }
+        if hasTokenBoundary(s, "node")    { return .node }
         return nil
     }
 

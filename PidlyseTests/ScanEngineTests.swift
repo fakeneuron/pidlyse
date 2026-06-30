@@ -78,9 +78,22 @@ final class ScanEngineTests: XCTestCase {
     }
 
     func testDetectKind_bareNode_isNode() {
-        // No trailing space — hasSuffix("node") path.
+        // No trailing space — bare command (== "node") and path-only (/node) forms.
         XCTAssertEqual(ScanCore.detectKind("node"), .node)
         XCTAssertEqual(ScanCore.detectKind("/usr/local/bin/node"), .node)
+    }
+
+    func testDetectKind_nodeBunTokenBoundary_noSubstringFalsePositives() {
+        // PID-046: node/bun route through the shared `hasTokenBoundary` helper, so an
+        // executable that merely ends with or contains the token (without a word
+        // boundary) is not misclassified.
+        XCTAssertNil(ScanCore.detectKind("/usr/bin/fake-node"))
+        XCTAssertNil(ScanCore.detectKind("some-node tool"))
+        XCTAssertNil(ScanCore.detectKind("/opt/embun"))
+        XCTAssertNil(ScanCore.detectKind("inode"))
+        // Legitimate matches still fire.
+        XCTAssertEqual(ScanCore.detectKind("node server.js"), .node)
+        XCTAssertEqual(ScanCore.detectKind("bun run dev"), .bun)
     }
 
     func testDetectKind_chromeUnderPlaywrightMCP_isChromeHelper() {
