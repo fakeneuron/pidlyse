@@ -14,7 +14,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 - [ ] **PID-EPIC-50** [medium]🧠 | popover-power-ux — Lightweight power-user affordances for faster stray triage, surfaced by the [[PID-049]] survey — added without breaking the no-bloat/performant posture. Spans the Tier 1+2 shortlist: row context menu, provenance auto-sort, reclaimable-footprint header, quick filter, per-kind scan toggles, and keyboard/click-outside dismissal polish.
   - [x] **PID-50.1** [medium]🧠 | discovery — Completed 2026-06-30.
-  - [ ] **PID-50.2** [light]🔧 | row-context-menu — Right-click `.contextMenu` on each process row: Copy PID · Copy command line · Copy `kill <pid>` · Reveal working directory in Finder. Pasteboard / NSWorkspace only — no new shell-out. (Survey item 1.)
+  - [x] **PID-50.2** [light]🔧 | row-context-menu — Completed 2026-06-30.
   - [ ] **PID-50.3** [light]🔧 | provenance-sort — Deterministically order rows alphabetically by their provenance/project label (`rowDescriptor`) within each kind group, so the list stays stable across scans. No sort UI. MenuBarView ordering only. (Survey item 2, rescoped.)
   - [ ] **PID-50.4** [light]🔧 | reclaimable-footprint — Sum the safe-bucket `rssKB` and show "~X MB reclaimable" in the "Safe to clean" section header (reuse `ramString`). MenuBarView only; no new data. (Survey item 3.)
   - [ ] **PID-50.5** [medium]🧠 | quick-filter — Search field below the tab picker that filters the Processes tab by command / project label / listening port; session-scoped, clears on close. MenuBarView (reads `engine.cwds` / `listeningPorts`). (Survey item 4.)

@@ -256,6 +256,30 @@ struct MenuBarView: View {
                 reasoningBlock(item: item, isOld: isOld)
             }
         }
+        .contextMenu { rowContextMenu(item) }
+    }
+
+    /// Right-click affordances for a row (PID-50.2): clipboard copies + reveal the
+    /// working directory in Finder. Pasteboard / NSWorkspace only — no shell-out.
+    @ViewBuilder
+    private func rowContextMenu(_ item: ProcessItem) -> some View {
+        Button("Copy PID") { copyToPasteboard(String(item.pid)) }
+        Button("Copy command line") { copyToPasteboard(item.command) }
+        Button("Copy `kill \(item.pid)`") { copyToPasteboard("kill \(item.pid)") }
+        // Omitted when the cwd can't be resolved (graceful degrade, like the other
+        // provenance hints) — nothing to reveal.
+        if let cwd = engine.cwds[item.pid] {
+            Button("Reveal working directory in Finder") {
+                let path = (cwd.fullPath as NSString).expandingTildeInPath
+                NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+            }
+        }
+    }
+
+    /// Replace the general pasteboard contents with `string` (PID-50.2).
+    private func copyToPasteboard(_ string: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(string, forType: .string)
     }
 
     private func reasoningBlock(item: ProcessItem, isOld: Bool) -> some View {

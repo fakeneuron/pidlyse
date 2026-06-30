@@ -10,6 +10,7 @@ Sits beside the clock. Periodically scans for known process junk — orphaned te
 - **Per-row signals** — the owning project (the git repo / working directory the process runs in, e.g. `bidviz` or `bidviz/frontend`, shown as the row label so a bare `npm`/`node` is identifiable; full path on hover), CPU%, RAM, age, risk-tier color dot (green / orange / red), expandable "why is this here?" detail (tty status, orphan flag, age criteria, plus provenance hints: the registered port it listens on, its scanned parent process, and the Docker container that owns it)
 - **Two-section layout** — *Safe to clean* (easy-tier orphaned/old/no-tty strays) and *Needs review* (ambiguous processes tied to real dev infra)
 - **"Clean all"** sweeps the safe section in one click; per-row kill button for surgical cleanup
+- **Right-click a row** for quick actions — copy the PID, the full command line, or a ready-to-paste `kill <pid>`, and reveal the process's working directory in Finder (clipboard / Finder only, no extra shell-out)
 - **Session dismiss** — hide a process until restart without killing it (↺ rescan restores all dismissed items)
 - **Docker containers tab** — a Processes / Containers segmented toggle in the popover; the Containers tab lists running containers (name, image, status, ports) with per-row **stop** and **stop + remove** buttons, and a clear empty state when Docker isn't installed
 - **Kill flow**: SIGTERM first, SIGKILL fallback after 2 s — always explicit, never automatic
