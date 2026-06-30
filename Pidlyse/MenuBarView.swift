@@ -338,7 +338,17 @@ struct MenuBarView: View {
     private func grouped(_ items: [ProcessItem]) -> [(ProcessKind, [ProcessItem])] {
         ProcessKind.allCases.compactMap { kind in
             let matches = items.filter { $0.kind == kind }
-            return matches.isEmpty ? nil : (kind, matches)
+            // Order each group alphabetically by the provenance/project label so the
+            // list stays stable across scans instead of leaking `engine.items` scan
+            // order (PID-50.3). `pid` breaks ties (same descriptor) for full determinism.
+            let sorted = matches.sorted {
+                switch rowDescriptor($0).localizedCaseInsensitiveCompare(rowDescriptor($1)) {
+                case .orderedAscending:  return true
+                case .orderedDescending: return false
+                case .orderedSame:       return $0.pid < $1.pid
+                }
+            }
+            return sorted.isEmpty ? nil : (kind, sorted)
         }
     }
 
