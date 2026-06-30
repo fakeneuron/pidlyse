@@ -278,6 +278,32 @@ final class ScanEngineTests: XCTestCase {
         XCTAssertEqual(items.count, 1)
     }
 
+    // MARK: - disabledKinds filtering
+
+    func testEnumerate_disabledKinds_match_filtersProcess() {
+        let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60,
+                                         psOutput: output,
+                                         disabledKinds: [.pytest])
+        XCTAssertEqual(items.count, 0)
+    }
+
+    func testEnumerate_disabledKinds_noMatch_processKept() {
+        let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60,
+                                         psOutput: output,
+                                         disabledKinds: [.vitest])
+        XCTAssertEqual(items.count, 1)
+    }
+
+    func testEnumerate_disabledKinds_empty_noFiltering() {
+        let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60,
+                                         psOutput: output,
+                                         disabledKinds: [])
+        XCTAssertEqual(items.count, 1)
+    }
+
     // MARK: - dismissedPIDs filtering
 
     func testEnumerate_dismissedPIDs_match_filtersProcess() {

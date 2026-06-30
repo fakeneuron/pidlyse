@@ -15,13 +15,14 @@ public enum ScanCore {
     /// Parse + classify `ps` output into stray candidates. `psOutput`,
     /// `registeredPIDs`, `ignoredNames`, and `dismissedPIDs` are injectable
     /// for unit testing. When `registeredPIDs` is nil the live `lsof` query runs.
-    /// Items whose command args contain any `ignoredNames` entry, or whose PID is
-    /// in `dismissedPIDs`, are dropped.
+    /// Items whose command args contain any `ignoredNames` entry, whose PID is
+    /// in `dismissedPIDs`, or whose `kind` is in `disabledKinds`, are dropped.
     public static func enumerate(elapsedThreshold: TimeInterval = defaultElapsedThreshold,
                                  psOutput: String? = nil,
                                  registeredPIDs: Set<Int32>? = nil,
                                  ignoredNames: [String] = [],
                                  dismissedPIDs: Set<Int32> = [],
+                                 disabledKinds: Set<ProcessKind> = [],
                                  startTimeProvider: ((Int32) -> ProcStartTime?)? = nil) -> [ProcessItem] {
         let output = psOutput ?? runPS()
         let portPIDs = registeredPIDs ?? PortRegistry.listeningPIDs()
@@ -39,7 +40,12 @@ public enum ScanCore {
         if !dismissedPIDs.isEmpty {
             all = all.filter { !dismissedPIDs.contains($0.pid) }
         }
-        return collapseWrappers(all)
+        // Filter disabled kinds *after* the wrapper collapse: a merged wrapper row
+        // takes its `kind` from the meaningful child (`npm run dev` → `.vite`), so
+        // judging the final, displayed kind matches what the user sees in the row.
+        let collapsed = collapseWrappers(all)
+        guard !disabledKinds.isEmpty else { return collapsed }
+        return collapsed.filter { !disabledKinds.contains($0.kind) }
     }
 
     // MARK: - Wrapper collapse (PID-039)

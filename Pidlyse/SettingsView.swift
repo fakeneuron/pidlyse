@@ -1,3 +1,4 @@
+import PidlyseCore
 import ServiceManagement
 import SwiftUI
 
@@ -18,6 +19,21 @@ struct SettingsView: View {
                     }
                 } catch {
                     // Registration can fail if the user denies the system prompt.
+                }
+            }
+        )
+    }
+
+    /// Binding for one kind's "scanned" toggle — on when the kind is *not* in the
+    /// engine's `disabledKinds` set. Flipping off inserts it (skipped next scan).
+    private func kindEnabled(_ kind: ProcessKind) -> Binding<Bool> {
+        Binding(
+            get: { !engine.disabledKinds.contains(kind) },
+            set: { enabled in
+                if enabled {
+                    engine.disabledKinds.remove(kind)
+                } else {
+                    engine.disabledKinds.insert(kind)
                 }
             }
         )
@@ -66,6 +82,14 @@ struct SettingsView: View {
                     .font(.system(.body, design: .monospaced))
                     .frame(minHeight: 80)
                 Text("One command substring per line — matching processes are hidden from scan results.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Section("Scanned kinds") {
+                ForEach(ProcessKind.allCases, id: \.rawValue) { kind in
+                    Toggle(kind.label, isOn: kindEnabled(kind))
+                }
+                Text("Unchecked kinds are skipped during scans — like Ignored processes, but by category.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

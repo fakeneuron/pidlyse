@@ -56,6 +56,16 @@ final class ScanEngine: ObservableObject {
         }
     }
 
+    /// Process kinds the user has switched off — skipped during the scan. A
+    /// category-level complement to the substring `ignoredNames` ignore. Persisted
+    /// to UserDefaults as a `[String]` of `ProcessKind` raw values. Empty = scan
+    /// everything (the default).
+    @Published var disabledKinds: Set<ProcessKind> = [] {
+        didSet {
+            UserDefaults.standard.set(disabledKinds.map { $0.rawValue }, forKey: "disabledKinds")
+        }
+    }
+
     /// When true, fires a macOS system notification when a scan surfaces new stray PIDs.
     /// Persisted to UserDefaults. Permission is requested the first time it is enabled.
     @Published var notificationsEnabled: Bool = false {
@@ -84,10 +94,12 @@ final class ScanEngine: ObservableObject {
         let savedThreshold = ud.double(forKey: "elapsedThreshold")
         let savedInterval = ud.double(forKey: "scanInterval")
         let savedIgnoredNames = ud.stringArray(forKey: "ignoredNames") ?? []
+        let savedDisabledKinds = Set((ud.stringArray(forKey: "disabledKinds") ?? []).compactMap(ProcessKind.init(rawValue:)))
         let savedNotifications = ud.bool(forKey: "notificationsEnabled")
 
         if savedThreshold > 0 { _elapsedThreshold = Published(wrappedValue: savedThreshold) }
         _ignoredNames = Published(wrappedValue: savedIgnoredNames)
+        _disabledKinds = Published(wrappedValue: savedDisabledKinds)
         if savedInterval > 0 { _scanInterval = Published(wrappedValue: savedInterval) }
         if savedNotifications { _notificationsEnabled = Published(wrappedValue: true) }
         startTimer()
@@ -106,6 +118,7 @@ final class ScanEngine: ObservableObject {
         isScanning = true
         let threshold = elapsedThreshold
         let ignored = ignoredNames
+        let disabled = disabledKinds
         let dismissed = dismissedPIDs
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             // Resolve the registered-port listeners once: its keys feed the
@@ -123,6 +136,7 @@ final class ScanEngine: ObservableObject {
                                             registeredPIDs: Set(portMap.keys),
                                             ignoredNames: ignored,
                                             dismissedPIDs: dismissed,
+                                            disabledKinds: disabled,
                                             startTimeProvider: KillService.startTime)
             // Resolve each candidate's working directory once per scan (single bulk
             // lsof over the matched PIDs); the row-expansion hint reads it (PID-038).

@@ -18,7 +18,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-50.3** [light]🔧 | provenance-sort — Completed 2026-06-30.
   - [x] **PID-50.4** [light]🔧 | reclaimable-footprint — Completed 2026-06-30.
   - [x] **PID-50.5** [medium]🧠 | quick-filter — Completed 2026-06-30.
-  - [ ] **PID-50.6** [medium]🧠 | per-kind-toggles — "Scanned kinds" Settings section with a toggle per `ProcessKind`; persist `disabledKinds` on `ScanEngine`; filter disabled kinds during scan. Complements the existing substring ignore. SettingsView + ScanEngine + ScanCore. (Survey item 5.)
+  - [x] **PID-50.6** [medium]🧠 | per-kind-toggles — Completed 2026-06-30.
   - [ ] **PID-50.7** [medium]🧠 | popover-keys-dismiss — ⌘⌫ kills the selected/sole safe row; ensure Esc + click-outside reliably dismiss the popover (already `.transient` — verify on a build, add an event monitor only if needed). AppDelegate + MenuBarView. (Survey item 6, minimal.)
   - [ ] **PID-50.8** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest `.N` child.
 
