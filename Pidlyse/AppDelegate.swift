@@ -145,6 +145,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             popover.performClose(nil)
         } else {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            // An `NSStatusItem` click doesn't activate the app, so the popover window
+            // never becomes key on open — keyboard events (Esc to dismiss, ⌘⌫ to kill
+            // the sole safe row) leak to the previously-active app, and `.transient`
+            // click-outside dismissal stays dormant until the user first clicks inside.
+            // Activate + key the popover window so all three work immediately (PID-50.7).
+            NSApp.activate()
+            popover.contentViewController?.view.window?.makeKey()
         }
     }
 

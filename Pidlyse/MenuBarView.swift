@@ -49,12 +49,30 @@ struct MenuBarView: View {
             }
         }
         .frame(width: 320)
+        .background(soleSafeKillShortcut)
         .onAppear { engine.scan() }
         .onDisappear { filterText = "" }
         .onChange(of: engine.isScanning) { _, isScanning in
             guard !isScanning else { return }
             initCollapsedKinds()
         }
+    }
+
+    /// Invisible ⌘⌫ shortcut (PID-50.7): kills the sole *visible* safe row when
+    /// exactly one is shown. There's no row-selection mechanism (arrow traversal is
+    /// deliberately out of scope), so a single safe row is the only unambiguous
+    /// target — `.disabled` gates the shortcut to `safeItems.count == 1`, making it
+    /// inert otherwise. Hosted in `.background` so it contributes no layout (the
+    /// popover's fixed width / height-driven sizing stays intact, per PID-040).
+    private var soleSafeKillShortcut: some View {
+        Button("") {
+            guard let sole = safeItems.first else { return }
+            KillService.kill(sole, containerOwners: engine.containerOwners) { engine.scan() }
+        }
+        .keyboardShortcut(.delete, modifiers: .command)
+        .disabled(safeItems.count != 1)
+        .opacity(0)
+        .accessibilityHidden(true)
     }
 
     // MARK: - Init helpers

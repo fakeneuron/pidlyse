@@ -19,10 +19,12 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-50.4** [light]🔧 | reclaimable-footprint — Completed 2026-06-30.
   - [x] **PID-50.5** [medium]🧠 | quick-filter — Completed 2026-06-30.
   - [x] **PID-50.6** [medium]🧠 | per-kind-toggles — Completed 2026-06-30.
-  - [ ] **PID-50.7** [medium]🧠 | popover-keys-dismiss — ⌘⌫ kills the selected/sole safe row; ensure Esc + click-outside reliably dismiss the popover (already `.transient` — verify on a build, add an event monitor only if needed). AppDelegate + MenuBarView. (Survey item 6, minimal.)
+  - [x] **PID-50.7** [medium]🧠 | popover-keys-dismiss — Completed 2026-06-30.
   - [ ] **PID-50.8** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest `.N` child.
 
 ## Low
+
+- [ ] **PID-051** [medium]🧠 | kill-rescan-flicker — Investigate the popover's post-kill rescan: killing one Chrome (playwright-mcp) helper appears to clear the whole list momentarily before a respawned batch repopulates. Confirm whether engine.scan() clears items mid-scan (flicker) vs diffs in place; decide if respawned instances should settle without the flash.
 
 ## Future Opportunities
 
