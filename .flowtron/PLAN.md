@@ -16,13 +16,14 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- [ ] **PID-051** [medium]🧠 | kill-rescan-flicker — Investigate the popover's post-kill rescan: killing one Chrome (playwright-mcp) helper appears to clear the whole list momentarily before a respawned batch repopulates. Confirm whether engine.scan() clears items mid-scan (flicker) vs diffs in place; decide if respawned instances should settle without the flash.
+(none)
 
 ## Future Opportunities
 
 - **PID-030** [medium]🧠 | notarize-and-sign — Replace ad-hoc signing with Developer ID + Apple notarization + stapling (and the Hardened Runtime entitlement notarization requires). Removes the Gatekeeper "Apple could not verify…" warning on the public download. **Deferred 2026-06-28** — gated on $99/yr Apple Developer Program enrollment (operator opted to defer). Until then the public-trust story rests on the public source + SHA-256 checksum (shipped via `make dmg` + release.yml) + the honest right-click→Open install note in the README "Security" section. (Confirmed home for the no-sandbox / Hardened-Runtime posture by the [[PID-EPIC-35]] security sweep — F3/F4 folded here, no duplicate child filed.)
 ## Completed
 
+- [x] **PID-051** [medium]🧠 | kill-rescan-flicker — Completed 2026-06-30. No-bug: `engine.scan()` replaces `items` atomically (no mid-scan clear); the momentary clear is real Chrome teardown/respawn churn across two scans, not a render flicker.
 - [x] **PID-EPIC-50** [medium]🧠 | popover-power-ux — Completed 2026-06-30.
   - [x] **PID-50.1** [medium]🧠 | discovery — Completed 2026-06-30.
   - [x] **PID-50.2** [light]🔧 | row-context-menu — Completed 2026-06-30.
