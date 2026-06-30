@@ -29,6 +29,7 @@ Pidlyse/
         CwdResolver.swift         # lsof cwd parse + git-root project label (row descriptor)
         DockerCore.swift          # pure `docker ps` output parsing
         Container.swift           # model: id, name, image, status, ports
+        Shell.swift               # shared subprocess primitive (Process/Pipe drain) — all four shell-out sites delegate
   Pidlyse/
     PidlyseApp.swift          # @main; required (inert) Settings scene + NSApplicationDelegateAdaptor
     AppDelegate.swift         # NSStatusItem bridge: icon, popover, right-click Quit, self-managed Settings window

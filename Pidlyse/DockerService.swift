@@ -48,26 +48,14 @@ enum DockerService {
     /// Whether the Docker CLI is available on this machine.
     static var isInstalled: Bool { cliPath() != nil }
 
-    /// Shell out to the Docker CLI, reading stdout to EOF before `waitUntilExit`
-    /// to prevent pipe-buffer deadlock. Returns stdout as UTF-8 and whether the
-    /// process exited with status 0; `("", false)` when Docker is not installed
-    /// or the launch fails.
+    /// Shell out to the Docker CLI via the shared `Shell` primitive. Returns
+    /// stdout as UTF-8 and whether the process exited with status 0;
+    /// `("", false)` when Docker is not installed or the launch fails. Owns the
+    /// docker-specific *what* (path resolution); `Shell.run` owns the *how*.
     @discardableResult
     static func run(_ args: [String]) -> (output: String, ok: Bool) {
         guard let docker = cliPath() else { return ("", false) }
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: docker)
-        task.arguments = args
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        // Discard stderr via the null device, not an undrained Pipe(): we only ever
-        // read stdout, so a captured-but-unread stderr pipe could fill its ~64 KB
-        // buffer and wedge waitUntilExit() forever. /dev/null can't fill. (PID-35.2)
-        task.standardError = FileHandle.nullDevice
-        guard (try? task.run()) != nil else { return ("", false) }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        task.waitUntilExit()
-        return (String(data: data, encoding: .utf8) ?? "", task.terminationStatus == 0)
+        return Shell.run(docker, args)
     }
 
     /// List running containers via `docker ps`. Returns an empty array when

@@ -107,30 +107,10 @@ public enum CwdResolver {
 
     // MARK: - lsof shell-out
 
-    /// Shell out to an executable, reading stdout to EOF before `waitUntilExit`
-    /// to prevent pipe-buffer deadlock. Returns stdout as UTF-8 ("" on failure).
-    private static func runShell(_ path: String, _ args: [String]) -> String {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: path)
-        task.arguments = args
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        // Discard stderr via the null device, not an undrained Pipe(): we only ever
-        // read stdout, so a captured-but-unread stderr pipe could fill its ~64 KB
-        // buffer and wedge waitUntilExit() forever. /dev/null can't fill. (PID-35.2)
-        task.standardError = FileHandle.nullDevice
-        do {
-            try task.run()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            task.waitUntilExit()
-            return String(data: data, encoding: .utf8) ?? ""
-        } catch { return "" }
-    }
-
     /// `-a` ANDs `-p` (the scanned PIDs) with `-d cwd` (the cwd descriptor only);
     /// `-Fpn` emits machine-parseable `p<pid>` / `n<path>` field lines.
     static func runLSOF(_ pids: [Int32]) -> String {
         let list = pids.map(String.init).joined(separator: ",")
-        return runShell("/usr/sbin/lsof", ["-a", "-p", list, "-d", "cwd", "-Fpn"])
+        return Shell.run("/usr/sbin/lsof", ["-a", "-p", list, "-d", "cwd", "-Fpn"]).output
     }
 }

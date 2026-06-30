@@ -130,27 +130,7 @@ public enum PortRegistry {
 
     // MARK: - lsof shell-out
 
-    /// Shell out to an executable, reading stdout to EOF before `waitUntilExit`
-    /// to prevent pipe-buffer deadlock. Returns stdout as UTF-8 ("" on failure).
-    private static func runShell(_ path: String, _ args: [String]) -> String {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: path)
-        task.arguments = args
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        // Discard stderr via the null device, not an undrained Pipe(): we only ever
-        // read stdout, so a captured-but-unread stderr pipe could fill its ~64 KB
-        // buffer and wedge waitUntilExit() forever. /dev/null can't fill. (PID-35.2)
-        task.standardError = FileHandle.nullDevice
-        do {
-            try task.run()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            task.waitUntilExit()
-            return String(data: data, encoding: .utf8) ?? ""
-        } catch { return "" }
-    }
-
     static func runLSOF() -> String {
-        runShell("/usr/sbin/lsof", ["-nPi", "-sTCP:LISTEN"])
+        Shell.run("/usr/sbin/lsof", ["-nPi", "-sTCP:LISTEN"]).output
     }
 }
