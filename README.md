@@ -11,6 +11,7 @@ Sits beside the clock. Periodically scans for known process junk — orphaned te
 - **Two-section layout** — *Safe to clean* (easy-tier orphaned/old/no-tty strays, with a "~X MB reclaimable" footprint total in the section header) and *Needs review* (ambiguous processes tied to real dev infra)
 - **"Clean all"** sweeps the safe section in one click; per-row kill button for surgical cleanup
 - **Right-click a row** for quick actions — copy the PID, the full command line, or a ready-to-paste `kill <pid>`, and reveal the process's working directory in Finder (clipboard / Finder only, no extra shell-out)
+- **Quick filter** — a search field on the Processes tab narrows the list live by command, owning project, or listening port; session-scoped, clears when the popover closes
 - **Session dismiss** — hide a process until restart without killing it (↺ rescan restores all dismissed items)
 - **Docker containers tab** — a Processes / Containers segmented toggle in the popover; the Containers tab lists running containers (name, image, status, ports) with per-row **stop** and **stop + remove** buttons, and a clear empty state when Docker isn't installed
 - **Kill flow**: SIGTERM first, SIGKILL fallback after 2 s — always explicit, never automatic

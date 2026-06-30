@@ -24,12 +24,19 @@ struct MenuBarView: View {
     /// high-risk groups start collapsed; easy/moderate start expanded.
     @State private var collapsedKinds: Set<ProcessKind> = []
     @State private var seenKinds: Set<ProcessKind> = []
+    /// Live filter for the Processes tab. Session-scoped: the hosting controller is
+    /// reused across popover opens (see `AppDelegate`), so `@State` persists — the
+    /// `.onDisappear` below clears it so each open starts unfiltered.
+    @State private var filterText = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
             Divider()
             tabPicker
+            if selectedTab == .processes && !engine.items.isEmpty {
+                searchField
+            }
             switch selectedTab {
             case .processes:
                 if engine.items.isEmpty {
@@ -43,6 +50,7 @@ struct MenuBarView: View {
         }
         .frame(width: 320)
         .onAppear { engine.scan() }
+        .onDisappear { filterText = "" }
         .onChange(of: engine.isScanning) { _, isScanning in
             guard !isScanning else { return }
             initCollapsedKinds()
@@ -107,6 +115,35 @@ struct MenuBarView: View {
         .padding(.vertical, 6)
     }
 
+    /// Live quick-filter for the Processes tab (PID-50.5): a plain text field that
+    /// narrows the visible rows by `matchesFilter`. Clears via the trailing ✕ or on
+    /// popover close. Styled to match the popover's caption aesthetic.
+    private var searchField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.caption2).foregroundStyle(.secondary)
+            TextField("Filter by command, project, or port", text: $filterText)
+                .textFieldStyle(.plain)
+                .font(.caption)
+            if !filterText.isEmpty {
+                Button {
+                    filterText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
+                .help("Clear filter")
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Color(nsColor: .controlBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .padding(.horizontal)
+        .padding(.bottom, 6)
+    }
+
     private var emptyState: some View {
         Text("No stray processes detected.")
             .font(.caption)
@@ -118,6 +155,14 @@ struct MenuBarView: View {
     private var content: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
+                if safeItems.isEmpty && reviewItems.isEmpty {
+                    // Only reachable with an active filter (content renders only when
+                    // `engine.items` is non-empty), so this is the "no matches" state.
+                    Text("No processes match \u{201C}\(filterText)\u{201D}.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
                 if !safeItems.isEmpty { safeSection }
                 if !reviewItems.isEmpty { reviewSection }
             }
@@ -334,8 +379,25 @@ struct MenuBarView: View {
 
     // MARK: - Derived data
 
-    private var safeItems: [ProcessItem] { engine.items.filter { $0.bucket == .safe } }
-    private var reviewItems: [ProcessItem] { engine.items.filter { $0.bucket == .needsReview } }
+    private var safeItems: [ProcessItem] { engine.items.filter { $0.bucket == .safe && matchesFilter($0) } }
+    private var reviewItems: [ProcessItem] { engine.items.filter { $0.bucket == .needsReview && matchesFilter($0) } }
+
+    /// Quick-filter predicate (PID-50.5): an empty query passes everything; otherwise a
+    /// case-insensitive substring match against the command line, the row's
+    /// project/provenance label (`rowDescriptor`), or any listening port number.
+    /// Folded into `safeItems` / `reviewItems` so the section counts, "Clean all" scope,
+    /// and the reclaimable-footprint header all track the filtered set.
+    private func matchesFilter(_ item: ProcessItem) -> Bool {
+        let query = filterText.trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else { return true }
+        if item.command.localizedCaseInsensitiveContains(query) { return true }
+        if rowDescriptor(item).localizedCaseInsensitiveContains(query) { return true }
+        if let ports = engine.listeningPorts[item.pid],
+           ports.contains(where: { String($0).contains(query) }) {
+            return true
+        }
+        return false
+    }
 
     /// Total resident memory the safe-bucket processes would free if cleaned.
     private var safeReclaimableKB: Int { safeItems.reduce(0) { $0 + $1.rssKB } }
