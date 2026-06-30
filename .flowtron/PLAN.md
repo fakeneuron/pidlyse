@@ -16,7 +16,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-50.1** [medium]🧠 | discovery — Completed 2026-06-30.
   - [x] **PID-50.2** [light]🔧 | row-context-menu — Completed 2026-06-30.
   - [x] **PID-50.3** [light]🔧 | provenance-sort — Completed 2026-06-30.
-  - [ ] **PID-50.4** [light]🔧 | reclaimable-footprint — Sum the safe-bucket `rssKB` and show "~X MB reclaimable" in the "Safe to clean" section header (reuse `ramString`). MenuBarView only; no new data. (Survey item 3.)
+  - [x] **PID-50.4** [light]🔧 | reclaimable-footprint — Completed 2026-06-30.
   - [ ] **PID-50.5** [medium]🧠 | quick-filter — Search field below the tab picker that filters the Processes tab by command / project label / listening port; session-scoped, clears on close. MenuBarView (reads `engine.cwds` / `listeningPorts`). (Survey item 4.)
   - [ ] **PID-50.6** [medium]🧠 | per-kind-toggles — "Scanned kinds" Settings section with a toggle per `ProcessKind`; persist `disabledKinds` on `ScanEngine`; filter disabled kinds during scan. Complements the existing substring ignore. SettingsView + ScanEngine + ScanCore. (Survey item 5.)
   - [ ] **PID-50.7** [medium]🧠 | popover-keys-dismiss — ⌘⌫ kills the selected/sole safe row; ensure Esc + click-outside reliably dismiss the popover (already `.transient` — verify on a build, add an event monitor only if needed). AppDelegate + MenuBarView. (Survey item 6, minimal.)

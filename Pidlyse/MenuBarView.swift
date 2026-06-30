@@ -134,6 +134,8 @@ struct MenuBarView: View {
             HStack {
                 Text("Safe to clean (\(safeItems.count))")
                     .font(.subheadline).bold()
+                Text("~\(ramString(safeReclaimableKB)) reclaimable")
+                    .font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button("Clean all") {
                     KillService.kill(safeItems, containerOwners: engine.containerOwners) { engine.scan() }
@@ -334,6 +336,9 @@ struct MenuBarView: View {
 
     private var safeItems: [ProcessItem] { engine.items.filter { $0.bucket == .safe } }
     private var reviewItems: [ProcessItem] { engine.items.filter { $0.bucket == .needsReview } }
+
+    /// Total resident memory the safe-bucket processes would free if cleaned.
+    private var safeReclaimableKB: Int { safeItems.reduce(0) { $0 + $1.rssKB } }
 
     private func grouped(_ items: [ProcessItem]) -> [(ProcessKind, [ProcessItem])] {
         ProcessKind.allCases.compactMap { kind in
