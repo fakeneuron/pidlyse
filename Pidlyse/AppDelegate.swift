@@ -36,9 +36,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(
+        popover.delegate = self
+        let hosting = NSHostingController(
             rootView: MenuBarView(engine: engine, openSettings: { [weak self] in self?.openSettings() })
         )
+        // Let SwiftUI's intrinsic size drive the popover so it tracks runtime
+        // content-height changes — most starkly when the last stray closes and
+        // `MenuBarView` collapses from its fixed-height list to the empty state.
+        // The popover's width is fixed (see `MenuBarView`), so height changes never
+        // shift the `.minY` arrow horizontally.
+        hosting.sizingOptions = [.preferredContentSize]
+        popover.contentViewController = hosting
 
         // Redraw the icon whenever the engine's scan state changes. `receive(on:)`
         // defers to the next main-loop tick so the @Published values are already
@@ -55,6 +63,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// (auto-adapts to light/dark menu bar); the count keeps its color. When the
     /// stray count rises, the icon fires a one-shot pulse (see `pulse(_:)`).
     private func updateIcon() {
+        // Freeze the menu-bar icon while the popover is open. The `.variableLength`
+        // status button resizes as the count badge gains/loses digits (and flips to
+        // the spinner during the open-triggered rescan); since `NSPopover` anchors to
+        // the button at show time and the button is right-edge-pinned, any width change
+        // slides the icon's center and drifts the popover's arrow off it. Holding the
+        // icon still keeps the open popover rock-steady — the live list inside still
+        // reflects removals. `popoverDidClose` resyncs the icon once it closes.
+        guard !popover.isShown else { return }
         guard let button = statusItem?.button else { return }
         let safe = engine.items.filter { $0.bucket == .safe }.count
         let review = engine.items.filter { $0.bucket == .needsReview }.count
@@ -172,5 +188,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             at: NSPoint(x: 0, y: button.bounds.height + 5),
             in: button
         )
+    }
+}
+
+extension AppDelegate: NSPopoverDelegate {
+    /// Resync the menu-bar icon once the popover closes. `updateIcon` is frozen
+    /// while the popover is shown (see its guard), so the icon catches up to the
+    /// current scan state — count badge, spinner, or clean glyph — on close.
+    func popoverDidClose(_ notification: Notification) {
+        updateIcon()
     }
 }
