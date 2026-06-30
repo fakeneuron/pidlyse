@@ -72,16 +72,10 @@ public enum PortRegistry {
 
     /// PIDs currently listening on a registered port.
     /// `lsofOutput` is injectable so the pure pipeline can be unit-tested without shelling out.
+    /// Just the key set of `listeningPorts` — both filter on registered ports via the shared
+    /// `parseListenerLine`, so a PID appears here iff it has ≥1 registered listening port.
     public static func listeningPIDs(lsofOutput: String? = nil) -> Set<Int32> {
-        let output = lsofOutput ?? runLSOF()
-        let ports = effectivePorts  // capture once per scan; effectivePorts re-reads disk each call
-        var result = Set<Int32>()
-        for line in output.split(separator: "\n", omittingEmptySubsequences: true) {
-            if let pid = parsePIDAndPort(String(line), ports: ports) {
-                result.insert(pid)
-            }
-        }
-        return result
+        Set(listeningPorts(lsofOutput: lsofOutput).keys)
     }
 
     /// Parse one line of `lsof -nPi -sTCP:LISTEN` output, returning the PID only if
