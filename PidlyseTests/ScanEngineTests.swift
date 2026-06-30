@@ -437,6 +437,7 @@ final class ScanEngineTests: XCTestCase {
             5184,   // wandora frontend
             5183,   // delparte
             3003,   // blastimage
+            5185,   // finanal frontend
         ]
         for port in known {
             XCTAssertTrue(PortRegistry.registeredPorts.contains(port),

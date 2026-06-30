@@ -14,7 +14,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- [ ] **PID-043** [light]🔧 | port-table-drift — The compiled `registeredPorts` table in `PortRegistry.swift` has drifted from the global CLAUDE.md registry: add finanal (5185, 8007) and marscharts landing (4002). Muted impact (riskTier floors + PID-025 `ports.json` override), but the mirror is stale; while there, confirm the PID-18.5 tripwire test catches additions. Surfaced by audit-repo 2026-06-29 (Theme: Hand-mirrored constant drifts).
 - [ ] **PID-045** [light]🔧 | set-toggle-ext — Cosmetic: add a `extension Set { mutating func toggle(_ member: Element) }` and use it for the two `contains ? remove : insert` blocks in `MenuBarView.swift` (`collapsedKinds` ~:162, `expandedPIDs` ~:238). The one repeated control-flow shape in the UI; low priority. Surfaced by audit-repo 2026-06-29 (refactor sweep).
 
 ## Future Opportunities
@@ -22,6 +21,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - **PID-030** [medium]🧠 | notarize-and-sign — Replace ad-hoc signing with Developer ID + Apple notarization + stapling (and the Hardened Runtime entitlement notarization requires). Removes the Gatekeeper "Apple could not verify…" warning on the public download. **Deferred 2026-06-28** — gated on $99/yr Apple Developer Program enrollment (operator opted to defer). Until then the public-trust story rests on the public source + SHA-256 checksum (shipped via `make dmg` + release.yml) + the honest right-click→Open install note in the README "Security" section. (Confirmed home for the no-sandbox / Hardened-Runtime posture by the [[PID-EPIC-35]] security sweep — F3/F4 folded here, no duplicate child filed.)
 ## Completed
 
+- [x] **PID-043** [light]🔧 | port-table-drift — Completed 2026-06-29.
 - [x] **PID-044** [light]🔧 | listeningpids-collapse — Completed 2026-06-29.
 - [x] **PID-042** [light]🔧 | shellout-dedup — Completed 2026-06-29.
 - [x] **PID-041** [light]🔧 | onchange-deprecation — Completed 2026-06-29.

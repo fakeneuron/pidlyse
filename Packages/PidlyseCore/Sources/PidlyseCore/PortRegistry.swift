@@ -15,6 +15,7 @@ public enum PortRegistry {
         3001, 8003,
         // marscharts
         4000, 8000,
+        4002,         // marscharts landing (also stockshock IB paper — shared)
         // ADPpro
         5501,
         // bananapeel
@@ -25,6 +26,8 @@ public enum PortRegistry {
         5899, 8899, 8004,
         // bidviz
         8005,   // 5181 already covered above
+        5188,   // bidviz landing splash
+
         // fakeneuron
         3002,
         // spinalcord
@@ -35,6 +38,8 @@ public enum PortRegistry {
         5183,
         // blastimage
         3003,
+        // finanal
+        5185, 8007,
     ]
 
     // MARK: - User port overrides (PID-025)
