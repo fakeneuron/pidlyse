@@ -43,7 +43,7 @@ struct MenuBarView: View {
         }
         .frame(width: 320)
         .onAppear { engine.scan() }
-        .onChange(of: engine.isScanning) { isScanning in
+        .onChange(of: engine.isScanning) { _, isScanning in
             guard !isScanning else { return }
             initCollapsedKinds()
         }

@@ -29,7 +29,7 @@ struct ContainersView: View {
         }
         .frame(height: 360)
         .onAppear(perform: reload)
-        .onChange(of: refreshToken) { _ in reload() }
+        .onChange(of: refreshToken) { reload() }
     }
 
     // MARK: - Sections

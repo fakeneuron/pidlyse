@@ -14,13 +14,12 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- [ ] **PID-041** [light]🔧 | onchange-deprecation — Migrate the two deprecated `onChange(of:perform:)` call sites (MenuBarView.swift, ContainersView.swift) to the macOS-14 zero/two-parameter `onChange` closure to clear the build warnings.
-
 ## Future Opportunities
 
 - **PID-030** [medium]🧠 | notarize-and-sign — Replace ad-hoc signing with Developer ID + Apple notarization + stapling (and the Hardened Runtime entitlement notarization requires). Removes the Gatekeeper "Apple could not verify…" warning on the public download. **Deferred 2026-06-28** — gated on $99/yr Apple Developer Program enrollment (operator opted to defer). Until then the public-trust story rests on the public source + SHA-256 checksum (shipped via `make dmg` + release.yml) + the honest right-click→Open install note in the README "Security" section. (Confirmed home for the no-sandbox / Hardened-Runtime posture by the [[PID-EPIC-35]] security sweep — F3/F4 folded here, no duplicate child filed.)
 ## Completed
 
+- [x] **PID-041** [light]🔧 | onchange-deprecation — Completed 2026-06-29.
 - [x] **PID-040** [medium]🧠 | popover-realign — Completed 2026-06-29.
 - [x] **PID-039** [medium]🧠 | npm-surface-dedup — Completed 2026-06-29.
 - [x] **PID-038** [medium]🧠 | cwd-provenance — Completed 2026-06-29.
