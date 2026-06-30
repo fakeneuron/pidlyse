@@ -160,11 +160,7 @@ struct MenuBarView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Button {
                     withAnimation(.easeInOut(duration: 0.15)) {
-                        if collapsedKinds.contains(kind) {
-                            collapsedKinds.remove(kind)
-                        } else {
-                            collapsedKinds.insert(kind)
-                        }
+                        collapsedKinds.toggle(kind)
                     }
                 } label: {
                     HStack(spacing: 4) {
@@ -235,11 +231,7 @@ struct MenuBarView: View {
                 Text(ageString(item.elapsed))
                     .font(.caption2).foregroundStyle(.secondary)
                 Button {
-                    if expandedPIDs.contains(item.pid) {
-                        expandedPIDs.remove(item.pid)
-                    } else {
-                        expandedPIDs.insert(item.pid)
-                    }
+                    expandedPIDs.toggle(item.pid)
                 } label: {
                     Image(systemName: isExpanded ? "info.circle.fill" : "info.circle")
                 }
@@ -339,6 +331,18 @@ struct MenuBarView: View {
         case ..<3600:  return "\(s / 60)m"
         case ..<86400: return "\(s / 3600)h"
         default:       return "\(s / 86400)d"
+        }
+    }
+}
+
+private extension Set {
+    /// Insert `member` if absent, remove it if present — the one-line
+    /// equivalent of the `contains ? remove : insert` toggle shape.
+    mutating func toggle(_ member: Element) {
+        if contains(member) {
+            remove(member)
+        } else {
+            insert(member)
         }
     }
 }
