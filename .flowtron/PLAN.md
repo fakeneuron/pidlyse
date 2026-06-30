@@ -19,6 +19,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - **PID-030** [medium]🧠 | notarize-and-sign — Replace ad-hoc signing with Developer ID + Apple notarization + stapling (and the Hardened Runtime entitlement notarization requires). Removes the Gatekeeper "Apple could not verify…" warning on the public download. **Deferred 2026-06-28** — gated on $99/yr Apple Developer Program enrollment (operator opted to defer). Until then the public-trust story rests on the public source + SHA-256 checksum (shipped via `make dmg` + release.yml) + the honest right-click→Open install note in the README "Security" section. (Confirmed home for the no-sandbox / Hardened-Runtime posture by the [[PID-EPIC-35]] security sweep — F3/F4 folded here, no duplicate child filed.)
 ## Completed
 
+- [x] **PID-048** [light]🔧 | doc-currency-sweep — Completed 2026-06-30.
 - [x] **PID-047** [light]🔧 | logo-provenance — Completed 2026-06-30.
 - [x] **PID-046** [light]🔧 | node-bun-tokenboundary — Completed 2026-06-29.
 - [x] **PID-045** [light]🔧 | set-toggle-ext — Completed 2026-06-29.

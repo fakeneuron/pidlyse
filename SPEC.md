@@ -137,11 +137,13 @@ Any process matched whose port appears in the merged registry is demoted to "nee
 
 ## Settings Panel
 
-Configurable at runtime:
+Configurable at runtime (`SettingsView.swift`):
 
-- Scan interval (default: 2 min)
-- Elapsed-time threshold for "old" (default: 30 min)
-- Ignored PIDs list (session or persistent)
+- **Launch at login** — registers a login item via `SMAppService` (opt-in; [[PID-010]]).
+- **Notifications** — "Alert on new strays": a system notification when a scan finds processes not seen in the previous scan (opt-in; [[PID-13.5]]).
+- **Scan interval** (default: 2 min).
+- **Stale-process threshold** for "old" (default: 30 min).
+- **Ignored command substrings** — one per line; matching processes are hidden from scan results (persisted via `UserDefaults`). Distinct from the session-only dismiss/snooze in §"Kill Flow".
 
 ---
 
@@ -149,7 +151,7 @@ Configurable at runtime:
 
 - ~~Docker / container management~~ — **delivered post-v1** (PID-EPIC-28): a Processes / Containers segmented toggle whose Containers tab lists running containers with per-row stop / stop+remove. All `docker` access stays in the app-side `DockerService`; pure parsing in `PidlyseCore.DockerCore`.
 - Full Supabase stack awareness
-- Auto-start on login (deferred — add via `SMAppService` post-v1)
+- ~~Auto-start on login~~ — **delivered post-v1** (PID-010): a "Launch at login" toggle in Settings registers a login item via `SMAppService`.
 - Animated menu bar icon beyond simple badge (partially delivered post-v1: a one-shot stray-found pulse, PID-026; continuous animation / scanning spinner remain out)
 - Daemon / background XPC service
 
