@@ -12,15 +12,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-- [ ] **PID-EPIC-50** [medium]🧠 | popover-power-ux — Lightweight power-user affordances for faster stray triage, surfaced by the [[PID-049]] survey — added without breaking the no-bloat/performant posture. Spans the Tier 1+2 shortlist: row context menu, provenance auto-sort, reclaimable-footprint header, quick filter, per-kind scan toggles, and keyboard/click-outside dismissal polish.
-  - [x] **PID-50.1** [medium]🧠 | discovery — Completed 2026-06-30.
-  - [x] **PID-50.2** [light]🔧 | row-context-menu — Completed 2026-06-30.
-  - [x] **PID-50.3** [light]🔧 | provenance-sort — Completed 2026-06-30.
-  - [x] **PID-50.4** [light]🔧 | reclaimable-footprint — Completed 2026-06-30.
-  - [x] **PID-50.5** [medium]🧠 | quick-filter — Completed 2026-06-30.
-  - [x] **PID-50.6** [medium]🧠 | per-kind-toggles — Completed 2026-06-30.
-  - [x] **PID-50.7** [medium]🧠 | popover-keys-dismiss — Completed 2026-06-30.
-  - [ ] **PID-50.8** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest `.N` child.
+(none)
 
 ## Low
 
@@ -31,6 +23,15 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - **PID-030** [medium]🧠 | notarize-and-sign — Replace ad-hoc signing with Developer ID + Apple notarization + stapling (and the Hardened Runtime entitlement notarization requires). Removes the Gatekeeper "Apple could not verify…" warning on the public download. **Deferred 2026-06-28** — gated on $99/yr Apple Developer Program enrollment (operator opted to defer). Until then the public-trust story rests on the public source + SHA-256 checksum (shipped via `make dmg` + release.yml) + the honest right-click→Open install note in the README "Security" section. (Confirmed home for the no-sandbox / Hardened-Runtime posture by the [[PID-EPIC-35]] security sweep — F3/F4 folded here, no duplicate child filed.)
 ## Completed
 
+- [x] **PID-EPIC-50** [medium]🧠 | popover-power-ux — Completed 2026-06-30.
+  - [x] **PID-50.1** [medium]🧠 | discovery — Completed 2026-06-30.
+  - [x] **PID-50.2** [light]🔧 | row-context-menu — Completed 2026-06-30.
+  - [x] **PID-50.3** [light]🔧 | provenance-sort — Completed 2026-06-30.
+  - [x] **PID-50.4** [light]🔧 | reclaimable-footprint — Completed 2026-06-30.
+  - [x] **PID-50.5** [medium]🧠 | quick-filter — Completed 2026-06-30.
+  - [x] **PID-50.6** [medium]🧠 | per-kind-toggles — Completed 2026-06-30.
+  - [x] **PID-50.7** [medium]🧠 | popover-keys-dismiss — Completed 2026-06-30.
+  - [x] **PID-50.8** [medium]🧠 | audit — Completed 2026-06-30.
 - [x] **PID-049** [medium]🧠 | ux-feature-survey — Completed 2026-06-30.
 - [x] **PID-048** [light]🔧 | doc-currency-sweep — Completed 2026-06-30.
 - [x] **PID-047** [light]🔧 | logo-provenance — Completed 2026-06-30.
