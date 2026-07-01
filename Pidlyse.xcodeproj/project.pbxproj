@@ -13,6 +13,7 @@
 		AAAA0000000000000000B119 /* ScanEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B117 /* ScanEngine.swift */; };
 		AAAA0000000000000000B11C /* ScanEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B11B /* ScanEngineTests.swift */; };
 		AAAA0000000000000000B127 /* KillService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B128 /* KillService.swift */; };
+		AAAA0000000000000000B160 /* CleanLogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B161 /* CleanLogStore.swift */; };
 		AAAA0000000000000000B145 /* DockerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B146 /* DockerService.swift */; };
 		AAAA0000000000000000B150 /* ContainersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B151 /* ContainersView.swift */; };
 		AAAA0000000000000000B131 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B130 /* SettingsView.swift */; };
@@ -41,6 +42,7 @@
 		AAAA0000000000000000B11A /* PidlyseTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PidlyseTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AAAA0000000000000000B11B /* ScanEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanEngineTests.swift; sourceTree = "<group>"; };
 		AAAA0000000000000000B128 /* KillService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KillService.swift; sourceTree = "<group>"; };
+		AAAA0000000000000000B161 /* CleanLogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanLogStore.swift; sourceTree = "<group>"; };
 		AAAA0000000000000000B146 /* DockerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DockerService.swift; sourceTree = "<group>"; };
 		AAAA0000000000000000B151 /* ContainersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainersView.swift; sourceTree = "<group>"; };
 		AAAA0000000000000000B130 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -84,6 +86,7 @@
 				AAAA0000000000000000B107 /* MenuBarView.swift */,
 				AAAA0000000000000000B117 /* ScanEngine.swift */,
 				AAAA0000000000000000B128 /* KillService.swift */,
+				AAAA0000000000000000B161 /* CleanLogStore.swift */,
 				AAAA0000000000000000B146 /* DockerService.swift */,
 				AAAA0000000000000000B151 /* ContainersView.swift */,
 				AAAA0000000000000000B130 /* SettingsView.swift */,
@@ -223,6 +226,7 @@
 				AAAA0000000000000000B10B /* MenuBarView.swift in Sources */,
 				AAAA0000000000000000B119 /* ScanEngine.swift in Sources */,
 				AAAA0000000000000000B127 /* KillService.swift in Sources */,
+				AAAA0000000000000000B160 /* CleanLogStore.swift in Sources */,
 				AAAA0000000000000000B145 /* DockerService.swift in Sources */,
 				AAAA0000000000000000B150 /* ContainersView.swift in Sources */,
 				AAAA0000000000000000B131 /* SettingsView.swift in Sources */,

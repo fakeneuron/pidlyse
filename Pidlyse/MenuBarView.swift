@@ -67,7 +67,10 @@ struct MenuBarView: View {
     private var soleSafeKillShortcut: some View {
         Button("") {
             guard let sole = safeItems.first else { return }
-            KillService.kill(sole, containerOwners: engine.containerOwners) { engine.scan() }
+            KillService.kill(sole, containerOwners: engine.containerOwners) { outcome in
+                engine.recordCleaned(sole, outcome: outcome)
+                engine.scan()
+            }
         }
         .keyboardShortcut(.delete, modifiers: .command)
         .disabled(safeItems.count != 1)
@@ -201,7 +204,11 @@ struct MenuBarView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button("Clean all") {
-                    KillService.kill(safeItems, containerOwners: engine.containerOwners) { engine.scan() }
+                    let killed = safeItems
+                    KillService.kill(killed, containerOwners: engine.containerOwners) { outcomes in
+                        engine.recordCleaned(killed, outcomes: outcomes)
+                        engine.scan()
+                    }
                 }
                 .buttonStyle(.borderless)
                 .foregroundStyle(.red)
@@ -310,7 +317,10 @@ struct MenuBarView: View {
                 .buttonStyle(.borderless)
                 .help("Ignore for session")
                 Button {
-                    KillService.kill(item, containerOwners: engine.containerOwners) { engine.scan() }
+                    KillService.kill(item, containerOwners: engine.containerOwners) { outcome in
+                        engine.recordCleaned(item, outcome: outcome)
+                        engine.scan()
+                    }
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                 }

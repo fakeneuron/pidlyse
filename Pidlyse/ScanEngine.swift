@@ -97,6 +97,11 @@ final class ScanEngine: ObservableObject {
         }
     }
 
+    /// Persistent log of confirmed cleans (PID-53.2). Owns disk I/O; the pure
+    /// aggregation lives in `PidlyseCore.CleanLog`. Exposed so the PID-53.3
+    /// "Cleaned" tab can bind to its `events`.
+    let cleanLog = CleanLogStore()
+
     /// PIDs dismissed for this session. Not persisted — cleared on app restart.
     private(set) var dismissedPIDs: Set<Int32> = []
 
@@ -201,6 +206,32 @@ final class ScanEngine: ObservableObject {
         dismissedPIDs = []
         previousPIDs = nil
         scan()
+    }
+
+    // MARK: - Clean log (PID-53.2)
+
+    /// Record a single kill's outcome. Logs only `.confirmed` deaths — labelled
+    /// from the scan-time `cwds` project label (fallback: `displayPath`). Called
+    /// on the main thread from the kill-completion hook **before** the rescan, so
+    /// `cwds` still holds the pre-kill label.
+    func recordCleaned(_ item: ProcessItem, outcome: KillService.KillOutcome) {
+        guard outcome == .confirmed else { return }
+        cleanLog.record(makeCleanEvent(item))
+    }
+
+    /// Batch variant: record every confirmed kill from a `[pid: outcome]` map,
+    /// resolving each pid back to its `ProcessItem` for the kind/rss/label.
+    func recordCleaned(_ items: [ProcessItem], outcomes: [Int32: KillService.KillOutcome]) {
+        for item in items where outcomes[item.pid] == .confirmed {
+            cleanLog.record(makeCleanEvent(item))
+        }
+    }
+
+    private func makeCleanEvent(_ item: ProcessItem) -> CleanEvent {
+        CleanEvent(kind: item.kind.rawValue,
+                   projectLabel: cwds[item.pid]?.label ?? item.displayPath,
+                   rssKB: item.rssKB,
+                   timestamp: Date())
     }
 
     // MARK: - Notifications

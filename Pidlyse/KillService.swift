@@ -13,6 +13,17 @@ enum KillService {
     /// Grace period between SIGTERM and the SIGKILL fallback.
     static let gracePeriod: TimeInterval = 2
 
+    /// Outcome of a kill attempt, threaded out so the clean log records only real
+    /// deaths (PID-53.2). `confirmed` = we sent SIGTERM (→ process died, or was
+    /// force-SIGKILL'd post-grace) or `docker stop` succeeded. `notKilled` = the
+    /// two paths where nothing of ours killed anything: the PID was recycled/gone
+    /// before SIGTERM (identity guard refused), or SIGTERM hit EPERM (foreign owner,
+    /// e.g. the root Docker daemon). Excluding those keeps "RAM reclaimed" honest.
+    enum KillOutcome {
+        case confirmed
+        case notKilled
+    }
+
     // MARK: - Public kill API
 
     /// Terminate one process. Docker items whose PID maps to a container root
@@ -24,11 +35,11 @@ enum KillService {
     /// `ScanEngine.containerOwners` cache; an empty map (its default) means no
     /// container resolution is available and docker items fall through to POSIX.
     static func kill(_ item: ProcessItem, containerOwners: [Int32: String] = [:],
-                     onComplete: @escaping () -> Void = {}) {
+                     onComplete: @escaping (KillOutcome) -> Void = { _ in }) {
         if item.kind == .docker {
             DispatchQueue.global().async {
                 if dockerStopByName(containerOwners[item.pid]) {
-                    DispatchQueue.main.async { onComplete() }
+                    DispatchQueue.main.async { onComplete(.confirmed) }
                     return
                 }
                 killPosix(item.pid, expected: item.startTime, onComplete: onComplete)
@@ -42,14 +53,20 @@ enum KillService {
     /// routing and shares the same scan-time `containerOwners` map. `onComplete`
     /// fires once, on the main queue, after every kill has resolved.
     static func kill(_ items: [ProcessItem], containerOwners: [Int32: String] = [:],
-                     onComplete: @escaping () -> Void = {}) {
-        guard !items.isEmpty else { onComplete(); return }
+                     onComplete: @escaping ([Int32: KillOutcome]) -> Void = { _ in }) {
+        guard !items.isEmpty else { onComplete([:]); return }
         let group = DispatchGroup()
+        // Every per-item `onComplete` fires on the main queue (see the four dispatch
+        // points below), so this dictionary is mutated single-threaded — no lock needed.
+        var outcomes: [Int32: KillOutcome] = [:]
         for item in items {
             group.enter()
-            kill(item, containerOwners: containerOwners) { group.leave() }
+            kill(item, containerOwners: containerOwners) { outcome in
+                outcomes[item.pid] = outcome
+                group.leave()
+            }
         }
-        group.notify(queue: .main) { onComplete() }
+        group.notify(queue: .main) { onComplete(outcomes) }
     }
 
     // MARK: - Process identity (PID-reuse guard)
@@ -101,14 +118,15 @@ enum KillService {
     // MARK: - POSIX signal path
 
     private static func killPosix(_ pid: Int32, expected: ProcStartTime?,
-                                  onComplete: @escaping () -> Void) {
+                                  onComplete: @escaping (KillOutcome) -> Void) {
         // Re-verify identity before SIGTERM: a PID recycled between the scan (when
         // `expected` was captured) and this click would otherwise take the signal.
         let current = startTime(of: pid)
         guard shouldSendSIGTERM(expected: expected, current: current) else {
             // Recycled or gone since the scan — don't signal a bystander. Fire
-            // onComplete so the caller rescans and the stale row drops away.
-            DispatchQueue.main.async { onComplete() }
+            // onComplete so the caller rescans and the stale row drops away. Nothing
+            // of ours killed anything → notKilled (not logged).
+            DispatchQueue.main.async { onComplete(.notKilled) }
             return
         }
         let result = Darwin.kill(pid, SIGTERM)
@@ -116,9 +134,12 @@ enum KillService {
             // Process is owned by another user (e.g. root Docker daemon).
             // Fire onComplete so the caller rescans; the process will reappear,
             // indicating to the user that it cannot be killed without privileges.
-            DispatchQueue.main.async { onComplete() }
+            // We killed nothing → notKilled.
+            DispatchQueue.main.async { onComplete(.notKilled) }
             return
         }
+        // SIGTERM was delivered: the process either exits on it or is force-SIGKILL'd
+        // after the grace period below → confirmed either way (PID-53.2).
         // Reuse the just-read token as the SIGKILL-escalation snapshot (it matched
         // `expected`, so the PID still maps to the scanned process at SIGTERM time).
         let startSnapshot = current
@@ -126,7 +147,7 @@ enum KillService {
             if shouldEscalateToSIGKILL(snapshot: startSnapshot, current: startTime(of: pid)) {
                 Darwin.kill(pid, SIGKILL)
             }
-            DispatchQueue.main.async { onComplete() }
+            DispatchQueue.main.async { onComplete(.confirmed) }
         }
     }
 
