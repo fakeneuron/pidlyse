@@ -8,11 +8,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-- [ ] **PID-EPIC-53** [medium]🧠 | clean-history-stats — Persist a log of cleaned processes and surface value stats — "cleaned this week", estimated RAM reclaimed, top stray kinds — plus a "Recently cleaned" view. Extends the session-scoped reclaimable footprint already shown into persistent value over time. (Filed via /ft-epic-discovery; refined at .1 closure.)
-  - [x] **PID-53.1** [medium]🧠 | discovery — Completed 2026-06-30.
-  - [x] **PID-53.2** [medium]🧠 | clean-log-store — Completed 2026-07-01.
-  - [x] **PID-53.3** [medium]🧠 | cleaned-tab-stats — Completed 2026-07-01.
-  - [ ] **PID-53.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 - [ ] **PID-EPIC-54** [medium]🧠 | detection-rules — Expand built-in process kinds (next/astro/sveltekit/vite dev servers, cargo, go run, ollama and local LLM servers, more MCP/Playwright variants, Electron helpers) and add user-defined custom rules, a persistent protected-processes list, and stronger per-project ignores. (Filed via /ft-epic-discovery; refined at .1 closure.)
   - [ ] **PID-54.1** [medium]🧠 | discovery — Scope shared design and file children .2..4 per SPEC/epic.md.
   - [ ] **PID-54.5** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
@@ -42,6 +37,11 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [ ] **PID-58.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 ## Completed
 
+- [x] **PID-EPIC-53** [medium]🧠 | clean-history-stats — Completed 2026-07-01.
+  - [x] **PID-53.1** [medium]🧠 | discovery — Completed 2026-06-30.
+  - [x] **PID-53.2** [medium]🧠 | clean-log-store — Completed 2026-07-01.
+  - [x] **PID-53.3** [medium]🧠 | cleaned-tab-stats — Completed 2026-07-01.
+  - [x] **PID-53.4** [medium]🧠 | audit — Completed 2026-07-01.
 - [x] **PID-EPIC-52** [medium]🧠 | process-inspector — Completed 2026-06-30.
   - [x] **PID-52.1** [medium]🧠 | discovery — Completed 2026-06-30.
   - [x] **PID-52.2** [medium]🧠 | inspector-shell — Completed 2026-06-30.
