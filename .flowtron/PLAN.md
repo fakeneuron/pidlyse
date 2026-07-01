@@ -8,11 +8,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-- [ ] **PID-EPIC-52** [medium]🧠 | process-inspector — Click a process row to open a details inspector: full command line, listening ports, parent (ppid) chain, and open files via `lsof` — deepening the existing "Why is this here?" expandable into a full-context view. (Filed via /ft-epic-discovery; refined at .1 closure.)
-  - [x] **PID-52.1** [medium]🧠 | discovery — Completed 2026-06-30.
-  - [x] **PID-52.2** [medium]🧠 | inspector-shell — Completed 2026-06-30.
-  - [x] **PID-52.3** [medium]🧠 | inspector-open-files — Completed 2026-06-30.
-  - [ ] **PID-52.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 - [ ] **PID-EPIC-53** [medium]🧠 | clean-history-stats — Persist a log of cleaned processes and surface value stats — "cleaned this week", estimated RAM reclaimed, top stray kinds — plus a "Recently cleaned" view. Extends the session-scoped reclaimable footprint already shown into persistent value over time. (Filed via /ft-epic-discovery; refined at .1 closure.)
   - [ ] **PID-53.1** [medium]🧠 | discovery — Scope shared design and file children .2..3 per SPEC/epic.md.
   - [ ] **PID-53.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
@@ -45,6 +40,11 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [ ] **PID-58.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 ## Completed
 
+- [x] **PID-EPIC-52** [medium]🧠 | process-inspector — Completed 2026-06-30.
+  - [x] **PID-52.1** [medium]🧠 | discovery — Completed 2026-06-30.
+  - [x] **PID-52.2** [medium]🧠 | inspector-shell — Completed 2026-06-30.
+  - [x] **PID-52.3** [medium]🧠 | inspector-open-files — Completed 2026-06-30.
+  - [x] **PID-52.4** [medium]🧠 | audit — Completed 2026-06-30.
 - [x] **PID-051** [medium]🧠 | kill-rescan-flicker — Completed 2026-06-30. No-bug: `engine.scan()` replaces `items` atomically (no mid-scan clear); the momentary clear is real Chrome teardown/respawn churn across two scans, not a render flicker.
 - [x] **PID-EPIC-50** [medium]🧠 | popover-power-ux — Completed 2026-06-30.
   - [x] **PID-50.1** [medium]🧠 | discovery — Completed 2026-06-30.
