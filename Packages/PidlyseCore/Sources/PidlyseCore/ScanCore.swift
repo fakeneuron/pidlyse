@@ -23,13 +23,15 @@ public enum ScanCore {
                                  ignoredNames: [String] = [],
                                  dismissedPIDs: Set<Int32> = [],
                                  disabledKinds: Set<ProcessKind> = [],
+                                 customRules: [CustomRule] = [],
                                  startTimeProvider: ((Int32) -> ProcStartTime?)? = nil) -> [ProcessItem] {
         let output = psOutput ?? runPS()
         let portPIDs = registeredPIDs ?? PortRegistry.listeningPIDs()
         var all = output
             .split(separator: "\n", omittingEmptySubsequences: true)
             .compactMap { makeItem(from: String($0), elapsedThreshold: elapsedThreshold,
-                                   registeredPIDs: portPIDs, startTimeProvider: startTimeProvider) }
+                                   registeredPIDs: portPIDs, customRules: customRules,
+                                   startTimeProvider: startTimeProvider) }
         if !ignoredNames.isEmpty {
             all = all.filter { item in
                 !ignoredNames.contains { prefix in
@@ -106,11 +108,25 @@ public enum ScanCore {
     /// doesn't parse or matches no known `ProcessKind`.
     /// A process whose PID is in `registeredPIDs` is demoted from `.easy` to `.moderate`
     /// so it always lands in the Needs Review bucket.
+    /// User `customRules` are consulted **ahead of** `detectKind`: a custom-rule
+    /// match relabels the process (`.custom` kind + `customLabel`) even when a
+    /// built-in kind would also match, and always lands in Needs Review. (PID-54.3)
     public static func makeItem(from line: String, elapsedThreshold: TimeInterval,
                                 registeredPIDs: Set<Int32> = [],
+                                customRules: [CustomRule] = [],
                                 startTimeProvider: ((Int32) -> ProcStartTime?)? = nil) -> ProcessItem? {
         guard let p = parsePSLine(line) else { return nil }
-        guard let kind = detectKind(p.args) else { return nil }
+        let kind: ProcessKind
+        let customLabel: String?
+        if let rule = CustomRule.firstMatch(p.args, in: customRules) {
+            kind = .custom
+            customLabel = rule.label
+        } else if let detected = detectKind(p.args) {
+            kind = detected
+            customLabel = nil
+        } else {
+            return nil
+        }
 
         let elapsed = parseElapsed(p.etime)
         let cpuPercent = Double(p.pcpu) ?? 0.0
@@ -127,7 +143,8 @@ public enum ScanCore {
         let startTime = startTimeProvider.flatMap { $0(p.pid) }
         return ProcessItem(pid: p.pid, ppid: p.ppid, command: p.args,
                            elapsed: elapsed, tty: p.tty, kind: kind, riskTier: tier,
-                           cpuPercent: cpuPercent, rssKB: rssKB, startTime: startTime)
+                           cpuPercent: cpuPercent, rssKB: rssKB, startTime: startTime,
+                           customLabel: customLabel)
     }
 
     // MARK: - Provenance resolution
@@ -262,6 +279,8 @@ public enum ScanCore {
             return strongStray ? .easy : .moderate
         case .npm, .vite, .bun, .nextjs, .astro, .cargo, .goRun, .electron:
             return strongStray ? .moderate : .high
+        case .custom:
+            return .moderate   // user-defined match: never easy → always needsReview
         case .docker, .uvicorn, .node, .llmServer:
             return .high   // handled above; keeps the switch exhaustive
         }

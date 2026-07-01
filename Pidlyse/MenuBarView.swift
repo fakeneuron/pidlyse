@@ -290,7 +290,10 @@ struct MenuBarView: View {
     /// header already carries the kind, so a bare `npm`/`node` `displayPath` is
     /// redundant; the project answers "which app / dev server is this?".
     private func rowDescriptor(_ item: ProcessItem) -> String {
-        engine.cwds[item.pid]?.label ?? item.displayPath
+        // Custom-rule matches share one "Custom rules" group header, so the row
+        // itself carries the friendly per-rule label as its identity. (PID-54.3)
+        if item.kind == .custom, let label = item.customLabel { return label }
+        return engine.cwds[item.pid]?.label ?? item.displayPath
     }
 
     private func row(_ item: ProcessItem) -> some View {

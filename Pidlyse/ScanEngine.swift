@@ -82,6 +82,17 @@ final class ScanEngine: ObservableObject {
         }
     }
 
+    /// User-defined detection rules (substring → friendly label), consulted ahead
+    /// of the built-in kinds and always surfaced in Needs Review (PID-54.3). The
+    /// substring-ignore complement to `ignoredNames`: where an ignore *hides* a
+    /// match, a custom rule *adds* one. Persisted to UserDefaults as a `[String]`
+    /// of `substring = label` lines. Empty = built-in detection only (the default).
+    @Published var customRules: [CustomRule] = [] {
+        didSet {
+            UserDefaults.standard.set(customRules.map(CustomRule.serialize), forKey: "customRules")
+        }
+    }
+
     /// When true, fires a macOS system notification when a scan surfaces new stray PIDs.
     /// Persisted to UserDefaults. Permission is requested the first time it is enabled.
     @Published var notificationsEnabled: Bool = false {
@@ -116,11 +127,13 @@ final class ScanEngine: ObservableObject {
         let savedInterval = ud.double(forKey: "scanInterval")
         let savedIgnoredNames = ud.stringArray(forKey: "ignoredNames") ?? []
         let savedDisabledKinds = Set((ud.stringArray(forKey: "disabledKinds") ?? []).compactMap(ProcessKind.init(rawValue:)))
+        let savedCustomRules = (ud.stringArray(forKey: "customRules") ?? []).compactMap(CustomRule.parse)
         let savedNotifications = ud.bool(forKey: "notificationsEnabled")
 
         if savedThreshold > 0 { _elapsedThreshold = Published(wrappedValue: savedThreshold) }
         _ignoredNames = Published(wrappedValue: savedIgnoredNames)
         _disabledKinds = Published(wrappedValue: savedDisabledKinds)
+        _customRules = Published(wrappedValue: savedCustomRules)
         if savedInterval > 0 { _scanInterval = Published(wrappedValue: savedInterval) }
         if savedNotifications { _notificationsEnabled = Published(wrappedValue: true) }
         startTimer()
@@ -140,6 +153,7 @@ final class ScanEngine: ObservableObject {
         let threshold = elapsedThreshold
         let ignored = ignoredNames
         let disabled = disabledKinds
+        let rules = customRules
         let dismissed = dismissedPIDs
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             // Resolve the registered-port listeners once: its keys feed the
@@ -158,6 +172,7 @@ final class ScanEngine: ObservableObject {
                                             ignoredNames: ignored,
                                             dismissedPIDs: dismissed,
                                             disabledKinds: disabled,
+                                            customRules: rules,
                                             startTimeProvider: KillService.startTime)
             // Resolve each candidate's working directory once per scan (single bulk
             // lsof over the matched PIDs); the row-expansion hint reads it (PID-038).
@@ -228,7 +243,10 @@ final class ScanEngine: ObservableObject {
     }
 
     private func makeCleanEvent(_ item: ProcessItem) -> CleanEvent {
-        CleanEvent(kind: item.kind.rawValue,
+        // For a custom-rule match, persist the friendly label as the `kind` string:
+        // the Cleaned tab's `ProcessKind(rawValue:)?.label ?? kc.kind` fallback then
+        // shows the user's label (an unknown rawValue falls through to the raw string).
+        CleanEvent(kind: item.kind == .custom ? item.displayLabel : item.kind.rawValue,
                    projectLabel: cwds[item.pid]?.label ?? item.displayPath,
                    rssKB: item.rssKB,
                    timestamp: Date())
@@ -244,10 +262,10 @@ final class ScanEngine: ObservableObject {
         let content = UNMutableNotificationContent()
         if newStrays.count == 1 {
             content.title = "New stray process"
-            content.body = "\(newStrays[0].kind.label): \(newStrays[0].displayPath)"
+            content.body = "\(newStrays[0].displayLabel): \(newStrays[0].displayPath)"
         } else {
             content.title = "\(newStrays.count) new stray processes"
-            content.body = newStrays.map { $0.kind.label }.joined(separator: ", ")
+            content.body = newStrays.map { $0.displayLabel }.joined(separator: ", ")
         }
         content.sound = .default
 

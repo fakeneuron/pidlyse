@@ -52,6 +52,19 @@ struct SettingsView: View {
         )
     }
 
+    /// Binding that joins/splits `customRules` on newlines for the TextEditor —
+    /// one `substring = label` rule per line, mirroring `ignoredNamesText`.
+    private var customRulesText: Binding<String> {
+        Binding(
+            get: { engine.customRules.map(CustomRule.serialize).joined(separator: "\n") },
+            set: {
+                engine.customRules = $0
+                    .components(separatedBy: "\n")
+                    .compactMap(CustomRule.parse)
+            }
+        )
+    }
+
     var body: some View {
         Form {
             Section("Startup") {
@@ -85,8 +98,18 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            Section("Custom rules") {
+                TextEditor(text: customRulesText)
+                    .font(.system(.body, design: .monospaced))
+                    .frame(minHeight: 80)
+                Text("One rule per line as `substring = label` — matching processes surface under the label in Needs Review (never auto-killable).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Section("Scanned kinds") {
-                ForEach(ProcessKind.allCases, id: \.rawValue) { kind in
+                // `.custom` is excluded — it's the sentinel for user rules above,
+                // not a togglable built-in category.
+                ForEach(ProcessKind.allCases.filter { $0 != .custom }, id: \.rawValue) { kind in
                     Toggle(kind.label, isOn: kindEnabled(kind))
                 }
                 Text("Unchecked kinds are skipped during scans — like Ignored processes, but by category.")

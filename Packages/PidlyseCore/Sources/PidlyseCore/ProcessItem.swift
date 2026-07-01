@@ -25,6 +25,10 @@ public enum ProcessKind: String, CaseIterable {
     case electron
     case llmServer
     case mcpServer
+    // User-defined custom-rule match (PID-54.3). Sentinel kind — the friendly
+    // per-rule label rides on `ProcessItem.customLabel`, not on this enum. Always
+    // classified needsReview; excluded from the Settings "Scanned kinds" toggles.
+    case custom
 
     /// Short, user-facing label shown in the popover row.
     public var label: String {
@@ -48,6 +52,7 @@ public enum ProcessKind: String, CaseIterable {
         case .electron:       return "Electron (dev)"
         case .llmServer:      return "LLM server"
         case .mcpServer:      return "MCP server"
+        case .custom:         return "Custom rules"
         }
     }
 }
@@ -95,6 +100,9 @@ public struct ProcessItem: Identifiable {
     /// Controlling terminal as reported by `ps` (`??` = none).
     public let tty: String
     public let kind: ProcessKind
+    /// The friendly label from the matched user rule when `kind == .custom`;
+    /// `nil` for built-in kinds. Feeds `displayLabel`. (PID-54.3)
+    public let customLabel: String?
     public let riskTier: RiskTier
     /// CPU usage percentage from `ps pcpu` column.
     public let cpuPercent: Double
@@ -107,13 +115,15 @@ public struct ProcessItem: Identifiable {
 
     public init(pid: Int32, ppid: Int32, command: String, elapsed: TimeInterval,
                 tty: String, kind: ProcessKind, riskTier: RiskTier,
-                cpuPercent: Double, rssKB: Int, startTime: ProcStartTime? = nil) {
+                cpuPercent: Double, rssKB: Int, startTime: ProcStartTime? = nil,
+                customLabel: String? = nil) {
         self.pid = pid
         self.ppid = ppid
         self.command = command
         self.elapsed = elapsed
         self.tty = tty
         self.kind = kind
+        self.customLabel = customLabel
         self.riskTier = riskTier
         self.cpuPercent = cpuPercent
         self.rssKB = rssKB
@@ -126,6 +136,11 @@ public struct ProcessItem: Identifiable {
 
     /// `safe` only for the easy tier; everything else needs explicit review.
     public var bucket: Bucket { riskTier == .easy ? .safe : .needsReview }
+
+    /// User-facing label: the matched custom rule's friendly label when present,
+    /// else the built-in `kind.label`. Display consumers (popover row descriptor,
+    /// notifications, clean log) prefer this over `kind.label`. (PID-54.3)
+    public var displayLabel: String { customLabel ?? kind.label }
 
     /// Compact display label shown in the popover row. Absolute-path executables
     /// format as `parentDir/executableName` (e.g. `bin/uvicorn`); bare-word

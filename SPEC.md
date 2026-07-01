@@ -52,6 +52,7 @@ Runs on a configurable timer (default: every 2 min). Shells out to `ps -axww -o 
 
 | Pattern | `kind` | Category |
 |---------|--------|----------|
+| *user-defined substring* (Settings → Custom rules) | `custom` | Consulted **ahead of** all built-ins; carries the user's friendly label, always Needs Review |
 | `playwright-mcp` / `@playwright/mcp` | `playwrightMCP` | Orphaned MCP browser tooling |
 | `@modelcontextprotocol` / `mcp-server-*` | `mcpServer` | Orphaned MCP servers (filesystem/git/etc.) |
 | `pytest`, `vitest`, `jest`, `playwright test` | `pytest` / `vitest` / `jest` / `playwrightTest` | Hung test runners |
@@ -69,7 +70,7 @@ Runs on a configurable timer (default: every 2 min). Shells out to `ps -axww -o 
 | `bun` | `bun` | JS runtime / package manager |
 | `node` | `node` | Node.js runtime |
 
-A process that matches no `kind` is not a stray candidate and is excluded. Each match is evaluated on:
+User-defined **custom rules** (one command substring → a friendly label, edited in Settings and persisted to UserDefaults) are consulted before the built-in patterns: a match surfaces the process as `kind == custom` under the user's label and is always classified Needs Review — never auto-killable. A process that matches neither a custom rule nor a built-in `kind` is not a stray candidate and is excluded. Each match is evaluated on:
 
 - **TTY**: `??` = no controlling terminal → stray indicator
 - **Elapsed time**: configurable threshold, default > 30 min
@@ -86,6 +87,7 @@ Each candidate carries a descriptive **`kind`** (see the Scan Engine table) and 
 | **easy** | **Safe to kill** | Test runner / playwright-mcp / MCP server / Chrome helper that is a *strong stray*: old elapsed **and** no TTY **and** parent dead |
 | **moderate** | **Needs review** | A candidate without all three strong-stray signals (recently started, has a TTY, or parent still alive) |
 | **high** | **Needs review** | Real dev infra (`docker`, `uvicorn`, `node`, `llmServer`) — never an easy kill regardless of signals; also the dev-server / build-tool family (`npm`/`vite`/`bun`/`nextjs`/`astro`/`cargo`/`goRun`/`electron`) when not a strong stray |
+| **moderate** (fixed) | **Needs review** | User-defined `custom`-rule matches — always Needs Review regardless of stray signals |
 
 `bucket = (riskTier == .easy) ? .safe : .needsReview`. A process is **never auto-killed**; `safe` items still require an explicit click (per CLAUDE.md).
 

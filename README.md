@@ -17,7 +17,7 @@ Sits beside the clock. Periodically scans for known process junk — orphaned te
 - **Docker containers tab** — a Processes / Containers / Cleaned segmented toggle in the popover; the Containers tab lists running containers (name, image, status, ports) with per-row **stop** and **stop + remove** buttons, and a clear empty state when Docker isn't installed
 - **Cleaned tab** — persistent value from your confirmed kills: this-week stats (how many cleaned, estimated RAM reclaimed, top stray kinds) above a newest-first "Recently cleaned" list; privacy-first (kind, project label, RAM, and time only — never the command line)
 - **Kill flow**: SIGTERM first, SIGKILL fallback after 2 s — always explicit, never automatic
-- **Settings**: scan interval (default 2 min), stale-process threshold (default 30 min), ignored command substrings, per-kind scan toggles (switch off whole process categories), launch at login, notification alerts (opt-in)
+- **Settings**: scan interval (default 2 min), stale-process threshold (default 30 min), ignored command substrings, custom detection rules (one command substring → a friendly label; always Needs Review), per-kind scan toggles (switch off whole process categories), launch at login, notification alerts (opt-in)
 
 ## Requirements
 
