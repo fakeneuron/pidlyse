@@ -7,8 +7,8 @@ import PidlyseCore
 /// Kills route through `KillService` (SIGTERM → 2 s → SIGKILL) and trigger a
 /// rescan. Never auto-kills — every kill is an explicit click (per CLAUDE.md).
 struct MenuBarView: View {
-    /// The two popover tabs, switched via the segmented control below the header.
-    private enum Tab { case processes, containers }
+    /// The popover tabs, switched via the segmented control below the header.
+    private enum Tab { case processes, containers, cleaned }
 
     @ObservedObject var engine: ScanEngine
     /// Opens the Settings window. Injected by `AppDelegate`, which presents a
@@ -46,6 +46,8 @@ struct MenuBarView: View {
                 }
             case .containers:
                 ContainersView(refreshToken: containerRefreshToken)
+            case .cleaned:
+                CleanedView(store: engine.cleanLog)
             }
         }
         .frame(width: 320)
@@ -100,12 +102,14 @@ struct MenuBarView: View {
                 switch selectedTab {
                 case .processes:  engine.rescan()
                 case .containers: containerRefreshToken += 1
+                case .cleaned:    break // live-bound to the clean log; nothing to refresh
                 }
             } label: {
                 Image(systemName: "arrow.clockwise")
             }
             .buttonStyle(.borderless)
-            .help(selectedTab == .processes ? "Rescan (restores hidden items)" : "Refresh containers")
+            .disabled(selectedTab == .cleaned)
+            .help(refreshHelp)
             Button {
                 openSettings()
             } label: {
@@ -125,10 +129,21 @@ struct MenuBarView: View {
         .padding(.vertical, 8)
     }
 
+    /// Tooltip for the shared header refresh, tracking the active tab. The Cleaned
+    /// tab is live-bound to the clean log, so its refresh is disabled (no action).
+    private var refreshHelp: String {
+        switch selectedTab {
+        case .processes:  return "Rescan (restores hidden items)"
+        case .containers: return "Refresh containers"
+        case .cleaned:    return "Nothing to refresh"
+        }
+    }
+
     private var tabPicker: some View {
         Picker("", selection: $selectedTab) {
             Text("Processes").tag(Tab.processes)
             Text("Containers").tag(Tab.containers)
+            Text("Cleaned").tag(Tab.cleaned)
         }
         .pickerStyle(.segmented)
         .labelsHidden()
