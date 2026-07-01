@@ -348,7 +348,10 @@ struct MenuBarView: View {
     }
 
     private func reasoningBlock(item: ProcessItem, isOld: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
+        // Full ancestor chain to launchd (PID-52.2): walks the whole process table,
+        // so it names non-stray shells / login that `ScanCore.parentCommand` couldn't.
+        let ancestors = AncestryResolver.ancestorChain(ofPPID: item.ppid, in: engine.processTable)
+        return VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 4) {
                 if !item.hasTTY { criterionTag("no tty") }
                 if item.isOrphan { criterionTag("orphan") }
@@ -358,6 +361,14 @@ struct MenuBarView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .monospaced()
+            // Full command line (PID-52.2): promoted from the row's `.help` tooltip to a
+            // visible, wrapped line — the inspector is where the complete detail lives.
+            Text(item.command)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .monospaced()
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
             // Provenance hints (PID-036.3): rendered only when resolvable, so a
             // process with no registered-port listener / no scanned parent simply
             // shows fewer lines (graceful degrade). The cwd / project-folder hint
@@ -368,11 +379,11 @@ struct MenuBarView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
-            if let parent = ScanCore.parentCommand(ofPPID: item.ppid, in: engine.items) {
-                Text("child of \(parent)")
+            if !ancestors.isEmpty {
+                Text("child of \(ancestors.joined(separator: " ← "))")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1).truncationMode(.middle)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             if let owner = engine.containerOwners[item.pid] {
                 Text("owned by container \(owner)")

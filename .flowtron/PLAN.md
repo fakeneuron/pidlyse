@@ -10,7 +10,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 - [ ] **PID-EPIC-52** [medium]🧠 | process-inspector — Click a process row to open a details inspector: full command line, listening ports, parent (ppid) chain, and open files via `lsof` — deepening the existing "Why is this here?" expandable into a full-context view. (Filed via /ft-epic-discovery; refined at .1 closure.)
   - [x] **PID-52.1** [medium]🧠 | discovery — Completed 2026-06-30.
-  - [ ] **PID-52.2** [medium]🧠 | inspector-shell — Deepen the inline ⓘ expander into a full-context inspector: show the full command line (today tooltip-only) and the complete parent chain to launchd. Add a ps-based ancestor resolver in PidlyseCore (parentCommand only sees scanned strays). Listening ports already render.
+  - [x] **PID-52.2** [medium]🧠 | inspector-shell — Completed 2026-06-30.
   - [ ] **PID-52.3** [medium]🧠 | inspector-open-files — Add an open-files list to the inspector, fetched on-demand via lsof -p <pid> when a row expands (never per-scan). New pure PidlyseCore parser mirroring PortRegistry/CwdResolver (injectable output, Shell.run shell-out); filter to regular files + sockets, drop dylib noise, cap length.
   - [ ] **PID-52.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 - [ ] **PID-EPIC-53** [medium]🧠 | clean-history-stats — Persist a log of cleaned processes and surface value stats — "cleaned this week", estimated RAM reclaimed, top stray kinds — plus a "Recently cleaned" view. Extends the session-scoped reclaimable footprint already shown into persistent value over time. (Filed via /ft-epic-discovery; refined at .1 closure.)

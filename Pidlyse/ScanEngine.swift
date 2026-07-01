@@ -33,6 +33,14 @@ final class ScanEngine: ObservableObject {
     /// `containerOwners`.
     @Published private(set) var cwds: [Int32: ProcessCwd] = [:]
 
+    /// PID → its process-table node (parent pid + compact executable label) for the
+    /// whole system, captured at scan time (PID-52.2). Resolved once per scan via a
+    /// single bulk `ps -axo pid=,ppid=,comm=`; consumed by the inspector's parent-chain
+    /// hint (`AncestryResolver.ancestorChain`) to walk every ancestor up to launchd —
+    /// including non-stray shells / `login` that `ScanCore.parentCommand` can't see.
+    /// Empty when nothing resolves. Mirrors `listeningPorts` / `containerOwners` / `cwds`.
+    @Published private(set) var processTable: [Int32: ProcessNode] = [:]
+
     /// How often (seconds) the background timer auto-scans. Persisted to UserDefaults.
     @Published var scanInterval: TimeInterval = 120 {
         didSet {
@@ -141,6 +149,9 @@ final class ScanEngine: ObservableObject {
             // Resolve each candidate's working directory once per scan (single bulk
             // lsof over the matched PIDs); the row-expansion hint reads it (PID-038).
             let cwdMap = CwdResolver.processCwds(forPIDs: result.map { $0.pid })
+            // Resolve the full system process table once per scan (single bulk `ps`);
+            // the inspector's parent-chain hint walks it to launchd (PID-52.2).
+            let procTable = AncestryResolver.processTable()
             DispatchQueue.main.async {
                 let oldPIDs = self?.previousPIDs
                 self?.previousPIDs = Set(result.map { $0.pid })
@@ -148,6 +159,7 @@ final class ScanEngine: ObservableObject {
                 self?.listeningPorts = portMap
                 self?.containerOwners = owners
                 self?.cwds = cwdMap
+                self?.processTable = procTable
                 self?.isScanning = false
                 self?.fireNotificationIfNeeded(newItems: result, previousPIDs: oldPIDs)
             }
