@@ -147,6 +147,29 @@ public enum ScanCore {
                            customLabel: customLabel)
     }
 
+    // MARK: - Scoped ignores (PID-54.4)
+
+    /// Drop items hidden by a **scoped** ignore rule — one carrying a `pathPrefix`. An
+    /// item is removed when its command contains the rule's substring (case-insensitive)
+    /// **and** its resolved cwd sits under the rule's prefix. Global rules
+    /// (`pathPrefix == nil`) are handled upstream inside `enumerate` via `ignoredNames`
+    /// and skipped here. Applied by `ScanEngine` after `CwdResolver.processCwds`, since
+    /// `enumerate` itself has no cwd data. An item whose cwd didn't resolve can't be
+    /// scoped, so it's kept (graceful degrade). Pure; `cwds` is the scan's PID→cwd map.
+    public static func applyScopedIgnores(_ items: [ProcessItem],
+                                          cwds: [Int32: ProcessCwd],
+                                          rules: [IgnoreRule]) -> [ProcessItem] {
+        let scoped = rules.filter { $0.pathPrefix != nil }
+        guard !scoped.isEmpty else { return items }
+        return items.filter { item in
+            guard let cwd = cwds[item.pid]?.fullPath else { return true }
+            return !scoped.contains { rule in
+                item.command.localizedCaseInsensitiveContains(rule.substring)
+                    && CwdResolver.isUnderPrefix(cwd, rule.pathPrefix!)
+            }
+        }
+    }
+
     // MARK: - Provenance resolution
 
     /// Resolve a child's parent to the parent candidate's compact `displayPath`,

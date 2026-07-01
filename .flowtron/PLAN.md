@@ -12,7 +12,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-54.1** [medium]🧠 | discovery — Completed 2026-07-01.
   - [x] **PID-54.2** [medium]🧠 | expand-builtin-kinds — Completed 2026-07-01.
   - [x] **PID-54.3** [medium]🧠 | custom-rules — Completed 2026-07-01.
-  - [ ] **PID-54.4** [medium]🧠 | protect-and-scope — Two persisted classification-override lists layered onto `enumerate`. A protected list keeps matches out of Safe / "Clean all safe" (marked 🔒, one-click un-protect). Per-project ignores extend `ignoredNames` with a cwd-path-prefix condition via `CwdResolver`, hiding matches only under a chosen project tree. Both wired into Settings + UserDefaults.
+  - [x] **PID-54.4** [medium]🧠 | protect-and-scope — Completed 2026-07-01.
   - [ ] **PID-54.5** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 - [ ] **PID-059** [light]🔧 | app-icon-wiring — Generate the macOS AppIcon PNG set from `logo.png` and populate `Pidlyse/Assets.xcassets/AppIcon.appiconset` — it currently declares the slots but ships zero images, so the `.app` bundle is iconless. The menu-bar glyph is separate and unaffected.
 - [ ] **PID-060** [light]🔧 | readme-visuals — Add high-quality popover screenshots and a short animated GIF (especially "Clean all" on real strays) to the README so the tool reads at a glance; keep the prominent Security section.

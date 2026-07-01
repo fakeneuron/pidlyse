@@ -68,14 +68,14 @@ struct MenuBarView: View {
     /// popover's fixed width / height-driven sizing stays intact, per PID-040).
     private var soleSafeKillShortcut: some View {
         Button("") {
-            guard let sole = safeItems.first else { return }
+            guard let sole = sweepableSafeItems.first else { return }
             KillService.kill(sole, containerOwners: engine.containerOwners) { outcome in
                 engine.recordCleaned(sole, outcome: outcome)
                 engine.scan()
             }
         }
         .keyboardShortcut(.delete, modifiers: .command)
-        .disabled(safeItems.count != 1)
+        .disabled(sweepableSafeItems.count != 1)
         .opacity(0)
         .accessibilityHidden(true)
     }
@@ -213,13 +213,15 @@ struct MenuBarView: View {
     private var safeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Safe to clean (\(safeItems.count))")
+                // Count / reclaimable / sweep all track the *sweepable* set (protected
+                // rows excluded), though the rows below still list every safe item.
+                Text("Safe to clean (\(sweepableSafeItems.count))")
                     .font(.subheadline).bold()
                 Text("~\(ramString(safeReclaimableKB)) reclaimable")
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button("Clean all") {
-                    let killed = safeItems
+                    let killed = sweepableSafeItems
                     KillService.kill(killed, containerOwners: engine.containerOwners) { outcomes in
                         engine.recordCleaned(killed, outcomes: outcomes)
                         engine.scan()
@@ -227,6 +229,7 @@ struct MenuBarView: View {
                 }
                 .buttonStyle(.borderless)
                 .foregroundStyle(.red)
+                .disabled(sweepableSafeItems.isEmpty)
             }
             groups(for: safeItems)
         }
@@ -299,11 +302,23 @@ struct MenuBarView: View {
     private func row(_ item: ProcessItem) -> some View {
         let isOld = item.elapsed >= engine.elapsedThreshold
         let isExpanded = expandedPIDs.contains(item.pid)
+        // Protection is only meaningful for Safe rows (only they're bulk-swept), so the
+        // 🔒 badge + lock toggle are gated there (PID-54.4).
+        let protectable = item.bucket == .safe && engine.cwds[item.pid] != nil
+        let protected = item.bucket == .safe && isProtected(item)
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                Circle()
-                    .fill(riskColor(item.riskTier))
-                    .frame(width: 8, height: 8)
+                if protected {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 8)
+                        .help("Protected — kept out of \u{201C}Clean all\u{201D}")
+                } else {
+                    Circle()
+                        .fill(riskColor(item.riskTier))
+                        .frame(width: 8, height: 8)
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     Text("PID \(item.pid)").font(.caption).monospaced()
                     Text(rowDescriptor(item))
@@ -327,6 +342,16 @@ struct MenuBarView: View {
                 }
                 .buttonStyle(.borderless)
                 .help("Why is this here?")
+                if protectable {
+                    Button {
+                        toggleProtected(item)
+                    } label: {
+                        Image(systemName: protected ? "lock.fill" : "lock.open")
+                    }
+                    .buttonStyle(.borderless)
+                    .help(protected ? "Un-protect this project"
+                                    : "Protect: keep this project out of \u{201C}Clean all\u{201D}")
+                }
                 Button {
                     engine.dismiss(item.pid)
                 } label: {
@@ -465,6 +490,33 @@ struct MenuBarView: View {
     private var safeItems: [ProcessItem] { engine.items.filter { $0.bucket == .safe && matchesFilter($0) } }
     private var reviewItems: [ProcessItem] { engine.items.filter { $0.bucket == .needsReview && matchesFilter($0) } }
 
+    /// The safe rows that "Clean all" (and the ⌘⌫ shortcut) actually sweep — safe items
+    /// minus any the user has protected (PID-54.4). Protected rows stay *listed* in the
+    /// Safe section (badged 🔒) but are excluded from the bulk sweep, the section count,
+    /// and the reclaimable total; their individual kill button still works.
+    private var sweepableSafeItems: [ProcessItem] { safeItems.filter { !isProtected($0) } }
+
+    /// True when `item`'s resolved working directory sits under any protected project
+    /// tree. View-side (reads the `@Published` `cwds` + `protectedProjects`) so toggling
+    /// a lock updates instantly without waiting for a rescan. False when the cwd didn't
+    /// resolve — an unlocatable process can't be matched to a project tree.
+    private func isProtected(_ item: ProcessItem) -> Bool {
+        guard let cwd = engine.cwds[item.pid]?.fullPath else { return false }
+        return engine.protectedProjects.contains { CwdResolver.isUnderPrefix(cwd, $0) }
+    }
+
+    /// Toggle protection for `item`'s project. Protecting seeds the row's project root
+    /// (falling back to its exact cwd outside a repo); un-protecting removes every
+    /// protected entry that currently covers this row, so one click reliably unlocks it.
+    private func toggleProtected(_ item: ProcessItem) {
+        guard let cwd = engine.cwds[item.pid] else { return }
+        if isProtected(item) {
+            engine.protectedProjects.removeAll { CwdResolver.isUnderPrefix(cwd.fullPath, $0) }
+        } else {
+            engine.protectedProjects.append(cwd.projectRoot ?? cwd.fullPath)
+        }
+    }
+
     /// Quick-filter predicate (PID-50.5): an empty query passes everything; otherwise a
     /// case-insensitive substring match against the command line, the row's
     /// project/provenance label (`rowDescriptor`), or any listening port number.
@@ -482,8 +534,9 @@ struct MenuBarView: View {
         return false
     }
 
-    /// Total resident memory the safe-bucket processes would free if cleaned.
-    private var safeReclaimableKB: Int { safeItems.reduce(0) { $0 + $1.rssKB } }
+    /// Total resident memory the *sweepable* safe processes would free if cleaned —
+    /// protected rows are excluded, matching the "Clean all" scope (PID-54.4).
+    private var safeReclaimableKB: Int { sweepableSafeItems.reduce(0) { $0 + $1.rssKB } }
 
     private func grouped(_ items: [ProcessItem]) -> [(ProcessKind, [ProcessItem])] {
         ProcessKind.allCases.compactMap { kind in

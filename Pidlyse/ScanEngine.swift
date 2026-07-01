@@ -64,11 +64,26 @@ final class ScanEngine: ObservableObject {
         }
     }
 
-    /// Command-prefix substrings to hide from scan results (case-insensitive).
-    /// Persisted to UserDefaults as a string array.
+    /// Command-substring ignores, one raw editor line each (case-insensitive). A bare
+    /// line hides matches globally; a `substring @ ~/path` line scopes the ignore to one
+    /// project tree (`IgnoreRule` grammar, PID-54.4). Persisted to UserDefaults as a
+    /// string array; parsed into `IgnoreRule`s at scan time.
     @Published var ignoredNames: [String] = [] {
         didSet {
             UserDefaults.standard.set(ignoredNames, forKey: "ignoredNames")
+        }
+    }
+
+    /// Project trees whose processes are kept out of the "Clean all" bulk sweep
+    /// (marked 🔒, still individually killable) — the protected-list override (PID-54.4).
+    /// Each entry is a `~`-abbreviated path prefix; a process is protected when its
+    /// resolved cwd sits under any entry (`CwdResolver.isUnderPrefix`). Edited via the
+    /// per-row 🔒 toggle or the Settings list. Persisted to UserDefaults as a `[String]`.
+    /// Not threaded into the scan — protection is a view-side overlay so lock/un-lock is
+    /// instant (no rescan). Empty = nothing protected (the default).
+    @Published var protectedProjects: [String] = [] {
+        didSet {
+            UserDefaults.standard.set(protectedProjects, forKey: "protectedProjects")
         }
     }
 
@@ -128,12 +143,14 @@ final class ScanEngine: ObservableObject {
         let savedIgnoredNames = ud.stringArray(forKey: "ignoredNames") ?? []
         let savedDisabledKinds = Set((ud.stringArray(forKey: "disabledKinds") ?? []).compactMap(ProcessKind.init(rawValue:)))
         let savedCustomRules = (ud.stringArray(forKey: "customRules") ?? []).compactMap(CustomRule.parse)
+        let savedProtectedProjects = ud.stringArray(forKey: "protectedProjects") ?? []
         let savedNotifications = ud.bool(forKey: "notificationsEnabled")
 
         if savedThreshold > 0 { _elapsedThreshold = Published(wrappedValue: savedThreshold) }
         _ignoredNames = Published(wrappedValue: savedIgnoredNames)
         _disabledKinds = Published(wrappedValue: savedDisabledKinds)
         _customRules = Published(wrappedValue: savedCustomRules)
+        _protectedProjects = Published(wrappedValue: savedProtectedProjects)
         if savedInterval > 0 { _scanInterval = Published(wrappedValue: savedInterval) }
         if savedNotifications { _notificationsEnabled = Published(wrappedValue: true) }
         startTimer()
@@ -151,7 +168,12 @@ final class ScanEngine: ObservableObject {
         guard !isScanning else { return }
         isScanning = true
         let threshold = elapsedThreshold
-        let ignored = ignoredNames
+        // Split the ignore editor lines: global substrings hide inside `enumerate`
+        // (unchanged path); scoped `substring @ prefix` rules need the cwd map and are
+        // applied as a post-filter below (PID-54.4).
+        let ignoreRules = ignoredNames.compactMap(IgnoreRule.parse)
+        let globalIgnores = ignoreRules.filter { $0.pathPrefix == nil }.map { $0.substring }
+        let scopedIgnores = ignoreRules.filter { $0.pathPrefix != nil }
         let disabled = disabledKinds
         let rules = customRules
         let dismissed = dismissedPIDs
@@ -169,7 +191,7 @@ final class ScanEngine: ObservableObject {
             // a PID recycled between this scan and a later kill click. (PID-35.3)
             let result = ScanCore.enumerate(elapsedThreshold: threshold,
                                             registeredPIDs: Set(portMap.keys),
-                                            ignoredNames: ignored,
+                                            ignoredNames: globalIgnores,
                                             dismissedPIDs: dismissed,
                                             disabledKinds: disabled,
                                             customRules: rules,
@@ -177,19 +199,22 @@ final class ScanEngine: ObservableObject {
             // Resolve each candidate's working directory once per scan (single bulk
             // lsof over the matched PIDs); the row-expansion hint reads it (PID-038).
             let cwdMap = CwdResolver.processCwds(forPIDs: result.map { $0.pid })
+            // Apply cwd-scoped ignores now that the cwd map exists — they can't run
+            // inside `enumerate` (no cwd there). Global ignores already filtered above.
+            let filtered = ScanCore.applyScopedIgnores(result, cwds: cwdMap, rules: scopedIgnores)
             // Resolve the full system process table once per scan (single bulk `ps`);
             // the inspector's parent-chain hint walks it to launchd (PID-52.2).
             let procTable = AncestryResolver.processTable()
             DispatchQueue.main.async {
                 let oldPIDs = self?.previousPIDs
-                self?.previousPIDs = Set(result.map { $0.pid })
-                self?.items = result
+                self?.previousPIDs = Set(filtered.map { $0.pid })
+                self?.items = filtered
                 self?.listeningPorts = portMap
                 self?.containerOwners = owners
                 self?.cwds = cwdMap
                 self?.processTable = procTable
                 self?.isScanning = false
-                self?.fireNotificationIfNeeded(newItems: result, previousPIDs: oldPIDs)
+                self?.fireNotificationIfNeeded(newItems: filtered, previousPIDs: oldPIDs)
             }
         }
     }

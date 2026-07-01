@@ -485,6 +485,77 @@ final class ScanEngineTests: XCTestCase {
         XCTAssertNil(items.first?.customLabel)
     }
 
+    // MARK: - IgnoreRule parsing / serialization (PID-54.4)
+
+    func testIgnoreRule_parse_bareLine_isGlobal() {
+        XCTAssertEqual(IgnoreRule.parse("chrome"), IgnoreRule(substring: "chrome", pathPrefix: nil))
+    }
+
+    func testIgnoreRule_parse_scopedLine_splitsSubstringAndPrefix() {
+        XCTAssertEqual(IgnoreRule.parse("node @ ~/code/bidviz"),
+                       IgnoreRule(substring: "node", pathPrefix: "~/code/bidviz"))
+    }
+
+    func testIgnoreRule_parse_emptySubstring_isNil() {
+        XCTAssertNil(IgnoreRule.parse(""))
+        XCTAssertNil(IgnoreRule.parse("   "))
+        XCTAssertNil(IgnoreRule.parse(" @ ~/code/bidviz"))
+    }
+
+    func testIgnoreRule_parse_emptyPrefix_degradesToGlobal() {
+        XCTAssertEqual(IgnoreRule.parse("node @ "), IgnoreRule(substring: "node", pathPrefix: nil))
+    }
+
+    func testIgnoreRule_serialize_roundTrip() {
+        XCTAssertEqual(IgnoreRule.serialize(IgnoreRule(substring: "chrome")), "chrome")
+        let scoped = IgnoreRule(substring: "node", pathPrefix: "~/code/bidviz")
+        XCTAssertEqual(IgnoreRule.serialize(scoped), "node @ ~/code/bidviz")
+        XCTAssertEqual(IgnoreRule.parse(IgnoreRule.serialize(scoped)), scoped)
+    }
+
+    // MARK: - applyScopedIgnores (cwd-scoped ignore post-filter, PID-54.4)
+
+    private func scopeItem(pid: Int32, command: String) -> ProcessItem {
+        ProcessItem(pid: pid, ppid: 1, command: command, elapsed: 0,
+                    tty: "??", kind: .node, riskTier: .high, cpuPercent: 0, rssKB: 0)
+    }
+
+    func testApplyScopedIgnores_hidesMatchUnderPrefix() {
+        let items = [scopeItem(pid: 10, command: "node /app/server.js")]
+        let cwds: [Int32: ProcessCwd] = [10: ProcessCwd(label: "bidviz", fullPath: "~/code/bidviz")]
+        let rules = [IgnoreRule(substring: "node", pathPrefix: "~/code/bidviz")]
+        XCTAssertEqual(ScanCore.applyScopedIgnores(items, cwds: cwds, rules: rules).count, 0)
+    }
+
+    func testApplyScopedIgnores_keepsMatchOutsidePrefix() {
+        let items = [scopeItem(pid: 10, command: "node /app/server.js")]
+        let cwds: [Int32: ProcessCwd] = [10: ProcessCwd(label: "marscharts", fullPath: "~/code/marscharts")]
+        let rules = [IgnoreRule(substring: "node", pathPrefix: "~/code/bidviz")]
+        XCTAssertEqual(ScanCore.applyScopedIgnores(items, cwds: cwds, rules: rules).count, 1)
+    }
+
+    func testApplyScopedIgnores_keepsWhenCwdUnresolved() {
+        let items = [scopeItem(pid: 10, command: "node /app/server.js")]
+        let rules = [IgnoreRule(substring: "node", pathPrefix: "~/code/bidviz")]
+        XCTAssertEqual(ScanCore.applyScopedIgnores(items, cwds: [:], rules: rules).count, 1)
+    }
+
+    func testApplyScopedIgnores_globalRulesIgnoredHere() {
+        // A global rule (no prefix) is handled inside enumerate, not by this post-filter.
+        let items = [scopeItem(pid: 10, command: "node /app/server.js")]
+        let cwds: [Int32: ProcessCwd] = [10: ProcessCwd(label: "bidviz", fullPath: "~/code/bidviz")]
+        let rules = [IgnoreRule(substring: "node", pathPrefix: nil)]
+        XCTAssertEqual(ScanCore.applyScopedIgnores(items, cwds: cwds, rules: rules).count, 1)
+    }
+
+    func testApplyScopedIgnores_substringMustAlsoMatch() {
+        // cwd under prefix but the command lacks the substring → kept.
+        let items = [scopeItem(pid: 10, command: "node /app/server.js")]
+        let cwds: [Int32: ProcessCwd] = [10: ProcessCwd(label: "bidviz", fullPath: "~/code/bidviz")]
+        let rules = [IgnoreRule(substring: "vite", pathPrefix: "~/code/bidviz")]
+        XCTAssertEqual(ScanCore.applyScopedIgnores(items, cwds: cwds, rules: rules).count, 1)
+    }
+
     // MARK: - displayPath
 
     private func item(command: String) -> ProcessItem {
@@ -1105,14 +1176,37 @@ final class CwdResolverTests: XCTestCase {
         let result = CwdResolver.processCwds(forPIDs: [200], lsofOutput: lsof, home: "/Users/x",
                                              gitRootFinder: { _ in "/Users/x/code/bidviz" })
         XCTAssertEqual(result, [200: ProcessCwd(label: "bidviz/frontend",
-                                                fullPath: "~/code/bidviz/frontend")])
+                                                fullPath: "~/code/bidviz/frontend",
+                                                projectRoot: "~/code/bidviz")])
     }
 
     func testProcessCwds_noGitRoot_labelIsLeafFolder() {
         let lsof = "p200\nn/Users/x/scratch\n"
         let result = CwdResolver.processCwds(forPIDs: [200], lsofOutput: lsof, home: "/Users/x",
                                              gitRootFinder: { _ in nil })
-        XCTAssertEqual(result, [200: ProcessCwd(label: "scratch", fullPath: "~/scratch")])
+        // No repo → projectRoot is nil (protect falls back to the exact cwd).
+        XCTAssertEqual(result, [200: ProcessCwd(label: "scratch", fullPath: "~/scratch",
+                                                projectRoot: nil)])
+    }
+
+    // MARK: - isUnderPrefix (protect + scoped-ignore path containment, PID-54.4)
+
+    func testIsUnderPrefix_exactMatchAndDescendant() {
+        XCTAssertTrue(CwdResolver.isUnderPrefix("~/code/bidviz", "~/code/bidviz"))
+        XCTAssertTrue(CwdResolver.isUnderPrefix("~/code/bidviz/frontend", "~/code/bidviz"))
+    }
+
+    func testIsUnderPrefix_siblingAndPartialSegment_notMatched() {
+        XCTAssertFalse(CwdResolver.isUnderPrefix("~/code/bidviz2", "~/code/bidviz"))
+        XCTAssertFalse(CwdResolver.isUnderPrefix("~/code/marscharts", "~/code/bidviz"))
+    }
+
+    func testIsUnderPrefix_trailingSlashTolerated() {
+        XCTAssertTrue(CwdResolver.isUnderPrefix("~/code/bidviz/frontend", "~/code/bidviz/"))
+    }
+
+    func testIsUnderPrefix_emptyPrefix_matchesNothing() {
+        XCTAssertFalse(CwdResolver.isUnderPrefix("~/code/bidviz", ""))
     }
 }
 

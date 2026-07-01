@@ -10,14 +10,15 @@ Sits beside the clock. Periodically scans for known process junk — orphaned te
 - **Per-row signals** — the owning project (the git repo / working directory the process runs in, e.g. `bidviz` or `bidviz/frontend`, shown as the row label so a bare `npm`/`node` is identifiable; full path on hover), CPU%, RAM, age, risk-tier color dot (green / orange / red), expandable "why is this here?" inspector (tty status, orphan flag, age criteria, the full command line, and provenance hints: the registered port it listens on, its full parent chain up to launchd, the Docker container that owns it, and its open files + sockets)
 - **Two-section layout** — *Safe to clean* (easy-tier orphaned/old/no-tty strays, with a "~X MB reclaimable" footprint total in the section header) and *Needs review* (ambiguous processes tied to real dev infra)
 - **"Clean all"** sweeps the safe section in one click; per-row kill button for surgical cleanup
+- **Protect a project** — click 🔒 on a safe row to keep that project's processes out of "Clean all" (they stay listed and individually killable); one click un-protects
 - **Right-click a row** for quick actions — copy the PID, the full command line, or a ready-to-paste `kill <pid>`, and reveal the process's working directory in Finder (clipboard / Finder only, no extra shell-out)
-- **Keyboard & dismissal** — ⌘⌫ kills the sole visible safe row when exactly one is shown; Esc or a click outside dismisses the popover (it takes keyboard focus on open)
+- **Keyboard & dismissal** — ⌘⌫ kills the sole sweepable safe row when exactly one is shown (protected rows excluded); Esc or a click outside dismisses the popover (it takes keyboard focus on open)
 - **Quick filter** — a search field on the Processes tab narrows the list live by command, owning project, or listening port; session-scoped, clears when the popover closes
 - **Session dismiss** — hide a process until restart without killing it (↺ rescan restores all dismissed items)
 - **Docker containers tab** — a Processes / Containers / Cleaned segmented toggle in the popover; the Containers tab lists running containers (name, image, status, ports) with per-row **stop** and **stop + remove** buttons, and a clear empty state when Docker isn't installed
 - **Cleaned tab** — persistent value from your confirmed kills: this-week stats (how many cleaned, estimated RAM reclaimed, top stray kinds) above a newest-first "Recently cleaned" list; privacy-first (kind, project label, RAM, and time only — never the command line)
 - **Kill flow**: SIGTERM first, SIGKILL fallback after 2 s — always explicit, never automatic
-- **Settings**: scan interval (default 2 min), stale-process threshold (default 30 min), ignored command substrings, custom detection rules (one command substring → a friendly label; always Needs Review), per-kind scan toggles (switch off whole process categories), launch at login, notification alerts (opt-in)
+- **Settings**: scan interval (default 2 min), stale-process threshold (default 30 min), ignored command substrings (optionally scoped to one project tree with ` @ ~/path`), custom detection rules (one command substring → a friendly label; always Needs Review), protected projects (kept out of "Clean all"), per-kind scan toggles (switch off whole process categories), launch at login, notification alerts (opt-in)
 
 ## Requirements
 

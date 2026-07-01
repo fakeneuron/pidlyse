@@ -26,7 +26,8 @@ Pidlyse/
         ScanCore.swift            # ps parse + stray detection + risk-tier classification
         ProcessItem.swift         # model: pid, ppid, command, elapsed, tty, kind, riskTier, cpu%, rss; derived bucket
         PortRegistry.swift        # compiled port table + user-override merge + lsof listener parse
-        CwdResolver.swift         # lsof cwd parse + git-root project label (row descriptor)
+        CwdResolver.swift         # lsof cwd parse + git-root project label & root path (row descriptor + protect scope)
+        IgnoreRule.swift          # model: command-substring ignore, optionally scoped to a cwd path prefix
         DockerCore.swift          # pure `docker ps` output parsing
         Container.swift           # model: id, name, image, status, ports
         Shell.swift               # shared subprocess primitive (Process/Pipe drain) — all four shell-out sites delegate
@@ -38,7 +39,7 @@ Pidlyse/
     ScanEngine.swift          # app-side scan lifecycle: timer, persistence, notifications (drives ScanCore)
     DockerService.swift       # app-side docker CLI access: path resolution, shell-out, container listing
     KillService.swift         # safe kill wrapper (SIGTERM → 2 s grace → SIGKILL; PID-reuse guard; docker-stop path)
-    SettingsView.swift        # scan interval, thresholds, ignored substrings, launch-at-login, notifications
+    SettingsView.swift        # scan interval, thresholds, ignored substrings (+ per-project scoping), custom rules, protected projects, launch-at-login, notifications
   PidlyseTests/
     ScanEngineTests.swift     # unit tests for the PidlyseCore pipeline
   logo.png                    # master brand/icon source (532×543 RGBA); not yet wired into the (intentionally empty) AppIcon.appiconset
@@ -70,7 +71,14 @@ Runs on a configurable timer (default: every 2 min). Shells out to `ps -axww -o 
 | `bun` | `bun` | JS runtime / package manager |
 | `node` | `node` | Node.js runtime |
 
-User-defined **custom rules** (one command substring → a friendly label, edited in Settings and persisted to UserDefaults) are consulted before the built-in patterns: a match surfaces the process as `kind == custom` under the user's label and is always classified Needs Review — never auto-killable. A process that matches neither a custom rule nor a built-in `kind` is not a stray candidate and is excluded. Each match is evaluated on:
+User-defined **custom rules** (one command substring → a friendly label, edited in Settings and persisted to UserDefaults) are consulted before the built-in patterns: a match surfaces the process as `kind == custom` under the user's label and is always classified Needs Review — never auto-killable. A process that matches neither a custom rule nor a built-in `kind` is not a stray candidate and is excluded.
+
+Two user-managed override lists (Settings, UserDefaults) further shape results (PID-54.4):
+
+- **Ignored substrings** hide matching processes. A bare line hides globally; a `substring @ ~/path` line (`IgnoreRule`) scopes the ignore to one project tree, hiding matches only when the resolved cwd sits under that prefix. Global ignores filter inside `enumerate`; scoped ignores apply as a post-filter (`ScanCore.applyScopedIgnores`) once the scan's cwd map is resolved.
+- **Protected projects** keep a project tree's processes out of the "Clean all" bulk sweep (marked 🔒, still individually killable). Each entry is a cwd path prefix; a process is protected when its cwd is under any entry (`CwdResolver.isUnderPrefix`). Protection is a display/sweep overlay — it does not change the `kind`/`riskTier` — and is toggled per-row (🔒) or in Settings.
+
+Each match is evaluated on:
 
 - **TTY**: `??` = no controlling terminal → stray indicator
 - **Elapsed time**: configurable threshold, default > 30 min
@@ -92,6 +100,8 @@ Each candidate carries a descriptive **`kind`** (see the Scan Engine table) and 
 `bucket = (riskTier == .easy) ? .safe : .needsReview`. A process is **never auto-killed**; `safe` items still require an explicit click (per CLAUDE.md).
 
 Port registry awareness ([[PID-005]]): any process listening on a port in the CLAUDE.md global port table is automatically demoted to "needs review" — never auto-killed.
+
+Protected-projects awareness (PID-54.4): a safe process whose working directory sits under a user-protected project tree stays *listed* in the Safe section (badged 🔒) but is excluded from the "Clean all" sweep, the section count, and the reclaimable total — a display/sweep overlay, not a bucket change. Its individual kill button still works.
 
 ---
 

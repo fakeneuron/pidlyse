@@ -11,10 +11,16 @@ public struct ProcessCwd: Equatable {
     /// The full `~`-abbreviated working directory, for the row's `.help` tooltip so the
     /// complete path is recoverable even when the label is short.
     public let fullPath: String
+    /// The `~`-abbreviated git-root path (`~/code/bidviz`) when the cwd is inside a repo,
+    /// else `nil`. The per-row 🔒 protect toggle seeds a protected-project prefix from
+    /// this (falling back to `fullPath` outside a repo) so protecting one row shields the
+    /// whole project tree. (PID-54.4)
+    public let projectRoot: String?
 
-    public init(label: String, fullPath: String) {
+    public init(label: String, fullPath: String, projectRoot: String? = nil) {
         self.label = label
         self.fullPath = fullPath
+        self.projectRoot = projectRoot
     }
 }
 
@@ -39,9 +45,23 @@ public enum CwdResolver {
         guard !pids.isEmpty else { return [:] }
         let output = lsofOutput ?? runLSOF(pids)
         return parseCwds(lsofOutput: output).mapValues { raw in
-            ProcessCwd(label: projectLabel(forCwd: raw, gitRoot: gitRootFinder(raw)),
-                       fullPath: abbreviateHome(raw, home: home))
+            let gitRoot = gitRootFinder(raw)
+            return ProcessCwd(label: projectLabel(forCwd: raw, gitRoot: gitRoot),
+                              fullPath: abbreviateHome(raw, home: home),
+                              projectRoot: gitRoot.map { abbreviateHome($0, home: home) })
         }
+    }
+
+    /// True when `cwd` sits at or under `prefix` — a plain path-prefix containment used
+    /// by both the protected-projects overlay and the cwd-scoped ignores (PID-54.4).
+    /// Compare like-for-like: pass the same `~`-abbreviated form on each side (the
+    /// scan's `ProcessCwd.fullPath` and the stored project prefix are both abbreviated).
+    /// A trailing slash on `prefix` is tolerated; an empty `prefix` matches nothing, so a
+    /// blank editor line can never protect/ignore everything by accident.
+    public static func isUnderPrefix(_ cwd: String, _ prefix: String) -> Bool {
+        let p = prefix.hasSuffix("/") ? String(prefix.dropLast()) : prefix
+        guard !p.isEmpty else { return false }
+        return cwd == p || cwd.hasPrefix(p + "/")
     }
 
     /// Parse `lsof -Fpn` field output into PID → cwd path. A `p<pid>` line opens a

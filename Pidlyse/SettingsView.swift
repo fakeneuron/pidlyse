@@ -65,6 +65,20 @@ struct SettingsView: View {
         )
     }
 
+    /// Binding that joins/splits `protectedProjects` on newlines for the TextEditor —
+    /// one `~`-abbreviated project path per line, mirroring `ignoredNamesText` (PID-54.4).
+    private var protectedProjectsText: Binding<String> {
+        Binding(
+            get: { engine.protectedProjects.joined(separator: "\n") },
+            set: {
+                engine.protectedProjects = $0
+                    .components(separatedBy: "\n")
+                    .map { $0.trimmingCharacters(in: .whitespaces) }
+                    .filter { !$0.isEmpty }
+            }
+        )
+    }
+
     var body: some View {
         Form {
             Section("Startup") {
@@ -94,7 +108,7 @@ struct SettingsView: View {
                 TextEditor(text: ignoredNamesText)
                     .font(.system(.body, design: .monospaced))
                     .frame(minHeight: 80)
-                Text("One command substring per line — matching processes are hidden from scan results.")
+                Text("One command substring per line — matching processes are hidden. Append ` @ <path>` to scope a rule to one project tree (e.g. `node @ ~/code/bidviz`).")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -103,6 +117,14 @@ struct SettingsView: View {
                     .font(.system(.body, design: .monospaced))
                     .frame(minHeight: 80)
                 Text("One rule per line as `substring = label` — matching processes surface under the label in Needs Review (never auto-killable).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Section("Protected projects") {
+                TextEditor(text: protectedProjectsText)
+                    .font(.system(.body, design: .monospaced))
+                    .frame(minHeight: 80)
+                Text("One project path per line — processes whose working directory is under that tree are kept out of \u{201C}Clean all\u{201D} (still listed and individually killable). Add or remove with the 🔒 button on a Safe row.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
