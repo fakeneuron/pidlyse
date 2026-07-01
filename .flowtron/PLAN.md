@@ -8,19 +8,41 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-(none)
+- [ ] **PID-EPIC-52** [medium]🧠 | process-inspector — Click a process row to open a details inspector: full command line, listening ports, parent (ppid) chain, and open files via `lsof` — deepening the existing "Why is this here?" expandable into a full-context view. (Filed via /ft-epic-discovery; refined at .1 closure.)
+  - [x] **PID-52.1** [medium]🧠 | discovery — Completed 2026-06-30.
+  - [ ] **PID-52.2** [medium]🧠 | inspector-shell — Deepen the inline ⓘ expander into a full-context inspector: show the full command line (today tooltip-only) and the complete parent chain to launchd. Add a ps-based ancestor resolver in PidlyseCore (parentCommand only sees scanned strays). Listening ports already render.
+  - [ ] **PID-52.3** [medium]🧠 | inspector-open-files — Add an open-files list to the inspector, fetched on-demand via lsof -p <pid> when a row expands (never per-scan). New pure PidlyseCore parser mirroring PortRegistry/CwdResolver (injectable output, Shell.run shell-out); filter to regular files + sockets, drop dylib noise, cap length.
+  - [ ] **PID-52.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
+- [ ] **PID-EPIC-53** [medium]🧠 | clean-history-stats — Persist a log of cleaned processes and surface value stats — "cleaned this week", estimated RAM reclaimed, top stray kinds — plus a "Recently cleaned" view. Extends the session-scoped reclaimable footprint already shown into persistent value over time. (Filed via /ft-epic-discovery; refined at .1 closure.)
+  - [ ] **PID-53.1** [medium]🧠 | discovery — Scope shared design and file children .2..3 per SPEC/epic.md.
+  - [ ] **PID-53.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
+- [ ] **PID-EPIC-54** [medium]🧠 | detection-rules — Expand built-in process kinds (next/astro/sveltekit/vite dev servers, cargo, go run, ollama and local LLM servers, more MCP/Playwright variants, Electron helpers) and add user-defined custom rules, a persistent protected-processes list, and stronger per-project ignores. (Filed via /ft-epic-discovery; refined at .1 closure.)
+  - [ ] **PID-54.1** [medium]🧠 | discovery — Scope shared design and file children .2..4 per SPEC/epic.md.
+  - [ ] **PID-54.5** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
+- [ ] **PID-059** [light]🔧 | app-icon-wiring — Generate the macOS AppIcon PNG set from `logo.png` and populate `Pidlyse/Assets.xcassets/AppIcon.appiconset` — it currently declares the slots but ships zero images, so the `.app` bundle is iconless. The menu-bar glyph is separate and unaffected.
+- [ ] **PID-060** [light]🔧 | readme-visuals — Add high-quality popover screenshots and a short animated GIF (especially "Clean all" on real strays) to the README so the tool reads at a glance; keep the prominent Security section.
 
 ## Medium
 
-(none)
+- [ ] **PID-EPIC-55** [medium]🧠 | idle-stray-signals — Strengthen stray detection by combining low CPU sampled across scans, process age, and absent TTY into a confident "idle dev server" signal, plus dev-mode flag parsing from command lines. Requires caching a short scan history; never changes the kill bar — signal only. (Filed via /ft-epic-discovery; refined at .1 closure.)
+  - [ ] **PID-55.1** [medium]🧠 | discovery — Scope shared design and file children .2..3 per SPEC/epic.md.
+  - [ ] **PID-55.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
+- [ ] **PID-EPIC-56** [medium]🧠 | docker-enhance — Extend the Docker panel: per-container CPU/memory via `docker stats` parsing, compose-project grouping, and a restart action alongside stop. Builds on the shipped DockerService/DockerCore split. (Filed via /ft-epic-discovery; refined at .1 closure.)
+  - [ ] **PID-56.1** [medium]🧠 | discovery — Scope shared design and file children .2..4 per SPEC/epic.md.
+  - [ ] **PID-56.5** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 
 ## Low
 
-(none)
+- [ ] **PID-EPIC-57** [heavy]🧠 | cli-companion — Ship a terminal companion binary (`pidlyse list --safe` / `clean` / `kill <pid>`) as a new SPM executable target sharing PidlyseCore's scan, classification, and kill logic. Preserves the never-auto-kill posture — `clean` still requires explicit invocation. (Filed via /ft-epic-discovery; refined at .1 closure.)
+  - [ ] **PID-57.1** [heavy]🧠 | discovery — Scope shared design and file children .2..3 per SPEC/epic.md.
+  - [ ] **PID-57.4** [heavy]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 
 ## Future Opportunities
 
 - **PID-030** [medium]🧠 | notarize-and-sign — Replace ad-hoc signing with Developer ID + Apple notarization + stapling (and the Hardened Runtime entitlement notarization requires). Removes the Gatekeeper "Apple could not verify…" warning on the public download. **Deferred 2026-06-28** — gated on $99/yr Apple Developer Program enrollment (operator opted to defer). Until then the public-trust story rests on the public source + SHA-256 checksum (shipped via `make dmg` + release.yml) + the honest right-click→Open install note in the README "Security" section. (Confirmed home for the no-sandbox / Hardened-Runtime posture by the [[PID-EPIC-35]] security sweep — F3/F4 folded here, no duplicate child filed.)
+- [ ] **PID-EPIC-58** [medium]🧠 | integrations — Expose Pidlyse actions to external launchers — a URL scheme plus Raycast/Shortcuts/AppleScript bridges — so power users can trigger a safe clean from elsewhere. Likely depends on the cli-companion surface ([[PID-EPIC-57]]). (Filed via /ft-epic-discovery; refined at .1 closure.)
+  - [ ] **PID-58.1** [medium]🧠 | discovery — Scope shared design and file children .2..3 per SPEC/epic.md.
+  - [ ] **PID-58.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 ## Completed
 
 - [x] **PID-051** [medium]🧠 | kill-rescan-flicker — Completed 2026-06-30. No-bug: `engine.scan()` replaces `items` atomically (no mid-scan clear); the momentary clear is real Chrome teardown/respawn churn across two scans, not a render flicker.
