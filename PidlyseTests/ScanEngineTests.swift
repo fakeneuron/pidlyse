@@ -122,6 +122,62 @@ final class ScanEngineTests: XCTestCase {
         XCTAssertNil(ScanCore.detectKind("/Users/user/jest-examples/server start"))
     }
 
+    // MARK: - detectKind: expanded kinds (PID-54.2)
+
+    func testDetectKind_nextjs() {
+        XCTAssertEqual(ScanCore.detectKind("node /proj/node_modules/.bin/next dev"), .nextjs)
+        XCTAssertEqual(ScanCore.detectKind("next dev --port 3000"), .nextjs)
+        // The renamed worker process ("next-server (v14.2.3)") is caught too.
+        XCTAssertEqual(ScanCore.detectKind("next-server (v14.2.3)"), .nextjs)
+        // "next" as a substring of a directory name must not match `.nextjs`
+        // (token boundary) — this is a plain node process, so it falls through
+        // to the generic `.node` fallback.
+        XCTAssertEqual(ScanCore.detectKind("node /app/nextcloud/server.js"), .node)
+    }
+
+    func testDetectKind_astro() {
+        XCTAssertEqual(ScanCore.detectKind("node /proj/node_modules/.bin/astro dev"), .astro)
+        XCTAssertEqual(ScanCore.detectKind("astro dev --host"), .astro)
+    }
+
+    func testDetectKind_cargo() {
+        XCTAssertEqual(ScanCore.detectKind("cargo run --release"), .cargo)
+        XCTAssertEqual(ScanCore.detectKind("/Users/u/.cargo/bin/cargo watch -x run"), .cargo)
+    }
+
+    func testDetectKind_goRun_commandFormOnly() {
+        XCTAssertEqual(ScanCore.detectKind("go run main.go"), .goRun)
+        XCTAssertEqual(ScanCore.detectKind("/usr/local/bin/go run ./cmd/server"), .goRun)
+        // Bare `go` / other verbs are intentionally out of scope (too short to
+        // token-match; the durable server is a temp binary, not `go`).
+        XCTAssertNil(ScanCore.detectKind("go build ./..."))
+        XCTAssertNil(ScanCore.detectKind("/usr/local/bin/mongod --config x"))
+        XCTAssertNil(ScanCore.detectKind("django-admin runserver"))
+    }
+
+    func testDetectKind_llmServer() {
+        XCTAssertEqual(ScanCore.detectKind("ollama serve"), .llmServer)
+        XCTAssertEqual(ScanCore.detectKind("/usr/local/bin/ollama runner --model llama3"), .llmServer)
+        XCTAssertEqual(ScanCore.detectKind("/opt/llama.cpp/llama-server -m model.gguf"), .llmServer)
+        XCTAssertEqual(ScanCore.detectKind("/opt/llama.cpp/llama-cli -p hi"), .llmServer)
+    }
+
+    func testDetectKind_electron_devScopedOnly() {
+        // Project-local electron dev run matches.
+        XCTAssertEqual(ScanCore.detectKind("/proj/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron ."), .electron)
+        XCTAssertEqual(ScanCore.detectKind("node /proj/node_modules/.bin/electron ."), .electron)
+        // Installed Electron apps must NOT surface — no false positives.
+        XCTAssertNil(ScanCore.detectKind("/Applications/Visual Studio Code.app/Contents/Frameworks/Code Helper (Renderer).app/Contents/MacOS/Code Helper (Renderer)"))
+        XCTAssertNil(ScanCore.detectKind("/Applications/Slack.app/Contents/MacOS/Slack Helper"))
+    }
+
+    func testDetectKind_mcpServer_genericButNotPlaywright() {
+        XCTAssertEqual(ScanCore.detectKind("node @modelcontextprotocol/server-filesystem /path"), .mcpServer)
+        XCTAssertEqual(ScanCore.detectKind("node /proj/node_modules/mcp-server-git/index.js"), .mcpServer)
+        // Playwright's MCP keeps its own kind, not the generic one.
+        XCTAssertEqual(ScanCore.detectKind("node @playwright/mcp@latest"), .playwrightMCP)
+    }
+
     // MARK: - riskTier / bucket
 
     func testOrphanedOldPytest_isEasyKill() {
@@ -172,6 +228,32 @@ final class ScanEngineTests: XCTestCase {
         // npm-tier: strongStray → moderate.
         let tier = ScanCore.riskTier(kind: .bun, hasTTY: false, isOrphan: true, isOld: true)
         XCTAssertEqual(tier, .moderate)
+    }
+
+    // MARK: - riskTier: expanded kinds (PID-54.2)
+
+    func testLLMServer_isHighRisk() {
+        // Local model server is real infra — high regardless of stray signals.
+        let tier = ScanCore.riskTier(kind: .llmServer, hasTTY: false, isOrphan: true, isOld: true)
+        XCTAssertEqual(tier, .high)
+    }
+
+    func testNextjsStrongStray_isModerate_notEasy() {
+        // Dev server (vite-tier): strongStray → moderate, never easy.
+        let tier = ScanCore.riskTier(kind: .nextjs, hasTTY: false, isOrphan: true, isOld: true)
+        XCTAssertEqual(tier, .moderate)
+    }
+
+    func testElectronNotStrongStray_isHigh() {
+        let tier = ScanCore.riskTier(kind: .electron, hasTTY: true, isOrphan: false, isOld: false)
+        XCTAssertEqual(tier, .high)
+    }
+
+    func testMcpServerStrongStray_isEasy() {
+        // Tooling-tier (like playwright-mcp): an orphaned, old, TTY-less MCP
+        // server is a classic stray → easy.
+        let tier = ScanCore.riskTier(kind: .mcpServer, hasTTY: false, isOrphan: true, isOld: true)
+        XCTAssertEqual(tier, .easy)
     }
 
     // MARK: - bucket derivation + end-to-end enumerate

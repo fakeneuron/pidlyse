@@ -53,12 +53,19 @@ Runs on a configurable timer (default: every 2 min). Shells out to `ps -axww -o 
 | Pattern | `kind` | Category |
 |---------|--------|----------|
 | `playwright-mcp` / `@playwright/mcp` | `playwrightMCP` | Orphaned MCP browser tooling |
+| `@modelcontextprotocol` / `mcp-server-*` | `mcpServer` | Orphaned MCP servers (filesystem/git/etc.) |
 | `pytest`, `vitest`, `jest`, `playwright test` | `pytest` / `vitest` / `jest` / `playwrightTest` | Hung test runners |
 | Chrome processes under `ms-playwright-mcp/` user-data dirs | `chromeHelper` | Zombie browser helpers |
 | `docker` (daemon + helpers) | `docker` | Real dev infra — never an easy kill |
 | `uvicorn` | `uvicorn` | Backend dev server — never an easy kill |
+| `next` / `next-server` | `nextjs` | Next.js dev server |
+| `astro` | `astro` | Astro dev server |
+| `cargo` | `cargo` | Rust build/run tool |
+| `go run …` (command form only) | `goRun` | Go run launcher |
+| `node_modules/electron` (project-local) | `electron` | Electron dev app (installed Electron apps excluded) |
+| `ollama`, `llama-server` / `llama-cli` | `llmServer` | Local LLM server — never an easy kill |
 | `npm` | `npm` | Dev tooling / servers |
-| `vite` | `vite` | Dev server (Vite) |
+| `vite` | `vite` | Dev server (Vite) — also catches SvelteKit, which runs on Vite |
 | `bun` | `bun` | JS runtime / package manager |
 | `node` | `node` | Node.js runtime |
 
@@ -76,9 +83,9 @@ Each candidate carries a descriptive **`kind`** (see the Scan Engine table) and 
 
 | `riskTier` | Bucket | When |
 |------------|--------|------|
-| **easy** | **Safe to kill** | Test runner / playwright-mcp / Chrome helper that is a *strong stray*: old elapsed **and** no TTY **and** parent dead |
+| **easy** | **Safe to kill** | Test runner / playwright-mcp / MCP server / Chrome helper that is a *strong stray*: old elapsed **and** no TTY **and** parent dead |
 | **moderate** | **Needs review** | A candidate without all three strong-stray signals (recently started, has a TTY, or parent still alive) |
-| **high** | **Needs review** | Real dev infra (`docker`, `uvicorn`, `node`) — never an easy kill regardless of signals; also `npm`/`vite`/`bun` when not a strong stray |
+| **high** | **Needs review** | Real dev infra (`docker`, `uvicorn`, `node`, `llmServer`) — never an easy kill regardless of signals; also the dev-server / build-tool family (`npm`/`vite`/`bun`/`nextjs`/`astro`/`cargo`/`goRun`/`electron`) when not a strong stray |
 
 `bucket = (riskTier == .easy) ? .safe : .needsReview`. A process is **never auto-killed**; `safe` items still require an explicit click (per CLAUDE.md).
 

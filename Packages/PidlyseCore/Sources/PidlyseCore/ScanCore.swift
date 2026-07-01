@@ -193,6 +193,11 @@ public enum ScanCore {
         if s.contains("@playwright/mcp") || s.contains("playwright-mcp") {
             return .playwrightMCP
         }
+        // Generic MCP servers (filesystem/git/etc.) beyond Playwright's — checked
+        // after the playwright cases so `@playwright/mcp` keeps its own kind.
+        if s.contains("@modelcontextprotocol") || s.contains("mcp-server-") {
+            return .mcpServer
+        }
         if s.contains("playwright") && s.contains("test") {
             return .playwrightTest
         }
@@ -202,10 +207,31 @@ public enum ScanCore {
         if hasTokenBoundary(s, "jest")    { return .jest }
         if hasTokenBoundary(s, "uvicorn") { return .uvicorn }
         if hasTokenBoundary(s, "docker")  { return .docker }
+        // Expanded dev-server / build-tool / local-infra kinds (PID-54.2), slotted
+        // before the generic node/npm fallbacks so a framework dev server isn't
+        // swallowed by `.node`. SvelteKit is intentionally absent — its dev server
+        // runs as Vite and is already caught by `.vite`.
+        if hasTokenBoundary(s, "next") || s.contains("next-server") { return .nextjs }
+        if hasTokenBoundary(s, "astro")  { return .astro }
+        if hasTokenBoundary(s, "cargo")  { return .cargo }
+        if isGoRun(s)                    { return .goRun }
+        if hasTokenBoundary(s, "ollama") || s.contains("llama-server") || s.contains("llama-cli") {
+            return .llmServer
+        }
+        if s.contains("node_modules/electron") || s.contains("node_modules/.bin/electron") {
+            return .electron
+        }
         if hasTokenBoundary(s, "npm")     { return .npm }
         if hasTokenBoundary(s, "bun")     { return .bun }
         if hasTokenBoundary(s, "node")    { return .node }
         return nil
+    }
+
+    /// True when `s` is an explicit `go run …` launcher. Bare `go` is too short
+    /// and common to token-match safely, and the durable server `go run` spawns
+    /// is a temp binary — so we key on the launcher command form. (PID-54.2)
+    private static func isGoRun(_ s: String) -> Bool {
+        s.hasPrefix("go run ") || s.contains("/go run ")
     }
 
     /// True when `token` appears at a word boundary in `s` — preceded by the
@@ -228,15 +254,15 @@ public enum ScanCore {
     /// "strong stray" only when it has no terminal, is orphaned, and is old.
     public static func riskTier(kind: ProcessKind, hasTTY: Bool, isOrphan: Bool, isOld: Bool) -> RiskTier {
         // Real dev infra — never an easy kill regardless of signals.
-        if kind == .docker || kind == .uvicorn || kind == .node { return .high }
+        if kind == .docker || kind == .uvicorn || kind == .node || kind == .llmServer { return .high }
 
         let strongStray = !hasTTY && isOrphan && isOld
         switch kind {
-        case .pytest, .vitest, .jest, .playwrightTest, .playwrightMCP, .chromeHelper:
+        case .pytest, .vitest, .jest, .playwrightTest, .playwrightMCP, .chromeHelper, .mcpServer:
             return strongStray ? .easy : .moderate
-        case .npm, .vite, .bun:
+        case .npm, .vite, .bun, .nextjs, .astro, .cargo, .goRun, .electron:
             return strongStray ? .moderate : .high
-        case .docker, .uvicorn, .node:
+        case .docker, .uvicorn, .node, .llmServer:
             return .high   // handled above; keeps the switch exhaustive
         }
     }

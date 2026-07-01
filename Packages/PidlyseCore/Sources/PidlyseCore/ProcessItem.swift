@@ -16,6 +16,15 @@ public enum ProcessKind: String, CaseIterable {
     case chromeHelper
     case bun
     case node
+    // Expanded built-in kinds (PID-54.2). Dev servers / build tools / local
+    // infra, each slotted before the generic node/npm fallbacks in `detectKind`.
+    case nextjs
+    case astro
+    case cargo
+    case goRun
+    case electron
+    case llmServer
+    case mcpServer
 
     /// Short, user-facing label shown in the popover row.
     public var label: String {
@@ -32,6 +41,13 @@ public enum ProcessKind: String, CaseIterable {
         case .chromeHelper:   return "Chrome (playwright-mcp)"
         case .bun:            return "Bun"
         case .node:           return "Node"
+        case .nextjs:         return "Next.js"
+        case .astro:          return "Astro"
+        case .cargo:          return "cargo"
+        case .goRun:          return "go run"
+        case .electron:       return "Electron (dev)"
+        case .llmServer:      return "LLM server"
+        case .mcpServer:      return "MCP server"
         }
     }
 }
