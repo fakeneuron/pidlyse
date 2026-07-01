@@ -319,6 +319,9 @@ struct MenuBarView: View {
             }
             if isExpanded {
                 reasoningBlock(item: item, isOld: isOld)
+                    // On-demand open-files fetch (PID-52.3): fires whenever the inspector
+                    // appears, decoupled from the ⓘ toggle; the engine caches per session.
+                    .onAppear { engine.loadOpenFiles(for: item.pid) }
             }
         }
         .contextMenu { rowContextMenu(item) }
@@ -390,6 +393,29 @@ struct MenuBarView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(1).truncationMode(.middle)
+            }
+            // On-demand open files + sockets (PID-52.3): fetched lazily when this block
+            // appears (see `.onAppear` in `row`), cached per session. Rendered only once
+            // resolved and non-empty — a process with nothing to show adds no lines
+            // (graceful degrade, like the other hints).
+            if let list = engine.openFiles[item.pid], !list.files.isEmpty {
+                Text("open files")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .monospaced()
+                ForEach(Array(list.files.enumerated()), id: \.offset) { _, file in
+                    Text(file.name)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .monospaced()
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if list.overflow > 0 {
+                    Text("+\(list.overflow) more")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
             }
         }
         .padding(.leading, 4)

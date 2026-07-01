@@ -41,6 +41,14 @@ final class ScanEngine: ObservableObject {
     /// Empty when nothing resolves. Mirrors `listeningPorts` / `containerOwners` / `cwds`.
     @Published private(set) var processTable: [Int32: ProcessNode] = [:]
 
+    /// PID → its open files + sockets, fetched **on-demand** when a row expands
+    /// (PID-52.3) — never during a scan, unlike every map above. Populated lazily by
+    /// `loadOpenFiles(for:)` via a single per-PID `lsof -p <pid>`; consumed by the
+    /// inspector's open-files list. Cached per session (fetch once per PID, empty
+    /// results included) so re-expanding a row doesn't re-spawn `lsof`; bounded to the
+    /// rows the user has inspected.
+    @Published private(set) var openFiles: [Int32: OpenFileList] = [:]
+
     /// How often (seconds) the background timer auto-scans. Persisted to UserDefaults.
     @Published var scanInterval: TimeInterval = 120 {
         didSet {
@@ -163,6 +171,19 @@ final class ScanEngine: ObservableObject {
                 self?.isScanning = false
                 self?.fireNotificationIfNeeded(newItems: result, previousPIDs: oldPIDs)
             }
+        }
+    }
+
+    /// Fetch a process's open files on-demand when its inspector expands (PID-52.3).
+    /// No-op if already cached (fetch once per PID per session — the guard also stops
+    /// a re-expand from re-spawning `lsof`); the single `lsof -p <pid>` runs on a
+    /// background queue and publishes on the main thread. Empty results are cached too,
+    /// so a fileless process isn't re-queried. Safe to call on every expansion.
+    func loadOpenFiles(for pid: Int32) {
+        guard openFiles[pid] == nil else { return }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let result = OpenFilesResolver.openFiles(forPID: pid)
+            DispatchQueue.main.async { self?.openFiles[pid] = result }
         }
     }
 
