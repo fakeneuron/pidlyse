@@ -302,6 +302,20 @@ final class ScanEngine: ObservableObject {
         scanHistory.isSustainedLowCPU(pid: item.pid, startTime: item.startTime)
     }
 
+    /// Whether a process reads as a confident **idle dev server** (PID-55.3):
+    /// sustained low CPU across the scan-history window AND old (past
+    /// `elapsedThreshold`) AND no controlling terminal AND an explicit dev-mode
+    /// flag in its command (`ScanCore.hasDevModeFlag`). The strict-AND / high-
+    /// precision reading resolved in the PID-55.3 discovery. Advisory only —
+    /// surfaced in the row inspector's "Why is this here?" expansion; never
+    /// influences the risk tier / bucket / kill bar.
+    func isIdleDevServer(_ item: ProcessItem) -> Bool {
+        hasSustainedLowCPU(item)
+            && item.elapsed >= elapsedThreshold
+            && !item.hasTTY
+            && ScanCore.hasDevModeFlag(item.command)
+    }
+
     // MARK: - Notifications
 
     private func fireNotificationIfNeeded(newItems: [ProcessItem], previousPIDs: Set<Int32>?) {

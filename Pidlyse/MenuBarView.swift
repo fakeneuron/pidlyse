@@ -413,6 +413,16 @@ struct MenuBarView: View {
                 if item.isOrphan { criterionTag("orphan") }
                 if isOld { criterionTag("old") }
             }
+            // Idle-dev-server verdict (PID-55.3): sustained low CPU + old + no tty +
+            // a dev-mode flag. Advisory reasoning line only — rendered when the signal
+            // fires, absent otherwise (graceful degrade, like the provenance hints);
+            // never touches the risk dot / bucket / kill bar.
+            if engine.isIdleDevServer(item) {
+                Text("idle dev server — sustained low CPU across recent scans")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Text("tty \(item.tty)  ·  ppid \(item.ppid)  ·  age \(ageString(item.elapsed))")
                 .font(.caption2)
                 .foregroundStyle(.secondary)

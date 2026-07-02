@@ -290,6 +290,27 @@ public enum ScanCore {
         return false
     }
 
+    // MARK: - Dev-mode flag parse (PID-55.3)
+
+    /// True when `command` carries an explicit dev-mode marker — a long-running
+    /// watch / dev / hot-reload flag or an inline `NODE_ENV=development` env
+    /// assignment. Folded (with sustained-low-CPU + age + no-TTY) into the
+    /// "idle dev server" signal surfaced in the row inspector. **Signal-only** —
+    /// never feeds `riskTier` / `bucket` / the kill bar.
+    ///
+    /// Deliberately high-precision: only explicit `--`-flag and env-var forms
+    /// match — a bare `dev` / `watch` *subcommand* (`next dev`) does not — and it
+    /// reuses `detectKind`'s `hasTokenBoundary` discipline so `--dev` doesn't
+    /// match `--devtools` (nor `--no-watch` match `--watch`).
+    public static func hasDevModeFlag(_ command: String) -> Bool {
+        let s = command.lowercased()
+        if s.contains("node_env=development") || s.contains("node_env development") { return true }
+        for flag in ["--watch", "--dev", "--hot", "--reload"] where hasTokenBoundary(s, flag) {
+            return true
+        }
+        return false
+    }
+
     /// Risk tier = base risk by kind, adjusted by stray signals. A process is a
     /// "strong stray" only when it has no terminal, is orphaned, and is old.
     public static func riskTier(kind: ProcessKind, hasTTY: Bool, isOrphan: Bool, isOld: Bool) -> RiskTier {
