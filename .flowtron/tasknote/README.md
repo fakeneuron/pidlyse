@@ -71,6 +71,7 @@ notes, API specs, DB schema docs, ADRs, inventories).
 
 - Build (Release, ad-hoc signed): `make build-release` → `build/Release/Pidlyse.app`; or `xcodebuild build -scheme Pidlyse` for a debug build
 - Package DMG: `make dmg` → `build/Pidlyse.dmg` (drag-install with /Applications symlink)
+- Build the `pidlyse` terminal companion: `make build-cli` → `Packages/PidlyseCore/.build/release/pidlyse`; install: `make install-cli` (→ /usr/local/bin)
 - Tests: `xcodebuild test -scheme Pidlyse -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
   (`CODE_SIGNING_ALLOWED=NO` is required for CLI test runs — pre-existing code-signing limitation in this environment)
 - Type check: `xcodebuild build -scheme Pidlyse` (Swift compiler surfaces all type errors; no separate linter)

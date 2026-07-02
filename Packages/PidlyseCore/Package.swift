@@ -12,9 +12,11 @@ let package = Package(
         .macOS(.v14)
     ],
     products: [
-        .library(name: "PidlyseCore", targets: ["PidlyseCore"])
+        .library(name: "PidlyseCore", targets: ["PidlyseCore"]),
+        .executable(name: "pidlyse", targets: ["PidlyseCLI"])
     ],
     targets: [
-        .target(name: "PidlyseCore")
+        .target(name: "PidlyseCore"),
+        .executableTarget(name: "PidlyseCLI", dependencies: ["PidlyseCore"])
     ]
 )

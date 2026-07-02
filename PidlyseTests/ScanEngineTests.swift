@@ -1643,3 +1643,166 @@ final class CleanLogTests: XCTestCase {
         XCTAssertEqual(restored, original)
     }
 }
+
+final class CLICoreTests: XCTestCase {
+
+    // MARK: - Command parse (PID-57.3)
+
+    func testParse_emptyArgs_isHelp() {
+        XCTAssertEqual(CLICore.parse([]), .success(.help))
+    }
+
+    func testParse_helpForms() {
+        XCTAssertEqual(CLICore.parse(["help"]), .success(.help))
+        XCTAssertEqual(CLICore.parse(["--help"]), .success(.help))
+        XCTAssertEqual(CLICore.parse(["-h"]), .success(.help))
+    }
+
+    func testParse_list() {
+        XCTAssertEqual(CLICore.parse(["list"]), .success(.list(safeOnly: false)))
+        XCTAssertEqual(CLICore.parse(["list", "--safe"]), .success(.list(safeOnly: true)))
+    }
+
+    func testParse_list_unexpectedArgument() {
+        XCTAssertEqual(CLICore.parse(["list", "--all"]), .failure(.unexpectedArgument("--all")))
+        XCTAssertEqual(CLICore.parse(["list", "--safe", "extra"]), .failure(.unexpectedArgument("extra")))
+    }
+
+    func testParse_clean() {
+        XCTAssertEqual(CLICore.parse(["clean"]), .success(.clean))
+        XCTAssertEqual(CLICore.parse(["clean", "--force"]), .failure(.unexpectedArgument("--force")))
+    }
+
+    func testParse_kill() {
+        XCTAssertEqual(CLICore.parse(["kill", "1234"]), .success(.kill(pid: 1234)))
+        XCTAssertEqual(CLICore.parse(["kill"]), .failure(.missingPID))
+        XCTAssertEqual(CLICore.parse(["kill", "abc"]), .failure(.invalidPID("abc")))
+        XCTAssertEqual(CLICore.parse(["kill", "-5"]), .failure(.invalidPID("-5")))
+        XCTAssertEqual(CLICore.parse(["kill", "0"]), .failure(.invalidPID("0")))
+        XCTAssertEqual(CLICore.parse(["kill", "12", "34"]), .failure(.unexpectedArgument("34")))
+    }
+
+    func testParse_unknownCommand() {
+        XCTAssertEqual(CLICore.parse(["scan"]), .failure(.unknownCommand("scan")))
+    }
+
+    // MARK: - Formatting
+
+    func testFormatElapsed() {
+        XCTAssertEqual(CLICore.formatElapsed(12), "12s")
+        XCTAssertEqual(CLICore.formatElapsed(45 * 60), "45m")
+        XCTAssertEqual(CLICore.formatElapsed(2 * 3600 + 13 * 60), "2h 13m")
+        XCTAssertEqual(CLICore.formatElapsed(3 * 86400 + 4 * 3600), "3d 4h")
+    }
+
+    func testFormatRSS() {
+        XCTAssertEqual(CLICore.formatRSS(kb: 512), "512 KB")
+        XCTAssertEqual(CLICore.formatRSS(kb: 145 * 1024), "145 MB")
+        XCTAssertEqual(CLICore.formatRSS(kb: 1_468_006), "1.4 GB")
+    }
+
+    func testTruncate() {
+        XCTAssertEqual(CLICore.truncate("short", max: 10), "short")
+        XCTAssertEqual(CLICore.truncate("abcdefghij", max: 5), "abcd…")
+    }
+
+    // MARK: - List table
+
+    private func item(pid: Int32, kind: ProcessKind, tier: RiskTier,
+                      command: String = "npm run dev") -> ProcessItem {
+        ProcessItem(pid: pid, ppid: 1, command: command, elapsed: 3600, tty: "??",
+                    kind: kind, riskTier: tier, cpuPercent: 0.5, rssKB: 2048)
+    }
+
+    func testListTable_rendersHeaderAndRows() {
+        let items = [item(pid: 100, kind: .pytest, tier: .easy),
+                     item(pid: 200, kind: .docker, tier: .high)]
+        let cwds: [Int32: ProcessCwd] = [100: ProcessCwd(label: "bidviz", fullPath: "~/code/bidviz", projectRoot: "~/code/bidviz")]
+        let table = CLICore.listTable(items: items, cwds: cwds)
+        let lines = table.split(separator: "\n")
+        XCTAssertEqual(lines.count, 3)
+        XCTAssertTrue(lines[0].contains("PID") && lines[0].contains("BUCKET") && lines[0].contains("COMMAND"))
+        XCTAssertTrue(lines[1].contains("100") && lines[1].contains("safe") && lines[1].contains("bidviz"))
+        // No cwd resolved for 200 → em-dash placeholder; docker is needsReview.
+        XCTAssertTrue(lines[2].contains("200") && lines[2].contains("review") && lines[2].contains("—"))
+    }
+
+    func testListTable_marksProtectedRows() {
+        let table = CLICore.listTable(items: [item(pid: 100, kind: .pytest, tier: .easy)],
+                                      protectedPIDs: [100])
+        XCTAssertTrue(table.contains("safe 🔒"))
+    }
+
+    func testListTable_truncatesLongCommands() {
+        let long = String(repeating: "x", count: 200)
+        let table = CLICore.listTable(items: [item(pid: 100, kind: .node, tier: .high, command: long)],
+                                      commandMax: 40)
+        XCTAssertFalse(table.contains(long))
+        XCTAssertTrue(table.contains(String(repeating: "x", count: 39) + "…"))
+    }
+}
+
+final class CleanLogFileTests: XCTestCase {
+
+    private var tempURL: URL!
+
+    override func setUp() {
+        super.setUp()
+        tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pidlyse-tests-\(UUID().uuidString)/clean-log.json")
+    }
+
+    override func tearDown() {
+        try? FileManager.default.removeItem(at: tempURL.deletingLastPathComponent())
+        super.tearDown()
+    }
+
+    private func event(_ kind: String, at seconds: TimeInterval) -> CleanEvent {
+        CleanEvent(kind: kind, projectLabel: "proj", rssKB: 100,
+                   timestamp: Date(timeIntervalSince1970: 1_000_000 + seconds))
+    }
+
+    func testLoad_missingFile_returnsEmpty() {
+        XCTAssertTrue(CleanLogFile.load(from: tempURL).isEmpty)
+    }
+
+    func testLoad_malformedJSON_returnsEmpty() throws {
+        try FileManager.default.createDirectory(at: tempURL.deletingLastPathComponent(),
+                                                withIntermediateDirectories: true)
+        try Data("not json".utf8).write(to: tempURL)
+        XCTAssertTrue(CleanLogFile.load(from: tempURL).isEmpty)
+    }
+
+    func testSaveLoad_roundTrip() {
+        let events = [event("pytest", at: 0), event("npm", at: 10)]
+        CleanLogFile.save(events, to: tempURL)
+        XCTAssertEqual(CleanLogFile.load(from: tempURL), events)
+    }
+
+    func testAppend_mergesWithExisting_andPersists() {
+        CleanLogFile.save([event("pytest", at: 0)], to: tempURL)
+        let merged = CleanLogFile.append([event("npm", at: 10)], at: tempURL)
+        XCTAssertEqual(merged.map { $0.kind }, ["pytest", "npm"])
+        XCTAssertEqual(CleanLogFile.load(from: tempURL).map { $0.kind }, ["pytest", "npm"])
+    }
+
+    func testAppend_appliesCap_keepingNewest() {
+        CleanLogFile.save([event("a", at: 0), event("b", at: 10)], to: tempURL)
+        let merged = CleanLogFile.append([event("c", at: 20)], at: tempURL, cap: 2)
+        XCTAssertEqual(merged.map { $0.kind }, ["b", "c"])
+    }
+
+    func testAppend_empty_isReadOnly() {
+        // No directory is created and nothing is written for an empty append.
+        XCTAssertTrue(CleanLogFile.append([], at: tempURL).isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: tempURL.path))
+    }
+
+    /// The format contract both writers share: ISO-8601 dates, so a log written
+    /// by the CLI decodes in the app's store (and vice versa).
+    func testSave_writesISO8601Dates() throws {
+        CleanLogFile.save([event("vite", at: 0)], to: tempURL)
+        let json = try String(contentsOf: tempURL, encoding: .utf8)
+        XCTAssertTrue(json.contains("\"1970-01-12T13:46:40Z\""))
+    }
+}

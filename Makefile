@@ -1,4 +1,4 @@
-.PHONY: test build-release install dmg
+.PHONY: test build-release install dmg build-cli install-cli
 
 # Run the Pidlyse test suite.
 # CODE_SIGNING_ALLOWED=NO is required for CLI test runs (code-signing limitation
@@ -13,6 +13,15 @@ build-release:
 
 install:
 	ditto build/Release/Pidlyse.app /Applications/Pidlyse.app
+
+# Build the pidlyse terminal companion (PID-EPIC-57).
+# Output: Packages/PidlyseCore/.build/release/pidlyse
+build-cli:
+	swift build -c release --package-path Packages/PidlyseCore --product pidlyse
+
+# Install the CLI to /usr/local/bin (may require sudo if root-owned).
+install-cli: build-cli
+	install -m 755 Packages/PidlyseCore/.build/release/pidlyse /usr/local/bin/pidlyse
 
 # Package the Release build into a drag-install DMG with an /Applications symlink.
 # Also emits build/Pidlyse.dmg.sha256 so a public download can publish a checksum

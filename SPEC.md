@@ -38,7 +38,11 @@ Pidlyse/
         Container.swift           # models: Container (id, name, image, status, ports, composeProject) + ContainerStats (cpu, memory)
         DockerService.swift       # impure docker CLI access: trusted-path resolution, shell-out, container listing/owners
         KillCore.swift            # synchronous kill path: SIGTERM → 2 s grace → SIGKILL; PID-reuse identity guards; docker-stop routing
+        CleanLogFile.swift        # shared clean-log disk I/O (load / append-capped / atomic save) — one format for both writers
+        CLICore.swift             # pure cli-companion command grammar (list/clean/kill/help) + table formatting
         Shell.swift               # shared subprocess primitive (Process/Pipe drain) — all shell-out sites delegate
+      Sources/PidlyseCLI/
+        main.swift                # `pidlyse` executable: defaults-domain settings read, ScanEngine-parity scan pipeline, command dispatch
   Pidlyse/
     PidlyseApp.swift          # @main; required (inert) Settings scene + NSApplicationDelegateAdaptor
     AppDelegate.swift         # NSStatusItem bridge: icon, popover, right-click Quit, self-managed Settings window
@@ -46,7 +50,7 @@ Pidlyse/
     ContainersView.swift      # popover UI — running-container list (one-shot CPU/mem sample, compose-project grouping) with restart / stop / stop+remove
     CleanedView.swift         # popover UI — "Cleaned" tab: kill-history stats (count, RAM reclaimed, top kinds)
     ScanEngine.swift          # app-side scan lifecycle: timer, persistence, notifications (drives ScanCore)
-    CleanLogStore.swift       # app-side JSON store for kill history; wired from ScanEngine, persists to Application Support
+    CleanLogStore.swift       # app-side @Published binding for kill history; wired from ScanEngine, disk I/O delegated to core CleanLogFile
     DockerService+Async.swift # SwiftUI-facing async wrappers over the core DockerService (main-queue delivery)
     KillService.swift         # thin async wrapper over KillCore (background-queue kill, main-queue callbacks)
     SettingsView.swift        # scan interval, thresholds, ignored substrings (+ per-project scoping), custom rules, protected projects, launch-at-login, notifications
@@ -173,6 +177,21 @@ Configurable at runtime (`SettingsView.swift`):
 - **Scan interval** (default: 2 min).
 - **Stale-process threshold** for "old" (default: 30 min).
 - **Ignored command substrings** — one per line; matching processes are hidden from scan results (persisted via `UserDefaults`). Distinct from the session-only dismiss/snooze in §"Kill Flow".
+
+---
+
+## CLI Companion
+
+`pidlyse` (PID-EPIC-57) — a terminal binary built from the same `PidlyseCore` package (`.executableTarget` `PidlyseCLI`; `make build-cli` / `make install-cli`). Hand-rolled arg parsing, zero external dependencies.
+
+| Command | Does |
+|---------|------|
+| `pidlyse list [--safe]` | One-shot scan; prints candidates (PID, bucket, kind, age, RAM, project, command). `--safe` filters to the safe bucket; protected rows carry 🔒 |
+| `pidlyse clean` | Kills exactly the app's "Clean all" sweep set — safe bucket minus protected projects |
+| `pidlyse kill <pid>` | Kills one *scanned candidate* by PID (any bucket, like the app's per-row kill button); refuses PIDs the scan didn't surface |
+| `pidlyse help` | Usage (also the bare-invocation default — never scans or kills) |
+
+Full app parity: settings (threshold, ignores incl. scoped, disabled kinds, custom rules, protected projects) are read from the app's defaults domain (`com.fakeneuron.pidlyse`); kills route through the same `KillCore` path (SIGTERM → 2 s grace → SIGKILL, PID-reuse guards, docker-stop routing); confirmed kills append to the shared clean-log (`CleanLogFile`), so CLI cleans show up in the app's "Cleaned" tab. One-shot by design — nothing is ever killed without an explicit `clean` / `kill` invocation.
 
 ---
 
