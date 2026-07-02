@@ -8,7 +8,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-- [ ] **PID-059** [light]🔧 | app-icon-wiring — Generate the macOS AppIcon PNG set from `logo.png` and populate `Pidlyse/Assets.xcassets/AppIcon.appiconset` — it currently declares the slots but ships zero images, so the `.app` bundle is iconless. The menu-bar glyph is separate and unaffected.
 - [ ] **PID-060** [light]🔧 | readme-visuals — Add high-quality popover screenshots and a short animated GIF (especially "Clean all" on real strays) to the README so the tool reads at a glance; keep the prominent Security section.
 
 ## Medium
@@ -16,6 +15,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - [ ] **PID-EPIC-56** [medium]🧠 | docker-enhance — Extend the Docker panel: per-container CPU/memory via `docker stats` parsing, compose-project grouping, and a restart action alongside stop. Builds on the shipped DockerService/DockerCore split. (Filed via /ft-epic-discovery; refined at .1 closure.)
   - [ ] **PID-56.1** [medium]🧠 | discovery — Scope shared design and file children .2..4 per SPEC/epic.md.
   - [ ] **PID-56.5** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
+- [ ] **PID-061** [light]🔧 | spec-doc-refresh — Bring SPEC.md current with shipped work: inspector paragraph lacks PID-52's additions (full command line, ancestor chain, open files); project tree omits AncestryResolver/OpenFilesResolver, CleanEvent/CleanLog/CleanLogStore/CleanedView, CustomRule. Decide whether SPEC.md joins the AI-referenced docs registry. (Surfaced by PID-55.4 audit.)
 
 ## Low
 
@@ -31,6 +31,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [ ] **PID-58.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 ## Completed
 
+- [x] **PID-059** [light]🔧 | app-icon-wiring — Completed 2026-07-02.
 - [x] **PID-EPIC-55** [medium]🧠 | idle-stray-signals — Completed 2026-07-02.
   - [x] **PID-55.1** [medium]🧠 | discovery — Completed 2026-07-02.
   - [x] **PID-55.2** [medium]🧠 | scan-history-cache — Completed 2026-07-02.

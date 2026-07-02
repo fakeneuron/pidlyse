@@ -43,7 +43,7 @@ Pidlyse/
     SettingsView.swift        # scan interval, thresholds, ignored substrings (+ per-project scoping), custom rules, protected projects, launch-at-login, notifications
   PidlyseTests/
     ScanEngineTests.swift     # unit tests for the PidlyseCore pipeline
-  logo.png                    # master brand/icon source (532×543 RGBA); not yet wired into the (intentionally empty) AppIcon.appiconset
+  logo.png                    # master brand/icon source (532×543 RGBA); wired into AppIcon.appiconset as 7 PNG sizes (16–1024px)
 ```
 
 ---
