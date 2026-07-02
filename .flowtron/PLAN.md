@@ -12,11 +12,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- [ ] **PID-EPIC-57** [heavy]🧠 | cli-companion — Ship a terminal companion binary (`pidlyse list --safe` / `clean` / `kill <pid>`) as a hand-rolled SPM executable sharing PidlyseCore; .2 first extracts the kill path (identity guards + docker-stop) into core. Full app-settings parity; confirmed kills land in the shared clean-log; never auto-kills.
-  - [x] **PID-57.1** [heavy]🧠 | cli-companion discovery — Completed 2026-07-02.
-  - [x] **PID-57.2** [medium]🧠 | kill-core-extraction — Completed 2026-07-02.
-  - [x] **PID-57.3** [medium]🧠 | cli-target — Completed 2026-07-02.
-  - [ ] **PID-57.4** [heavy]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
+(none)
 
 ## Future Opportunities
 
@@ -27,6 +23,11 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [ ] **PID-58.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 ## Completed
 
+- [x] **PID-EPIC-57** [heavy]🧠 | cli-companion — Completed 2026-07-02.
+  - [x] **PID-57.1** [heavy]🧠 | cli-companion discovery — Completed 2026-07-02.
+  - [x] **PID-57.2** [medium]🧠 | kill-core-extraction — Completed 2026-07-02.
+  - [x] **PID-57.3** [medium]🧠 | cli-target — Completed 2026-07-02.
+  - [x] **PID-57.4** [heavy]🧠 | audit — Completed 2026-07-02.
 - [x] **PID-EPIC-56** [medium]🧠 | docker-enhance — Completed 2026-07-02.
   - [x] **PID-56.1** [medium]🧠 | discovery — Completed 2026-07-02.
   - [x] **PID-56.2** [medium]🧠 | container-stats — Completed 2026-07-02.
