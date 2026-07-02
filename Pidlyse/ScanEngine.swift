@@ -284,6 +284,92 @@ final class ScanEngine: ObservableObject {
                    timestamp: Date())
     }
 
+    // MARK: - Headless clean action (PID-58.2)
+
+    /// Outcome of a headless `cleanAllSafe` sweep, surfaced to external triggers
+    /// (the `pidlyse://clean` result notification, later the AppIntents bridge).
+    struct CleanSummary {
+        /// Processes in the sweep set (safe minus protected) the sweep attempted.
+        let requested: Int
+        /// Confirmed deaths (`KillOutcome.confirmed`).
+        let cleaned: Int
+        /// Resident memory the confirmed kills freed, in KB.
+        let reclaimedKB: Int
+    }
+
+    /// Whether `item`'s resolved working directory sits under a protected project
+    /// tree (PID-54.4) — the engine-side SSOT for the protected overlay. Both the
+    /// popover ("Clean all") and the headless sweep read it, so the predicate can't
+    /// drift between surfaces. False when the cwd didn't resolve.
+    func isProtected(_ item: ProcessItem) -> Bool {
+        guard let cwd = cwds[item.pid]?.fullPath else { return false }
+        return protectedProjects.contains { CwdResolver.isUnderPrefix(cwd, $0) }
+    }
+
+    /// The "Clean all safe" sweep set: safe bucket minus protected projects
+    /// (PID-54.4). Engine-side SSOT shared by the popover button (which folds in
+    /// its quick-filter on top) and every external trigger (URL scheme,
+    /// AppIntents) — the same set the CLI's `commandClean()` derives.
+    var sweepableSafeItems: [ProcessItem] {
+        items.filter { $0.bucket == .safe && !isProtected($0) }
+    }
+
+    /// Headless "Clean all safe": kill the sweepable set, log confirmed deaths to
+    /// the shared clean-log, rescan, and report a `CleanSummary`. The shared action
+    /// layer every external trigger rides on (PID-58.2). Mirrors the popover's
+    /// "Clean all" sequence (kill → `recordCleaned` → `scan`) and the CLI
+    /// `commandClean()`. Must be called on the main thread; `completion` fires on
+    /// the main thread after every grace period resolves.
+    func cleanAllSafe(completion: @escaping (CleanSummary) -> Void = { _ in }) {
+        let killed = sweepableSafeItems
+        guard !killed.isEmpty else {
+            completion(CleanSummary(requested: 0, cleaned: 0, reclaimedKB: 0))
+            return
+        }
+        KillService.kill(killed, containerOwners: containerOwners) { [weak self] outcomes in
+            self?.recordCleaned(killed, outcomes: outcomes)
+            let confirmed = killed.filter { outcomes[$0.pid] == .confirmed }
+            let reclaimedKB = confirmed.reduce(0) { $0 + $1.rssKB }
+            self?.scan()
+            completion(CleanSummary(requested: killed.count,
+                                    cleaned: confirmed.count,
+                                    reclaimedKB: reclaimedKB))
+        }
+    }
+
+    /// Post a system notification summarising a headless clean (PID-58.2). Unlike
+    /// the new-stray notification, this is the *only* feedback channel for a
+    /// headless `pidlyse://clean`, so it always posts and requests authorization
+    /// on demand if not yet determined — independent of the `notificationsEnabled`
+    /// setting (which stays scoped to new-stray scan notifications). Silently
+    /// no-ops if the user has denied notifications.
+    func fireCleanResultNotification(_ summary: CleanSummary) {
+        let content = UNMutableNotificationContent()
+        if summary.requested == 0 {
+            content.title = "Nothing to clean"
+            content.body = "No unprotected safe-to-clean processes."
+        } else {
+            content.title = "Cleaned \(summary.cleaned) of \(summary.requested)"
+            content.body = "~\(ByteCountFormatter.string(fromByteCount: Int64(summary.reclaimedKB) * 1024, countStyle: .memory)) reclaimed"
+        }
+        content.sound = .default
+
+        let center = UNUserNotificationCenter.current()
+        center.getNotificationSettings { settings in
+            let post = {
+                let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+                center.add(request)
+            }
+            if settings.authorizationStatus == .notDetermined {
+                center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
+                    if granted { post() }
+                }
+            } else {
+                post()
+            }
+        }
+    }
+
     // MARK: - Scan history (PID-55.2)
 
     /// Fold the completed scan's CPU samples into the rolling window. Called on the

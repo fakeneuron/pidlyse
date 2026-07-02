@@ -507,12 +507,11 @@ struct MenuBarView: View {
     private var sweepableSafeItems: [ProcessItem] { safeItems.filter { !isProtected($0) } }
 
     /// True when `item`'s resolved working directory sits under any protected project
-    /// tree. View-side (reads the `@Published` `cwds` + `protectedProjects`) so toggling
-    /// a lock updates instantly without waiting for a rescan. False when the cwd didn't
-    /// resolve — an unlocatable process can't be matched to a project tree.
+    /// tree. Delegates to the engine-side SSOT (`ScanEngine.isProtected`, PID-58.2) so
+    /// the popover and the headless sweep can't drift; still reactive (reads the
+    /// `@Published` `cwds` + `protectedProjects`) so toggling a lock updates instantly.
     private func isProtected(_ item: ProcessItem) -> Bool {
-        guard let cwd = engine.cwds[item.pid]?.fullPath else { return false }
-        return engine.protectedProjects.contains { CwdResolver.isUnderPrefix(cwd, $0) }
+        engine.isProtected(item)
     }
 
     /// Toggle protection for `item`'s project. Protecting seeds the row's project root

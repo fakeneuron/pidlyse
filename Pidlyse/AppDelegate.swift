@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import PidlyseCore
 import SwiftUI
 
 /// Owns Pidlyse's menu bar presence. Pidlyse retired SwiftUI's `MenuBarExtra` in favor
@@ -55,6 +56,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         cancellable = engine.objectWillChange
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.updateIcon() }
+    }
+
+    /// Route `pidlyse://` URL opens to engine actions (PID-58.2). The `pidlyse`
+    /// scheme is registered via `CFBundleURLTypes` in `Info.plist`; for an
+    /// `LSUIElement` status-item app the open lands on the delegate with no window.
+    /// The pure verb parse lives in `PidlyseCore.URLScheme`; foreign schemes and
+    /// unknown verbs are ignored silently (no error surface for a drive-by URL).
+    /// `clean` runs the headless safe sweep directly and posts a result
+    /// notification — the launcher invocation is the explicit user action, and the
+    /// sweep is bounded to safe-minus-protected (never Needs Review). `scan`
+    /// re-enumerates (the manual ↺ equivalent).
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls {
+            switch URLScheme.parse(url) {
+            case .clean:
+                engine.cleanAllSafe { [weak self] summary in
+                    self?.engine.fireCleanResultNotification(summary)
+                }
+            case .scan:
+                engine.rescan()
+            case nil:
+                continue
+            }
+        }
     }
 
     /// Native menu bar icon: spinner while scanning, filled cpu + count badge when
