@@ -15,7 +15,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 - [ ] **PID-EPIC-55** [medium]🧠 | idle-stray-signals — Strengthen stray detection by combining low CPU sampled across scans, process age, and absent TTY into a confident "idle dev server" signal, plus dev-mode flag parsing from command lines. Requires caching a short scan history; never changes the kill bar — signal only. (Scoped by .1: N=4 — .1 discovery, .2 scan-history-cache, .3 idle-dev-signal, .4 audit; signal surfaces in the "Why is this here?" expansion only.)
   - [x] **PID-55.1** [medium]🧠 | discovery — Completed 2026-07-02.
-  - [ ] **PID-55.2** [medium]🧠 | scan-history-cache — Add a pure bounded rolling-window CPU-sample cache in PidlyseCore, keyed by PID+startTime (PID-reuse-safe), plus ScanEngine wiring to feed each scan. In-memory only; exposes a "sustained low CPU across window" query. No UI, no kill-bar change.
+  - [x] **PID-55.2** [medium]🧠 | scan-history-cache — Completed 2026-07-02.
   - [ ] **PID-55.3** [medium]🧠 | idle-dev-signal — Consume [[PID-55.2]]'s history + parse dev-mode flags (`--watch`/`--dev`/`NODE_ENV`) to compute a confident "idle dev server" signal (sustained low CPU + old + no TTY); surface it in the "Why is this here?" expansion only. Signal-only — never touches riskTier/bucket/kill bar.
   - [ ] **PID-55.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 - [ ] **PID-EPIC-56** [medium]🧠 | docker-enhance — Extend the Docker panel: per-container CPU/memory via `docker stats` parsing, compose-project grouping, and a restart action alongside stop. Builds on the shipped DockerService/DockerCore split. (Filed via /ft-epic-discovery; refined at .1 closure.)

@@ -134,6 +134,12 @@ final class ScanEngine: ObservableObject {
     /// PIDs from the previous completed scan. `nil` = no prior baseline (first scan).
     private var previousPIDs: Set<Int32>?
 
+    /// Rolling-window CPU-sample history across scans (PID-55.2). Fed once per scan
+    /// from `filtered`; consulted by `hasSustainedLowCPU(_:)` (the idle-signal query
+    /// PID-55.3 surfaces). In-memory for the session; pure logic lives in
+    /// `PidlyseCore.ScanHistory`. Signal-only — never influences the kill bar.
+    private var scanHistory = ScanHistory()
+
     private var timer: Timer?
 
     init() {
@@ -213,6 +219,7 @@ final class ScanEngine: ObservableObject {
                 self?.containerOwners = owners
                 self?.cwds = cwdMap
                 self?.processTable = procTable
+                self?.recordScanHistory(filtered)
                 self?.isScanning = false
                 self?.fireNotificationIfNeeded(newItems: filtered, previousPIDs: oldPIDs)
             }
@@ -275,6 +282,24 @@ final class ScanEngine: ObservableObject {
                    projectLabel: cwds[item.pid]?.label ?? item.displayPath,
                    rssKB: item.rssKB,
                    timestamp: Date())
+    }
+
+    // MARK: - Scan history (PID-55.2)
+
+    /// Fold the completed scan's CPU samples into the rolling window. Called on the
+    /// main thread from the scan-publish block; keys each sample by PID+startTime so
+    /// a recycled PID starts a fresh series.
+    private func recordScanHistory(_ items: [ProcessItem]) {
+        scanHistory = scanHistory.recording(items.map {
+            ScanHistory.Observation(pid: $0.pid, startTime: $0.startTime, cpuPercent: $0.cpuPercent)
+        })
+    }
+
+    /// Whether a process has shown sustained low CPU across the scan-history window
+    /// (PID-55.2). The idle-signal query PID-55.3 folds into its "idle dev server"
+    /// verdict; advisory only — never influences the risk tier / bucket / kill bar.
+    func hasSustainedLowCPU(_ item: ProcessItem) -> Bool {
+        scanHistory.isSustainedLowCPU(pid: item.pid, startTime: item.startTime)
     }
 
     // MARK: - Notifications

@@ -79,7 +79,7 @@ public enum Bucket {
 /// *same* process. Lives here in `PidlyseCore` so `ProcessItem` can hold it; the
 /// `sysctl` reader that produces it stays app-side in `KillService` (see the
 /// `KillService.ProcStartTime` typealias). (PID-18.3, PID-35.3)
-public struct ProcStartTime: Equatable {
+public struct ProcStartTime: Equatable, Hashable {
     public let sec: Int
     public let usec: Int
 
