@@ -111,6 +111,16 @@ struct ContainersView: View {
                 }
             }
             Button {
+                DockerService.restart(container.id) {
+                    containers = $0
+                    reloadStats()
+                }
+            } label: {
+                Image(systemName: "arrow.clockwise.circle")
+            }
+            .buttonStyle(.borderless)
+            .help("Restart \(container.name)")
+            Button {
                 DockerService.stop(container.id) {
                     containers = $0
                     reloadStats()

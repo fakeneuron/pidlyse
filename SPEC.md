@@ -41,7 +41,7 @@ Pidlyse/
     PidlyseApp.swift          # @main; required (inert) Settings scene + NSApplicationDelegateAdaptor
     AppDelegate.swift         # NSStatusItem bridge: icon, popover, right-click Quit, self-managed Settings window
     MenuBarView.swift         # popover UI — Processes/Containers toggle + process list
-    ContainersView.swift      # popover UI — running-container list (one-shot CPU/mem sample, compose-project grouping) with stop / stop+remove
+    ContainersView.swift      # popover UI — running-container list (one-shot CPU/mem sample, compose-project grouping) with restart / stop / stop+remove
     CleanedView.swift         # popover UI — "Cleaned" tab: kill-history stats (count, RAM reclaimed, top kinds)
     ScanEngine.swift          # app-side scan lifecycle: timer, persistence, notifications (drives ScanCore)
     CleanLogStore.swift       # app-side JSON store for kill history; wired from ScanEngine, persists to Application Support
@@ -176,7 +176,7 @@ Configurable at runtime (`SettingsView.swift`):
 
 ## Non-Goals (v1)
 
-- ~~Docker / container management~~ — **delivered post-v1** (PID-EPIC-28): a Processes / Containers segmented toggle whose Containers tab lists running containers with per-row stop / stop+remove, compose containers grouped under per-project section headers (non-compose ungrouped). All `docker` access stays in the app-side `DockerService`; pure parsing in `PidlyseCore.DockerCore`.
+- ~~Docker / container management~~ — **delivered post-v1** (PID-EPIC-28): a Processes / Containers segmented toggle whose Containers tab lists running containers with per-row restart / stop / stop+remove, compose containers grouped under per-project section headers (non-compose ungrouped). All `docker` access stays in the app-side `DockerService`; pure parsing in `PidlyseCore.DockerCore`.
 - Full Supabase stack awareness
 - ~~Auto-start on login~~ — **delivered post-v1** (PID-010): a "Launch at login" toggle in Settings registers a login item via `SMAppService`.
 - Animated menu bar icon beyond simple badge (partially delivered post-v1: a one-shot stray-found pulse, PID-026; continuous animation / scanning spinner remain out)

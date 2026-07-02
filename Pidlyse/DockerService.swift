@@ -110,6 +110,14 @@ enum DockerService {
 
     // MARK: - Container actions (explicit-click only, per CLAUDE.md)
 
+    /// Restart a running container via `docker restart` (SIGTERM + 10 s grace,
+    /// same semantic as `docker stop` but the container comes back up). Runs off
+    /// the main queue; `onComplete` delivers the refreshed list on the main queue.
+    /// Explicit-click only, per CLAUDE.md.
+    static func restart(_ id: String, onComplete: @escaping ([Container]) -> Void = { _ in }) {
+        performThenRefresh([["restart", id]], onComplete: onComplete)
+    }
+
     /// Stop a running container via `docker stop` (Docker's own graceful
     /// SIGTERM → 10 s → SIGKILL). Runs off the main queue; `onComplete`
     /// delivers the refreshed running-container list on the main queue so the

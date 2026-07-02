@@ -12,7 +12,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-56.1** [medium]🧠 | discovery — Completed 2026-07-02.
   - [x] **PID-56.2** [medium]🧠 | container-stats — Completed 2026-07-02.
   - [x] **PID-56.3** [medium]🧠 | compose-grouping — Completed 2026-07-02.
-  - [ ] **PID-56.4** [light]🔧 | restart-action — Restart action: per-row `docker restart` button in ContainersView beside stop/remove, via a DockerService.restart wrapper on the shared performThenRefresh path. Explicit-click only.
+  - [x] **PID-56.4** [light]🔧 | restart-action — Completed 2026-07-02.
   - [ ] **PID-56.5** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 ## Low
 
