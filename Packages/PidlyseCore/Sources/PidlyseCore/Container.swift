@@ -16,13 +16,19 @@ public struct Container: Identifiable, Equatable {
     /// Raw published-ports column, e.g. `0.0.0.0:5432->5432/tcp` (`{{.Ports}}`);
     /// empty when the container publishes no ports.
     public let ports: String
+    /// Compose project the container belongs to
+    /// (`{{.Label "com.docker.compose.project"}}`), or `nil` for containers
+    /// not started by Docker Compose (the label renders empty).
+    public let composeProject: String?
 
-    public init(id: String, name: String, image: String, status: String, ports: String) {
+    public init(id: String, name: String, image: String, status: String, ports: String,
+                composeProject: String?) {
         self.id = id
         self.name = name
         self.image = image
         self.status = status
         self.ports = ports
+        self.composeProject = composeProject
     }
 }
 

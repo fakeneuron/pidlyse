@@ -49,11 +49,39 @@ struct ContainersView: View {
     private var list: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
-                ForEach(containers) { row($0) }
+                ForEach(composeGroups, id: \.project) { group in
+                    header(group.project, count: group.rows.count)
+                    ForEach(group.rows) { row($0) }
+                }
+                ForEach(ungrouped) { row($0) }
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
         }
+    }
+
+    /// Compose containers grouped by project, sorted by project name; rows
+    /// keep their `docker ps` order within each group.
+    private var composeGroups: [(project: String, rows: [Container])] {
+        Dictionary(grouping: containers.filter { $0.composeProject != nil },
+                   by: { $0.composeProject ?? "" })
+            .sorted { $0.key < $1.key }
+            .map { (project: $0.key, rows: $0.value) }
+    }
+
+    /// Non-compose containers, rendered header-free after the project groups.
+    private var ungrouped: [Container] {
+        containers.filter { $0.composeProject == nil }
+    }
+
+    private func header(_ project: String, count: Int) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "square.stack.3d.up")
+                .font(.caption2)
+            Text("\(project) (\(count))")
+                .font(.caption)
+        }
+        .foregroundStyle(.secondary)
     }
 
     private func row(_ container: Container) -> some View {

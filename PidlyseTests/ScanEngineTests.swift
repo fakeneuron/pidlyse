@@ -876,18 +876,25 @@ final class DockerCoreTests: XCTestCase {
     // MARK: - parseLine
 
     func testParseLine_fullRow() {
-        let line = "abc123\tpg-db\tpostgres:16\tUp 3 minutes\t0.0.0.0:5432->5432/tcp"
+        let line = "abc123\tpg-db\tpostgres:16\tUp 3 minutes\t0.0.0.0:5432->5432/tcp\tsupabase"
         let c = DockerCore.parseLine(line)
         XCTAssertEqual(c?.id, "abc123")
         XCTAssertEqual(c?.name, "pg-db")
         XCTAssertEqual(c?.image, "postgres:16")
         XCTAssertEqual(c?.status, "Up 3 minutes")
         XCTAssertEqual(c?.ports, "0.0.0.0:5432->5432/tcp")
+        XCTAssertEqual(c?.composeProject, "supabase")
+    }
+
+    func testParseLine_emptyComposeLabel_isNil() {
+        // Non-compose container → the label field renders empty → nil project.
+        let line = "abc123\tpg-db\tpostgres:16\tUp 3 minutes\t5432/tcp\t"
+        XCTAssertNil(DockerCore.parseLine(line)?.composeProject)
     }
 
     func testParseLine_emptyPorts_kept() {
-        // Container with no published ports → trailing empty field, still valid.
-        let line = "def456\tworker\talpine:latest\tUp 10 seconds\t"
+        // Container with no published ports → empty ports field, still valid.
+        let line = "def456\tworker\talpine:latest\tUp 10 seconds\t\t"
         let c = DockerCore.parseLine(line)
         XCTAssertEqual(c?.id, "def456")
         XCTAssertEqual(c?.ports, "")
@@ -895,10 +902,12 @@ final class DockerCoreTests: XCTestCase {
 
     func testParseLine_tooFewFields_isNil() {
         XCTAssertNil(DockerCore.parseLine("abc123\tname\timage\tUp"))
+        // Pre-compose-label 5-field form is malformed now — format + parser move in lockstep.
+        XCTAssertNil(DockerCore.parseLine("abc123\tname\timage\tUp 3 minutes\t8080/tcp"))
     }
 
     func testParseLine_emptyID_isNil() {
-        XCTAssertNil(DockerCore.parseLine("\tname\timage\tUp 1 minute\t8080/tcp"))
+        XCTAssertNil(DockerCore.parseLine("\tname\timage\tUp 1 minute\t8080/tcp\t"))
     }
 
     func testParseLine_blank_isNil() {
@@ -909,18 +918,20 @@ final class DockerCoreTests: XCTestCase {
 
     func testParsePS_multipleContainers() {
         let output = """
-        abc123\tpg-db\tpostgres:16\tUp 3 minutes\t0.0.0.0:5432->5432/tcp
-        def456\tredis\tredis:7\tUp 1 hour\t6379/tcp
+        abc123\tpg-db\tpostgres:16\tUp 3 minutes\t0.0.0.0:5432->5432/tcp\tsupabase
+        def456\tredis\tredis:7\tUp 1 hour\t6379/tcp\t
         """
         let containers = DockerCore.parsePS(output)
         XCTAssertEqual(containers.count, 2)
         XCTAssertEqual(containers[0].name, "pg-db")
+        XCTAssertEqual(containers[0].composeProject, "supabase")
         XCTAssertEqual(containers[1].image, "redis:7")
+        XCTAssertNil(containers[1].composeProject)
     }
 
     func testParsePS_skipsBlankAndMalformedLines() {
         let output = """
-        abc123\tpg-db\tpostgres:16\tUp 3 minutes\t5432/tcp
+        abc123\tpg-db\tpostgres:16\tUp 3 minutes\t5432/tcp\tsupabase
 
         garbage-no-tabs
         """

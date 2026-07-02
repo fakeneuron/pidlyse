@@ -6,9 +6,10 @@ import Foundation
 /// side effects so the parsing is covered by unit tests.
 public enum DockerCore {
     /// Tab-separated field order this parser expects, produced by
-    /// `docker ps --format "{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"`.
-    /// Kept here so `DockerService` and the tests share one source of truth.
-    public static let psFormat = "{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+    /// `docker ps --format` with ID / Names / Image / Status / Ports plus the
+    /// compose-project label (empty for non-compose containers). Kept here so
+    /// `DockerService` and the tests share one source of truth.
+    public static let psFormat = "{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}\t{{.Label \"com.docker.compose.project\"}}"
 
     /// Tab-separated field order for the scan-time owner cache, produced by
     /// `docker inspect --format "{{.State.Pid}}\t{{.Name}}"`. Resolves each
@@ -32,18 +33,21 @@ public enum DockerCore {
     }
 
     /// Parse one tab-separated `docker ps` line into a `Container`, or `nil` if
-    /// it has fewer than five fields or an empty container ID. A trailing empty
-    /// ports field is expected (containers with no published ports) and kept.
+    /// it has fewer than six fields or an empty container ID. Empty trailing
+    /// fields are expected and kept: ports (no published ports) stays empty, and
+    /// an empty compose-project label (non-compose container) maps to `nil`.
     public static func parseLine(_ line: String) -> Container? {
         let fields = line.components(separatedBy: "\t")
-        guard fields.count >= 5 else { return nil }
+        guard fields.count >= 6 else { return nil }
         let id = fields[0].trimmingCharacters(in: .whitespaces)
         guard !id.isEmpty else { return nil }
+        let project = fields[5].trimmingCharacters(in: .whitespaces)
         return Container(id: id,
                          name: fields[1],
                          image: fields[2],
                          status: fields[3],
-                         ports: fields[4])
+                         ports: fields[4],
+                         composeProject: project.isEmpty ? nil : project)
     }
 
     /// Parse `docker inspect --format inspectOwnerFormat` output (one container
