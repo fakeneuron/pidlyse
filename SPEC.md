@@ -28,6 +28,7 @@ Pidlyse/
         PortRegistry.swift        # compiled port table + user-override merge + lsof listener parse
         CwdResolver.swift         # lsof cwd parse + git-root project label & root path (row descriptor + protect scope)
         IgnoreRule.swift          # model: command-substring ignore, optionally scoped to a cwd path prefix
+        ScanHistory.swift         # rolling-window per-process CPU cache (PID+startTime keyed) + sustained-low-CPU query
         DockerCore.swift          # pure `docker ps` output parsing
         Container.swift           # model: id, name, image, status, ports
         Shell.swift               # shared subprocess primitive (Process/Pipe drain) — all four shell-out sites delegate
@@ -119,7 +120,7 @@ Dismiss / ignore: snoozes that PID for the session (does not survive restart).
 
 Each process row's descriptor line shows the **project it runs in** — the enclosing git repo (`bidviz`, or `bidviz/frontend` when the process runs in a subfolder) resolved from the process's working directory via `lsof`, so a bare `npm`/`node` is identifiable beyond its executable name. It falls back to the compact executable path when no cwd resolves (with the full path on hover). (PID-038)
 
-"Why is this here?" expands inline classification reasoning: the stray signals that fired (no TTY / orphan / old) plus raw `tty · ppid · age`, and — when resolvable — provenance hints: the registered port(s) the PID listens on (`:5173 listening`, [[PID-005]] demotion), its parent within the scan set (`child of <command>`), and the Docker container that owns it (`owned by container <name>`, [[PID-EPIC-037]]). Hints are omitted when absent (no registered-port listener, a parent that isn't itself a scanned candidate, or no owning container resolved). (PID-EPIC-036)
+"Why is this here?" expands inline classification reasoning: the stray signals that fired (no TTY / orphan / old) plus raw `tty · ppid · age`, and — when resolvable — provenance hints: the registered port(s) the PID listens on (`:5173 listening`, [[PID-005]] demotion), its parent within the scan set (`child of <command>`), and the Docker container that owns it (`owned by container <name>`, [[PID-EPIC-037]]). Hints are omitted when absent (no registered-port listener, a parent that isn't itself a scanned candidate, or no owning container resolved). (PID-EPIC-036) When sustained low CPU across recent scans coincides with old + no-TTY + an explicit dev-mode flag in the command, an advisory "idle dev server" line also appears — signal-only, never feeding the risk tier or kill bar. ([[PID-EPIC-55]])
 
 ---
 
