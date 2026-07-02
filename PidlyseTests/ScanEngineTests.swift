@@ -957,6 +957,32 @@ final class DockerCoreTests: XCTestCase {
     func testParseContainerOwners_empty_returnsEmpty() {
         XCTAssertTrue(DockerCore.parseContainerOwners("").isEmpty)
     }
+
+    // MARK: - parseStats
+
+    func testParseStats_mapsIDToStats_stripsMemLimit() {
+        // `{{.MemUsage}}` renders as `used / limit`; only the used half is kept.
+        let output = "abc123\t0.15%\t45.2MiB / 7.667GiB\ndef456\t1.30%\t1.1GiB / 7.667GiB"
+        let stats = DockerCore.parseStats(output)
+        XCTAssertEqual(stats, ["abc123": ContainerStats(cpu: "0.15%", memory: "45.2MiB"),
+                               "def456": ContainerStats(cpu: "1.30%", memory: "1.1GiB")])
+    }
+
+    func testParseStats_memUsageWithoutLimit_keptWhole() {
+        // Defensive: a MemUsage with no ` / limit` tail passes through unsplit.
+        let stats = DockerCore.parseStats("abc123\t0.50%\t45MiB")
+        XCTAssertEqual(stats["abc123"], ContainerStats(cpu: "0.50%", memory: "45MiB"))
+    }
+
+    func testParseStats_skipsMalformedBlankAndEmptyIDLines() {
+        let output = "abc123\t0.15%\t45MiB / 1GiB\nno-tabs-here\n\t1%\t2MiB / 4MiB\ntoo\tfew"
+        let stats = DockerCore.parseStats(output)
+        XCTAssertEqual(Array(stats.keys), ["abc123"])
+    }
+
+    func testParseStats_empty_returnsEmpty() {
+        XCTAssertTrue(DockerCore.parseStats("").isEmpty)
+    }
 }
 
 /// Tests for the pure docker-binary trust policy added in PID-35.3 (F2). The impure

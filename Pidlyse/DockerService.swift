@@ -93,6 +93,21 @@ enum DockerService {
         }
     }
 
+    /// One-shot CPU/memory sample for all running containers via
+    /// `docker stats --no-stream`, keyed by short container ID. Blocks ~1-2 s
+    /// while Docker samples a CPU window, so it runs off the main queue and
+    /// delivers on the main queue (same shape as `list(onComplete:)`); empty
+    /// map when Docker is absent or the command fails. Fetched once per
+    /// load/refresh — no polling timer. The pure parse lives in
+    /// `DockerCore.parseStats`.
+    static func stats(onComplete: @escaping ([String: ContainerStats]) -> Void) {
+        DispatchQueue.global().async {
+            let result = run(["stats", "--no-stream", "--format", DockerCore.statsFormat])
+            let stats = result.ok ? DockerCore.parseStats(result.output) : [:]
+            DispatchQueue.main.async { onComplete(stats) }
+        }
+    }
+
     // MARK: - Container actions (explicit-click only, per CLAUDE.md)
 
     /// Stop a running container via `docker stop` (Docker's own graceful

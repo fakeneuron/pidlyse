@@ -34,14 +34,14 @@ Pidlyse/
         ScanHistory.swift         # rolling-window per-process CPU cache (PID+startTime keyed) + sustained-low-CPU query
         CleanEvent.swift          # Codable model: kind rawValue, project label, rssKB, timestamp; no command line (privacy-first)
         CleanLog.swift            # pure rolling-window stats (count, RAM reclaimed, top kinds) + count-cap retention
-        DockerCore.swift          # pure `docker ps` output parsing
-        Container.swift           # model: id, name, image, status, ports
+        DockerCore.swift          # pure `docker ps` / `docker stats` output parsing
+        Container.swift           # models: Container (id, name, image, status, ports) + ContainerStats (cpu, memory)
         Shell.swift               # shared subprocess primitive (Process/Pipe drain) — all four shell-out sites delegate
   Pidlyse/
     PidlyseApp.swift          # @main; required (inert) Settings scene + NSApplicationDelegateAdaptor
     AppDelegate.swift         # NSStatusItem bridge: icon, popover, right-click Quit, self-managed Settings window
     MenuBarView.swift         # popover UI — Processes/Containers toggle + process list
-    ContainersView.swift      # popover UI — running-container list with stop / stop+remove
+    ContainersView.swift      # popover UI — running-container list (one-shot CPU/mem sample) with stop / stop+remove
     CleanedView.swift         # popover UI — "Cleaned" tab: kill-history stats (count, RAM reclaimed, top kinds)
     ScanEngine.swift          # app-side scan lifecycle: timer, persistence, notifications (drives ScanCore)
     CleanLogStore.swift       # app-side JSON store for kill history; wired from ScanEngine, persists to Application Support

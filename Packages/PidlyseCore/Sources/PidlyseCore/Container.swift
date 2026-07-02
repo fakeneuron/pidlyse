@@ -25,3 +25,20 @@ public struct Container: Identifiable, Equatable {
         self.ports = ports
     }
 }
+
+/// One-shot CPU/memory sample for a running container, parsed from
+/// `docker stats --no-stream` output by `DockerCore.parseStats`. Display
+/// strings, not numbers — nothing sorts or thresholds on them, so Docker's
+/// own formatting is kept as-is.
+public struct ContainerStats: Equatable {
+    /// CPU percentage column, e.g. `0.15%` (`{{.CPUPerc}}`).
+    public let cpu: String
+    /// Used-memory half of `{{.MemUsage}}`, e.g. `45.2MiB` — the parser
+    /// strips the ` / limit` tail to keep rows compact.
+    public let memory: String
+
+    public init(cpu: String, memory: String) {
+        self.cpu = cpu
+        self.memory = memory
+    }
+}

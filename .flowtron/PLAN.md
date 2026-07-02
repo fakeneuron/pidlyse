@@ -10,7 +10,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 - [ ] **PID-EPIC-56** [medium]🧠 | docker-enhance — Extend the Docker panel: per-container CPU/memory via `docker stats` parsing, compose-project grouping, and a restart action alongside stop. Builds on the shipped DockerService/DockerCore split. (Scoped by .1: N=5 — .1 discovery, .2 container-stats, .3 compose-grouping, .4 restart-action, .5 audit; one-shot stats on load/refresh, per-project section headers, explicit-click only.)
   - [x] **PID-56.1** [medium]🧠 | discovery — Completed 2026-07-02.
-  - [ ] **PID-56.2** [medium]🧠 | container-stats — Per-container CPU/memory: one-shot `docker stats --no-stream` alongside `docker ps` on load/refresh; new stats format constant + pure parser in DockerCore (mirrors inspectOwnerFormat precedent), impure fetch in DockerService, values joined by ID onto ContainersView rows.
+  - [x] **PID-56.2** [medium]🧠 | container-stats — Completed 2026-07-02.
   - [ ] **PID-56.3** [medium]🧠 | compose-grouping — Compose-project grouping: extend DockerCore.psFormat with the `com.docker.compose.project` label field (parser + tests in lockstep); ContainersView rows grouped under per-project section headers, non-compose containers ungrouped.
   - [ ] **PID-56.4** [light]🔧 | restart-action — Restart action: per-row `docker restart` button in ContainersView beside stop/remove, via a DockerService.restart wrapper on the shared performThenRefresh path. Explicit-click only.
   - [ ] **PID-56.5** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.

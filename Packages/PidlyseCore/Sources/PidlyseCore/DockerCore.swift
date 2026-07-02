@@ -17,6 +17,12 @@ public enum DockerCore {
     /// without a per-click inspect. Kept here as the shared source of truth.
     public static let inspectOwnerFormat = "{{.State.Pid}}\t{{.Name}}"
 
+    /// Tab-separated field order for the one-shot per-container stats sample,
+    /// produced by `docker stats --no-stream --format
+    /// "{{.ID}}\t{{.CPUPerc}}\t{{.MemUsage}}"`. Kept here so `DockerService`
+    /// and the tests share one source of truth.
+    public static let statsFormat = "{{.ID}}\t{{.CPUPerc}}\t{{.MemUsage}}"
+
     /// Parse `docker ps --format` output (one container per line) into typed
     /// `Container` values. Blank and malformed lines are dropped.
     public static func parsePS(_ output: String) -> [Container] {
@@ -59,5 +65,26 @@ public enum DockerCore {
             owners[pid] = String(name)
         }
         return owners
+    }
+
+    /// Parse `docker stats --no-stream --format statsFormat` output (one
+    /// container per line, `<ID>\t<CPUPerc>\t<MemUsage>`) into an ID-keyed
+    /// stats map, joinable onto `parsePS` containers by short ID (`{{.ID}}`
+    /// emits the same 12-char form in both commands). `{{.MemUsage}}` renders
+    /// as `used / limit`; only the used half is kept. Lines with fewer than
+    /// three fields or an empty ID are dropped.
+    public static func parseStats(_ output: String) -> [String: ContainerStats] {
+        var stats: [String: ContainerStats] = [:]
+        for line in output.split(separator: "\n", omittingEmptySubsequences: true) {
+            let fields = line.components(separatedBy: "\t")
+            guard fields.count >= 3 else { continue }
+            let id = fields[0].trimmingCharacters(in: .whitespaces)
+            guard !id.isEmpty else { continue }
+            let cpu = fields[1].trimmingCharacters(in: .whitespaces)
+            let memory = fields[2].components(separatedBy: " / ")[0]
+                .trimmingCharacters(in: .whitespaces)
+            stats[id] = ContainerStats(cpu: cpu, memory: memory)
+        }
+        return stats
     }
 }
