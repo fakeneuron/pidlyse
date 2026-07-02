@@ -6,17 +6,11 @@ Pidlyse is a native macOS menu bar app (Swift + SwiftUI, M-series) that scans fo
 
 See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
-## High
-
-- [ ] **PID-060** [light]🔧 | readme-visuals — Add high-quality popover screenshots and a short animated GIF (especially "Clean all" on real strays) to the README so the tool reads at a glance; keep the prominent Security section.
-
 ## Medium
 
 - [ ] **PID-EPIC-56** [medium]🧠 | docker-enhance — Extend the Docker panel: per-container CPU/memory via `docker stats` parsing, compose-project grouping, and a restart action alongside stop. Builds on the shipped DockerService/DockerCore split. (Filed via /ft-epic-discovery; refined at .1 closure.)
   - [ ] **PID-56.1** [medium]🧠 | discovery — Scope shared design and file children .2..4 per SPEC/epic.md.
   - [ ] **PID-56.5** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
-- [ ] **PID-061** [light]🔧 | spec-doc-refresh — Bring SPEC.md current with shipped work: inspector paragraph lacks PID-52's additions (full command line, ancestor chain, open files); project tree omits AncestryResolver/OpenFilesResolver, CleanEvent/CleanLog/CleanLogStore/CleanedView, CustomRule. Decide whether SPEC.md joins the AI-referenced docs registry. (Surfaced by PID-55.4 audit.)
-
 ## Low
 
 - [ ] **PID-EPIC-57** [heavy]🧠 | cli-companion — Ship a terminal companion binary (`pidlyse list --safe` / `clean` / `kill <pid>`) as a new SPM executable target sharing PidlyseCore's scan, classification, and kill logic. Preserves the never-auto-kill posture — `clean` still requires explicit invocation. (Filed via /ft-epic-discovery; refined at .1 closure.)
@@ -25,12 +19,14 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Future Opportunities
 
+- [ ] **PID-060** [light]🔧 | readme-visuals — Add high-quality popover screenshots and a short animated GIF (especially "Clean all" on real strays) to the README so the tool reads at a glance; keep the prominent Security section.
 - **PID-030** [medium]🧠 | notarize-and-sign — Replace ad-hoc signing with Developer ID + Apple notarization + stapling (and the Hardened Runtime entitlement notarization requires). Removes the Gatekeeper "Apple could not verify…" warning on the public download. **Deferred 2026-06-28** — gated on $99/yr Apple Developer Program enrollment (operator opted to defer). Until then the public-trust story rests on the public source + SHA-256 checksum (shipped via `make dmg` + release.yml) + the honest right-click→Open install note in the README "Security" section. (Confirmed home for the no-sandbox / Hardened-Runtime posture by the [[PID-EPIC-35]] security sweep — F3/F4 folded here, no duplicate child filed.)
 - [ ] **PID-EPIC-58** [medium]🧠 | integrations — Expose Pidlyse actions to external launchers — a URL scheme plus Raycast/Shortcuts/AppleScript bridges — so power users can trigger a safe clean from elsewhere. Likely depends on the cli-companion surface ([[PID-EPIC-57]]). (Filed via /ft-epic-discovery; refined at .1 closure.)
   - [ ] **PID-58.1** [medium]🧠 | discovery — Scope shared design and file children .2..3 per SPEC/epic.md.
   - [ ] **PID-58.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 ## Completed
 
+- [x] **PID-061** [light]🔧 | spec-doc-refresh — Completed 2026-07-02.
 - [x] **PID-059** [light]🔧 | app-icon-wiring — Completed 2026-07-02.
 - [x] **PID-EPIC-55** [medium]🧠 | idle-stray-signals — Completed 2026-07-02.
   - [x] **PID-55.1** [medium]🧠 | discovery — Completed 2026-07-02.
