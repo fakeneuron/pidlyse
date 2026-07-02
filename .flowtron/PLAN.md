@@ -8,12 +8,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-- [ ] **PID-EPIC-54** [medium]🧠 | detection-rules — Expand process detection: new built-in kinds (Next/Astro/SvelteKit, cargo, go run, ollama & local LLM servers, Electron helpers, more MCP/Playwright variants), plus simple user-defined custom rules (substring→label), a persistent protected-processes list (kept out of "Clean all safe", un-protectable), and cwd-scoped per-project ignores. Scoped across children .2–.4.
-  - [x] **PID-54.1** [medium]🧠 | discovery — Completed 2026-07-01.
-  - [x] **PID-54.2** [medium]🧠 | expand-builtin-kinds — Completed 2026-07-01.
-  - [x] **PID-54.3** [medium]🧠 | custom-rules — Completed 2026-07-01.
-  - [x] **PID-54.4** [medium]🧠 | protect-and-scope — Completed 2026-07-01.
-  - [ ] **PID-54.5** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 - [ ] **PID-059** [light]🔧 | app-icon-wiring — Generate the macOS AppIcon PNG set from `logo.png` and populate `Pidlyse/Assets.xcassets/AppIcon.appiconset` — it currently declares the slots but ships zero images, so the `.app` bundle is iconless. The menu-bar glyph is separate and unaffected.
 - [ ] **PID-060** [light]🔧 | readme-visuals — Add high-quality popover screenshots and a short animated GIF (especially "Clean all" on real strays) to the README so the tool reads at a glance; keep the prominent Security section.
 
@@ -40,6 +34,12 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [ ] **PID-58.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 ## Completed
 
+- [x] **PID-EPIC-54** [medium]🧠 | detection-rules — Completed 2026-07-01.
+  - [x] **PID-54.1** [medium]🧠 | discovery — Completed 2026-07-01.
+  - [x] **PID-54.2** [medium]🧠 | expand-builtin-kinds — Completed 2026-07-01.
+  - [x] **PID-54.3** [medium]🧠 | custom-rules — Completed 2026-07-01.
+  - [x] **PID-54.4** [medium]🧠 | protect-and-scope — Completed 2026-07-01.
+  - [x] **PID-54.5** [medium]🧠 | audit — Completed 2026-07-01.
 - [x] **PID-EPIC-53** [medium]🧠 | clean-history-stats — Completed 2026-07-01.
   - [x] **PID-53.1** [medium]🧠 | discovery — Completed 2026-06-30.
   - [x] **PID-53.2** [medium]🧠 | clean-log-store — Completed 2026-07-01.
