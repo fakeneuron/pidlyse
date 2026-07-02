@@ -783,89 +783,89 @@ final class ScanEngineTests: XCTestCase {
 
 /// Tests for the PID-reuse guard added in PID-18.3: the SIGKILL fallback fires
 /// only when the post-grace start time matches the pre-SIGTERM snapshot.
-final class KillServiceTests: XCTestCase {
+final class KillCoreTests: XCTestCase {
 
-    private let a = KillService.ProcStartTime(sec: 1000, usec: 500)
+    private let a = ProcStartTime(sec: 1000, usec: 500)
 
     // MARK: - shouldEscalateToSIGKILL decision matrix
 
     func testShouldEscalate_sameStartTime_escalates() {
         // PID still maps to the same process → SIGKILL is safe.
-        let same = KillService.ProcStartTime(sec: 1000, usec: 500)
-        XCTAssertTrue(KillService.shouldEscalateToSIGKILL(snapshot: a, current: same))
+        let same = ProcStartTime(sec: 1000, usec: 500)
+        XCTAssertTrue(KillCore.shouldEscalateToSIGKILL(snapshot: a, current: same))
     }
 
     func testShouldEscalate_differentStartTime_doesNotEscalate() {
         // PID recycled for a different process → must NOT SIGKILL the bystander.
-        let reused = KillService.ProcStartTime(sec: 2000, usec: 0)
-        XCTAssertFalse(KillService.shouldEscalateToSIGKILL(snapshot: a, current: reused))
+        let reused = ProcStartTime(sec: 2000, usec: 0)
+        XCTAssertFalse(KillCore.shouldEscalateToSIGKILL(snapshot: a, current: reused))
     }
 
     func testShouldEscalate_differingOnlyByMicroseconds_doesNotEscalate() {
         // Identity requires both fields equal; same second, different usec → mismatch.
-        let nearMiss = KillService.ProcStartTime(sec: 1000, usec: 501)
-        XCTAssertFalse(KillService.shouldEscalateToSIGKILL(snapshot: a, current: nearMiss))
+        let nearMiss = ProcStartTime(sec: 1000, usec: 501)
+        XCTAssertFalse(KillCore.shouldEscalateToSIGKILL(snapshot: a, current: nearMiss))
     }
 
     func testShouldEscalate_currentGone_doesNotEscalate() {
         // Process already exited during the grace period → nothing to kill.
-        XCTAssertFalse(KillService.shouldEscalateToSIGKILL(snapshot: a, current: nil))
+        XCTAssertFalse(KillCore.shouldEscalateToSIGKILL(snapshot: a, current: nil))
     }
 
     func testShouldEscalate_snapshotMissing_doesNotEscalate() {
         // Identity never established at SIGTERM time → conservative: do not escalate.
-        XCTAssertFalse(KillService.shouldEscalateToSIGKILL(snapshot: nil, current: a))
+        XCTAssertFalse(KillCore.shouldEscalateToSIGKILL(snapshot: nil, current: a))
     }
 
     func testShouldEscalate_bothMissing_doesNotEscalate() {
-        XCTAssertFalse(KillService.shouldEscalateToSIGKILL(snapshot: nil, current: nil))
+        XCTAssertFalse(KillCore.shouldEscalateToSIGKILL(snapshot: nil, current: nil))
     }
 
     // MARK: - startTime(of:) liveness reader
 
     func testStartTime_currentProcess_isNonNil() {
-        XCTAssertNotNil(KillService.startTime(of: getpid()))
+        XCTAssertNotNil(KillCore.startTime(of: getpid()))
     }
 
     func testStartTime_currentProcess_isStable() {
         // Reading the same live PID twice yields the same identity token.
-        XCTAssertEqual(KillService.startTime(of: getpid()), KillService.startTime(of: getpid()))
+        XCTAssertEqual(KillCore.startTime(of: getpid()), KillCore.startTime(of: getpid()))
     }
 
     func testStartTime_nonexistentPID_isNil() {
         // Beyond any assignable PID (kern.maxproc) → kernel returns no process.
-        XCTAssertNil(KillService.startTime(of: 2_000_000_000))
+        XCTAssertNil(KillCore.startTime(of: 2_000_000_000))
     }
 
     // MARK: - shouldSendSIGTERM decision matrix (PID-35.3 — pre-SIGTERM identity guard)
 
     func testShouldSendSIGTERM_sameStartTime_sends() {
         // PID still maps to the scanned process → safe to SIGTERM.
-        let same = KillService.ProcStartTime(sec: 1000, usec: 500)
-        XCTAssertTrue(KillService.shouldSendSIGTERM(expected: a, current: same))
+        let same = ProcStartTime(sec: 1000, usec: 500)
+        XCTAssertTrue(KillCore.shouldSendSIGTERM(expected: a, current: same))
     }
 
     func testShouldSendSIGTERM_recycledPID_doesNotSend() {
         // PID recycled between scan and click → must NOT SIGTERM the bystander.
-        let reused = KillService.ProcStartTime(sec: 2000, usec: 0)
-        XCTAssertFalse(KillService.shouldSendSIGTERM(expected: a, current: reused))
+        let reused = ProcStartTime(sec: 2000, usec: 0)
+        XCTAssertFalse(KillCore.shouldSendSIGTERM(expected: a, current: reused))
     }
 
     func testShouldSendSIGTERM_differingOnlyByMicroseconds_doesNotSend() {
-        let nearMiss = KillService.ProcStartTime(sec: 1000, usec: 501)
-        XCTAssertFalse(KillService.shouldSendSIGTERM(expected: a, current: nearMiss))
+        let nearMiss = ProcStartTime(sec: 1000, usec: 501)
+        XCTAssertFalse(KillCore.shouldSendSIGTERM(expected: a, current: nearMiss))
     }
 
     func testShouldSendSIGTERM_processGoneSinceScan_doesNotSend() {
         // Had a scan-time token but the PID is gone now → nothing to kill.
-        XCTAssertFalse(KillService.shouldSendSIGTERM(expected: a, current: nil))
+        XCTAssertFalse(KillCore.shouldSendSIGTERM(expected: a, current: nil))
     }
 
     func testShouldSendSIGTERM_noScanToken_sends() {
         // No identity captured at scan → legacy fallback: send (never worse than
         // pre-PID-35.3, and a wiring miss can't silently no-op every kill).
-        XCTAssertTrue(KillService.shouldSendSIGTERM(expected: nil, current: a))
-        XCTAssertTrue(KillService.shouldSendSIGTERM(expected: nil, current: nil))
+        XCTAssertTrue(KillCore.shouldSendSIGTERM(expected: nil, current: a))
+        XCTAssertTrue(KillCore.shouldSendSIGTERM(expected: nil, current: nil))
     }
 }
 

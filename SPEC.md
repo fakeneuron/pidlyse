@@ -10,7 +10,7 @@ A native macOS menu bar app for Apple Silicon that surfaces stray and zombie pro
 
 - **Language / UI**: Swift + SwiftUI, macOS 14+ target
 - **Menu bar**: AppKit `NSStatusItem` bridge (managed by `AppDelegate`) hosting SwiftUI views — left-click opens the popover, right-click shows a Quit menu. (`MenuBarExtra` was retired in PID-023 because it exposes only left-click.)
-- **Process enumeration**: `ps -axww` shell-out (column-formatted); port-listener detection via `lsof -nPi -sTCP:LISTEN`. (`sysctl` is used in `KillService` for the PID-reuse start-time guard, not for enumeration.)
+- **Process enumeration**: `ps -axww` shell-out (column-formatted); port-listener detection via `lsof -nPi -sTCP:LISTEN`. (`sysctl` is used in `KillCore` for the PID-reuse start-time guard, not for enumeration.)
 - **No helper daemon** for v1. XPC service / `launchd` plist deferred to post-v1 if background scanning proves necessary.
 
 ---
@@ -36,7 +36,9 @@ Pidlyse/
         CleanLog.swift            # pure rolling-window stats (count, RAM reclaimed, top kinds) + count-cap retention
         DockerCore.swift          # pure `docker ps` / `docker stats` output parsing
         Container.swift           # models: Container (id, name, image, status, ports, composeProject) + ContainerStats (cpu, memory)
-        Shell.swift               # shared subprocess primitive (Process/Pipe drain) — all four shell-out sites delegate
+        DockerService.swift       # impure docker CLI access: trusted-path resolution, shell-out, container listing/owners
+        KillCore.swift            # synchronous kill path: SIGTERM → 2 s grace → SIGKILL; PID-reuse identity guards; docker-stop routing
+        Shell.swift               # shared subprocess primitive (Process/Pipe drain) — all shell-out sites delegate
   Pidlyse/
     PidlyseApp.swift          # @main; required (inert) Settings scene + NSApplicationDelegateAdaptor
     AppDelegate.swift         # NSStatusItem bridge: icon, popover, right-click Quit, self-managed Settings window
@@ -45,8 +47,8 @@ Pidlyse/
     CleanedView.swift         # popover UI — "Cleaned" tab: kill-history stats (count, RAM reclaimed, top kinds)
     ScanEngine.swift          # app-side scan lifecycle: timer, persistence, notifications (drives ScanCore)
     CleanLogStore.swift       # app-side JSON store for kill history; wired from ScanEngine, persists to Application Support
-    DockerService.swift       # app-side docker CLI access: path resolution, shell-out, container listing
-    KillService.swift         # safe kill wrapper (SIGTERM → 2 s grace → SIGKILL; PID-reuse guard; docker-stop path)
+    DockerService+Async.swift # SwiftUI-facing async wrappers over the core DockerService (main-queue delivery)
+    KillService.swift         # thin async wrapper over KillCore (background-queue kill, main-queue callbacks)
     SettingsView.swift        # scan interval, thresholds, ignored substrings (+ per-project scoping), custom rules, protected projects, launch-at-login, notifications
   PidlyseTests/
     ScanEngineTests.swift     # unit tests for the PidlyseCore pipeline
@@ -116,7 +118,7 @@ Protected-projects awareness (PID-54.4): a safe process whose working directory 
 ## Kill Flow
 
 1. User clicks kill button for a safe process.
-2. `KillService` sends `SIGTERM`.
+2. `KillService` sends `SIGTERM` (via the shared `KillCore` in `PidlyseCore`).
 3. After 2 s, if process still alive → `SIGKILL` fallback.
 4. Rescan triggered immediately after kill.
 5. PID removed from list on next scan result.
@@ -176,7 +178,7 @@ Configurable at runtime (`SettingsView.swift`):
 
 ## Non-Goals (v1)
 
-- ~~Docker / container management~~ — **delivered post-v1** (PID-EPIC-28): a Processes / Containers segmented toggle whose Containers tab lists running containers with per-row restart / stop / stop+remove, compose containers grouped under per-project section headers (non-compose ungrouped). All `docker` access stays in the app-side `DockerService`; pure parsing in `PidlyseCore.DockerCore`.
+- ~~Docker / container management~~ — **delivered post-v1** (PID-EPIC-28): a Processes / Containers segmented toggle whose Containers tab lists running containers with per-row restart / stop / stop+remove, compose containers grouped under per-project section headers (non-compose ungrouped). All `docker` access stays in `DockerService` (in `PidlyseCore` since PID-57.2); pure parsing in `PidlyseCore.DockerCore`.
 - Full Supabase stack awareness
 - ~~Auto-start on login~~ — **delivered post-v1** (PID-010): a "Launch at login" toggle in Settings registers a login item via `SMAppService`.
 - Animated menu bar icon beyond simple badge (partially delivered post-v1: a one-shot stray-found pulse, PID-026; continuous animation / scanning spinner remain out)

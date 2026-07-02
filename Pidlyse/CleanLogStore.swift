@@ -4,7 +4,7 @@ import PidlyseCore
 /// App-side persistence for the confirmed-clean log (PID-53.2). Owns the impure
 /// disk I/O — load, append, save — while the pure model (`CleanEvent`) and the
 /// aggregation/retention logic (`CleanLog`) live in `PidlyseCore` (mirroring the
-/// `DockerService` ↔ `DockerCore` and `ScanEngine` ↔ `ScanCore` splits).
+/// `KillService` ↔ `KillCore` and `ScanEngine` ↔ `ScanCore` splits).
 ///
 /// Backed by a JSON array at `~/Library/Application Support/Pidlyse/clean-log.json`
 /// (same directory as `PortRegistry`'s `ports.json`). `@Published events` lets the

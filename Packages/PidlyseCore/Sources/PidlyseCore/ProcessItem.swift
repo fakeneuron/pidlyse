@@ -77,8 +77,8 @@ public enum Bucket {
 /// the start time differs. Captured at scan time (carried on `ProcessItem`) and
 /// re-read at kill time so the kill path can confirm the PID still maps to the
 /// *same* process. Lives here in `PidlyseCore` so `ProcessItem` can hold it; the
-/// `sysctl` reader that produces it stays app-side in `KillService` (see the
-/// `KillService.ProcStartTime` typealias). (PID-18.3, PID-35.3)
+/// `sysctl` reader that produces it is `KillCore.startTime(of:)` (moved into the
+/// core with the kill path, PID-57.2). (PID-18.3, PID-35.3)
 public struct ProcStartTime: Equatable, Hashable {
     public let sec: Int
     public let usec: Int

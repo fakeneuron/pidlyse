@@ -201,7 +201,7 @@ final class ScanEngine: ObservableObject {
                                             dismissedPIDs: dismissed,
                                             disabledKinds: disabled,
                                             customRules: rules,
-                                            startTimeProvider: KillService.startTime)
+                                            startTimeProvider: KillCore.startTime)
             // Resolve each candidate's working directory once per scan (single bulk
             // lsof over the matched PIDs); the row-expansion hint reads it (PID-038).
             let cwdMap = CwdResolver.processCwds(forPIDs: result.map { $0.pid })

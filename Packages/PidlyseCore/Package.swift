@@ -1,10 +1,11 @@
 // swift-tools-version:5.9
 import PackageDescription
 
-// Pure scan core shared by the Pidlyse app and the (future) LaunchAgent helper
-// (PID-EPIC-27). Holds the side-effect-light enumeration + classification logic,
-// the process model, and the port registry — everything the helper needs to run
-// one scan per invocation without linking the SwiftUI app target.
+// Scan + kill core shared by the Pidlyse app and the cli-companion binary
+// (PID-EPIC-57). Holds the side-effect-light enumeration + classification logic,
+// the process model, the port registry, and the synchronous kill path with its
+// docker CLI layer — everything a second consumer needs to scan and clean
+// without linking the SwiftUI app target.
 let package = Package(
     name: "PidlyseCore",
     platforms: [
