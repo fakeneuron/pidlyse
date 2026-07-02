@@ -8,12 +8,8 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-- [ ] **PID-EPIC-56** [medium]🧠 | docker-enhance — Extend the Docker panel: per-container CPU/memory via `docker stats` parsing, compose-project grouping, and a restart action alongside stop. Builds on the shipped DockerService/DockerCore split. (Scoped by .1: N=5 — .1 discovery, .2 container-stats, .3 compose-grouping, .4 restart-action, .5 audit; one-shot stats on load/refresh, per-project section headers, explicit-click only.)
-  - [x] **PID-56.1** [medium]🧠 | discovery — Completed 2026-07-02.
-  - [x] **PID-56.2** [medium]🧠 | container-stats — Completed 2026-07-02.
-  - [x] **PID-56.3** [medium]🧠 | compose-grouping — Completed 2026-07-02.
-  - [x] **PID-56.4** [light]🔧 | restart-action — Completed 2026-07-02.
-  - [ ] **PID-56.5** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
+(none)
+
 ## Low
 
 - [ ] **PID-EPIC-57** [heavy]🧠 | cli-companion — Ship a terminal companion binary (`pidlyse list --safe` / `clean` / `kill <pid>`) as a new SPM executable target sharing PidlyseCore's scan, classification, and kill logic. Preserves the never-auto-kill posture — `clean` still requires explicit invocation. (Filed via /ft-epic-discovery; refined at .1 closure.)
@@ -29,6 +25,12 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [ ] **PID-58.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 ## Completed
 
+- [x] **PID-EPIC-56** [medium]🧠 | docker-enhance — Completed 2026-07-02.
+  - [x] **PID-56.1** [medium]🧠 | discovery — Completed 2026-07-02.
+  - [x] **PID-56.2** [medium]🧠 | container-stats — Completed 2026-07-02.
+  - [x] **PID-56.3** [medium]🧠 | compose-grouping — Completed 2026-07-02.
+  - [x] **PID-56.4** [light]🔧 | restart-action — Completed 2026-07-02.
+  - [x] **PID-56.5** [medium]🧠 | audit — Completed 2026-07-02.
 - [x] **PID-061** [light]🔧 | spec-doc-refresh — Completed 2026-07-02.
 - [x] **PID-059** [light]🔧 | app-icon-wiring — Completed 2026-07-02.
 - [x] **PID-EPIC-55** [medium]🧠 | idle-stray-signals — Completed 2026-07-02.
