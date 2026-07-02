@@ -21,7 +21,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - [ ] **PID-EPIC-58** [medium]🧠 | integrations — Expose Pidlyse actions to external launchers: a `pidlyse://` URL scheme (direct clean + result notification) and Shortcuts (AppIntents) + Raycast (script commands over the [[PID-EPIC-57]] CLI) bridges. AppleScript dropped. Children scoped by .1.
   - [x] **PID-58.1** [medium]🧠 | discovery — Completed 2026-07-02.
   - [x] **PID-58.2** [medium]🧠 | url-scheme — Completed 2026-07-02.
-  - [ ] **PID-58.3** [medium]🧠 | bridges — Shortcuts bridge via AppIntents ("Clean safe strays", "Scan now") on the .2 action layer, plus sample Raycast script commands wrapping the installed CLI (`integrations/raycast/` + docs). AppleScript dropped — CLI covers `osascript` users.
+  - [x] **PID-58.3** [medium]🧠 | bridges — Completed 2026-07-02.
   - [ ] **PID-58.4** [medium]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 ## Completed
 

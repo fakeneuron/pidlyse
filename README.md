@@ -36,6 +36,16 @@ Build a Release `.app` with ad-hoc signing: `make build-release` (output: `build
 
 A terminal companion, `pidlyse`, builds from the same core: `make build-cli` (output: `Packages/PidlyseCore/.build/release/pidlyse`), install with `make install-cli`. `pidlyse list [--safe]` prints what the app's popover shows, `pidlyse clean` runs the same "Clean all" sweep (safe bucket minus protected projects), and `pidlyse kill <pid>` kills one listed candidate — all with the app's settings and kill safeguards, and CLI cleans land in the app's "Cleaned" tab.
 
+## Integrations
+
+Pidlyse exposes its clean/scan actions to external launchers (PID-EPIC-58):
+
+- **URL scheme** — `open pidlyse://clean` runs the "Clean all" safe sweep and posts a result notification; `open pidlyse://scan` re-enumerates. Any launcher that opens a URL can drive it.
+- **Shortcuts / Spotlight** — two App Shortcuts, **Clean Safe Strays** and **Scan Now** (AppIntents), invocable from the Shortcuts app, Spotlight, and Raycast's Shortcuts listing. "Clean Safe Strays" is bounded to the same safe-minus-protected set as "Clean all".
+- **Raycast** — sample script commands in [`integrations/raycast/`](integrations/raycast/) wrap the installed `pidlyse` CLI for users who prefer the terminal companion (`make install-cli` first).
+
+AppleScript is intentionally not supported — `osascript` users can `do shell script "pidlyse clean"` via the CLI.
+
 ## Menu Bar States
 
 | State | Icon | Badge |
