@@ -12,8 +12,10 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- [ ] **PID-EPIC-57** [heavy]🧠 | cli-companion — Ship a terminal companion binary (`pidlyse list --safe` / `clean` / `kill <pid>`) as a new SPM executable target sharing PidlyseCore's scan, classification, and kill logic. Preserves the never-auto-kill posture — `clean` still requires explicit invocation. (Filed via /ft-epic-discovery; refined at .1 closure.)
-  - [ ] **PID-57.1** [heavy]🧠 | discovery — Scope shared design and file children .2..3 per SPEC/epic.md.
+- [ ] **PID-EPIC-57** [heavy]🧠 | cli-companion — Ship a terminal companion binary (`pidlyse list --safe` / `clean` / `kill <pid>`) as a hand-rolled SPM executable sharing PidlyseCore; .2 first extracts the kill path (identity guards + docker-stop) into core. Full app-settings parity; confirmed kills land in the shared clean-log; never auto-kills.
+  - [x] **PID-57.1** [heavy]🧠 | cli-companion discovery — Completed 2026-07-02.
+  - [ ] **PID-57.2** [medium]🧠 | kill-core-extraction — Move kill logic into PidlyseCore: synchronous SIGTERM → 2 s grace → SIGKILL path preserving the PID-35.3 identity guards, docker-stop routing, and the impure docker CLI layer (DockerService). App keeps thin async wrappers; behavior unchanged; tests migrate; CLAUDE.md convention notes updated.
+  - [ ] **PID-57.3** [medium]🧠 | cli-target — Add `pidlyse` SPM executable target: `list [--safe]`, `clean`, `kill <pid>` (hand-rolled arg parsing, zero new deps). Reads the app's defaults domain for full rule parity; confirmed kills append to the shared clean-log. Makefile build/install wiring; never auto-kills.
   - [ ] **PID-57.4** [heavy]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed at filing time as highest .N child.
 
 ## Future Opportunities
