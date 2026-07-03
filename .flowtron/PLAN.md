@@ -16,10 +16,10 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Future Opportunities
 
-- [ ] **PID-060** [light]🔧 | readme-visuals — Add high-quality popover screenshots and a short animated GIF (especially "Clean all" on real strays) to the README so the tool reads at a glance; keep the prominent Security section.
 - **PID-030** [medium]🧠 | notarize-and-sign — Replace ad-hoc signing with Developer ID + Apple notarization + stapling (and the Hardened Runtime entitlement notarization requires). Removes the Gatekeeper "Apple could not verify…" warning on the public download. **Deferred 2026-06-28** — gated on $99/yr Apple Developer Program enrollment (operator opted to defer). Until then the public-trust story rests on the public source + SHA-256 checksum (shipped via `make dmg` + release.yml) + the honest right-click→Open install note in the README "Security" section. (Confirmed home for the no-sandbox / Hardened-Runtime posture by the [[PID-EPIC-35]] security sweep — F3/F4 folded here, no duplicate child filed.)
 ## Completed
 
+- [x] **PID-060** [light]🔧 | readme-visuals — Completed 2026-07-03.
 - [x] **PID-EPIC-58** [medium]🧠 | integrations — Completed 2026-07-02.
   - [x] **PID-58.1** [medium]🧠 | discovery — Completed 2026-07-02.
   - [x] **PID-58.2** [medium]🧠 | url-scheme — Completed 2026-07-02.

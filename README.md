@@ -1,5 +1,13 @@
 # Pidlyse
 
+<p align="center">
+  <img src="docs/screenshots/popover.png" alt="Pidlyse popover — stray processes detected" width="480">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/clean-all.gif" alt="Clean all — sweeping safe strays in one click" width="480">
+</p>
+
 Native macOS menu bar app that spots stray dev processes and clears them in one click.
 
 Sits beside the clock. Periodically scans for known process junk — orphaned test runners, idle servers, stale playwright-mcp instances, zombie Chrome helpers — and badges the icon when it finds them. Click to expand: a categorised list with per-row CPU%, RAM, and age; risk-tier color dots; kill buttons for obvious strays; and a "Needs review" section for anything that warrants a second look.

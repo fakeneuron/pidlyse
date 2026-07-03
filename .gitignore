@@ -17,3 +17,6 @@ build/
 # Swift Package Manager
 .build/
 .swiftpm/
+
+# Screenshot source recordings (GIF is committed; raw .mov is not)
+docs/screenshots/*.mov
