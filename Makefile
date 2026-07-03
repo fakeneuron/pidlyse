@@ -27,9 +27,15 @@ install-cli: build-cli
 # Also emits build/Pidlyse.dmg.sha256 so a public download can publish a checksum
 # users verify with `shasum -a 256 -c Pidlyse.dmg.sha256`.
 dmg:
-	mkdir -p build/dmg-staging
+	mkdir -p build/dmg-staging build/dmg-mount
 	cp -R build/Release/Pidlyse.app build/dmg-staging/
 	ln -sf /Applications build/dmg-staging/Applications
-	hdiutil create -volname Pidlyse -srcfolder build/dmg-staging -ov -format UDZO build/Pidlyse.dmg
-	rm -rf build/dmg-staging
+	cp build/Release/Pidlyse.app/Contents/Resources/AppIcon.icns build/dmg-staging/.VolumeIcon.icns
+	hdiutil create -volname Pidlyse -srcfolder build/dmg-staging -ov -format UDRW build/Pidlyse-rw.dmg
+	hdiutil attach build/Pidlyse-rw.dmg -mountpoint build/dmg-mount -nobrowse -quiet
+	SetFile -a C build/dmg-mount
+	hdiutil detach build/dmg-mount -quiet
+	hdiutil convert build/Pidlyse-rw.dmg -format UDZO -o build/Pidlyse.dmg -ov
+	rm -f build/Pidlyse-rw.dmg
+	rm -rf build/dmg-staging build/dmg-mount
 	cd build && shasum -a 256 Pidlyse.dmg | tee Pidlyse.dmg.sha256
