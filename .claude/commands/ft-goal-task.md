@@ -1,0 +1,1 @@
+../../.flowtron/core/claude/commands/ft-goal-task.md
