@@ -102,7 +102,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-34.2** [light]🔧 | spec-structure-refresh — Completed 2026-06-28.
   - [x] **PID-34.3** [light]🔧 | settings-scene-comment — Completed 2026-06-28.
   - [x] **PID-34.4** [light]🔧 | worktree-hygiene — Completed 2026-06-28.
-  - [x] **PID-34.N** [light]🔧 | audit — Completed 2026-06-28.
+  - [x] **PID-34.5** [light]🔧 | audit — Completed 2026-06-28.
 - [x] **PID-031** [light]🔧 | public-download-page — Completed 2026-06-28.
 - [x] **PID-033** [light]🔧 | doc-footprint-accuracy — Completed 2026-06-28.
 - [x] **PID-032** [medium]🔧 | settings-wont-open — Completed 2026-06-28.
@@ -132,21 +132,21 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-20.2** [light]🔧 | build-install — Completed 2026-06-25.
   - [x] **PID-20.3** [light]🔧 | dmg-package — Completed 2026-06-25.
   - [x] **PID-20.4** [light]🔧 | release-ci — Completed 2026-06-25.
-  - [x] **PID-20.N** [light]🔧 | audit — Completed 2026-06-25.
+  - [x] **PID-20.5** [light]🔧 | audit — Completed 2026-06-25.
 - [x] **PID-EPIC-19** [light]🔧 | repo-hygiene — Completed 2026-06-25.
   - [x] **PID-19.2** [light]🔧 | gitignore — Completed 2026-06-25.
   - [x] **PID-19.3** [light]🔧 | spec-drift — Completed 2026-06-25.
-  - [x] **PID-19.N** [light]🔧 | audit — Completed 2026-06-25.
+  - [x] **PID-19.4** [light]🔧 | audit — Completed 2026-06-25.
 - [x] **PID-EPIC-18** [medium]🧠 | correctness — Completed 2026-06-25.
   - [x] **PID-18.2** [light]🔧 | init-notifications — Completed 2026-06-25.
   - [x] **PID-18.3** [medium]🧠 | kill-pidreuse — Completed 2026-06-25.
   - [x] **PID-18.4** [light]🔧 | listeningpids-tests — Completed 2026-06-25.
   - [x] **PID-18.5** [light]🔧 | portregistry-tripwire — Completed 2026-06-25.
-  - [x] **PID-18.N** [light]🔧 | audit — Completed 2026-06-25.
+  - [x] **PID-18.6** [light]🔧 | audit — Completed 2026-06-25.
 - [x] **PID-EPIC-17** [light]🔧 | ci-gates — Completed 2026-06-25.
   - [x] **PID-17.2** [light]🔧 | makefile-test — Completed 2026-06-25.
   - [x] **PID-17.3** [light]🔧 | ci-actions — Completed 2026-06-25.
-  - [x] **PID-17.N** [light]🔧 | audit — Completed 2026-06-25.
+  - [x] **PID-17.4** [light]🔧 | audit — Completed 2026-06-25.
 - [x] **PID-EPIC-16** [light]🔧 | code-quality — Completed 2026-06-24.
   - [x] **PID-16.1** [light]🔧 | discovery — Completed 2026-06-24.
   - [x] **PID-16.2** [light]🔧 | shellout-helper — Completed 2026-06-24.
@@ -156,7 +156,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - [x] **PID-EPIC-15** [light]🔧 | doc-sync — Completed 2026-06-24.
   - [x] **PID-15.2** [light]🔧 | spec-settings — Completed 2026-06-24.
   - [x] **PID-15.3** [light]🔧 | tasknote-readme-cmds — Completed 2026-06-24.
-  - [x] **PID-15.N** [light]🔧 | audit — Completed 2026-06-24.
+  - [x] **PID-15.4** [light]🔧 | audit — Completed 2026-06-24.
 - [x] **PID-EPIC-14** [light]🔧 | correctness — Completed 2026-06-24.
   - [x] **PID-14.2** [light]🔧 | bun-guard — Completed 2026-06-24.
   - [x] **PID-14.3** [light]🔧 | docker-stop-note — Completed 2026-06-24.
