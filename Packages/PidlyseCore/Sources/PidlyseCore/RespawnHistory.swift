@@ -1,0 +1,165 @@
+import Foundation
+
+/// Pure, in-memory record of *verified* kills and of the same logical process
+/// coming back under a new PID (PID-62.2) — the signal behind "respawns; kill
+/// won't stick".
+///
+/// A kill that `KillCore` verified as a real death arms a watch on that process's
+/// **command signature**. If a later scan surfaces the same signature under a
+/// different identity while the watch is open, that's a respawn: something
+/// restarted it (a parent supervisor, launchd, a Docker restart policy), so
+/// killing it again would be a dead end. One armed kill can produce at most one
+/// respawn — the watch is consumed on match — and watches expire after
+/// `detectionWindow` so an unrelated reappearance minutes later isn't misread.
+///
+/// Value-semantics and side-effect-free, mirroring `ScanHistory`: the app-side
+/// `ScanEngine` owns the single mutable instance, arms it at the kill-completion
+/// hook, and folds each scan into it. Session-only for the same reason (per
+/// [[PID-62.1]] clarification #3) — respawn memory earned before a relaunch says
+/// nothing about the current session, so a respawner re-earns its badge after one
+/// kill attempt. Signal only: never touches `ScanCore.riskTier` / `bucket` / the
+/// kill bar — `PID-62.3` and `PID-62.5` own what the user sees.
+public struct RespawnHistory: Equatable {
+
+    // MARK: - Tunable defaults
+
+    /// How long after a verified kill a reappearance still counts as a respawn.
+    /// Two default scan intervals (2 min each), so a supervisor that waits out a
+    /// backoff before restarting is still caught.
+    public static let defaultDetectionWindow: TimeInterval = 300
+
+    // MARK: - Identity
+
+    /// A process's *logical* identity — what stays the same when a supervisor
+    /// restarts it under a fresh PID. Built from the command line plus the resolved
+    /// working directory, so two `npm run dev` processes in different repos are
+    /// distinct signatures.
+    ///
+    /// Normalization is deliberately conservative: over-stripping would collapse
+    /// unrelated processes into one signature and badge an innocent row as a
+    /// respawner. It lowercases, collapses whitespace, and drops only tokens that
+    /// are *known* to change on every launch — per-launch temp paths, and the
+    /// IPC-handle flags Chrome's helper processes carry (`--…-handle=`,
+    /// `--…-client=`, `--…-fd=`). Everything else, ports included, is significant.
+    public struct Signature: Hashable {
+        /// The normalized signature text. Exposed for debugging and test assertions;
+        /// equality is what callers actually consume.
+        public let value: String
+
+        public init(command: String, cwd: String? = nil) {
+            let tokens = command.lowercased()
+                .split(whereSeparator: { $0.isWhitespace })
+                .map(String.init)
+                .filter { !Signature.isVolatile($0) }
+            let normalized = tokens.joined(separator: " ")
+            guard let cwd, !cwd.isEmpty else {
+                self.value = normalized
+                return
+            }
+            self.value = "\(normalized) @ \(cwd.lowercased())"
+        }
+
+        /// Path fragments that only ever appear inside per-launch scratch directories.
+        private static let volatilePathFragments = ["/var/folders/", "/tmp/"]
+        /// Flag-name suffixes whose values are per-launch IPC handles (Chrome helpers).
+        private static let volatileFlagSuffixes = ["-handle", "-client", "-fd"]
+
+        private static func isVolatile(_ token: String) -> Bool {
+            if volatilePathFragments.contains(where: token.contains) { return true }
+            guard token.hasPrefix("--"), let equals = token.firstIndex(of: "=") else { return false }
+            let name = token[token.startIndex..<equals]
+            return volatileFlagSuffixes.contains(where: name.hasSuffix)
+        }
+    }
+
+    /// One scanned process, reduced to what respawn detection needs.
+    public struct Observation {
+        public let pid: Int32
+        public let startTime: ProcStartTime?
+        public let signature: Signature
+
+        public init(pid: Int32, startTime: ProcStartTime?, signature: Signature) {
+            self.pid = pid
+            self.startTime = startTime
+            self.signature = signature
+        }
+    }
+
+    /// An open watch: the identity we verified dead, and when.
+    private struct Watch: Equatable {
+        let pid: Int32
+        let startTime: ProcStartTime?
+        let killedAt: Date
+    }
+
+    // MARK: - State
+
+    /// How long a watch stays open after a verified kill.
+    public let detectionWindow: TimeInterval
+    /// Signatures with an open watch, keyed by signature (one watch per signature —
+    /// re-killing the same logical process just re-arms it).
+    private var watches: [Signature: Watch]
+    /// Respawns detected this session, per signature. Grows only on a detected
+    /// respawn, so it stays bounded by how many distinct things the user has killed
+    /// and watched come back.
+    private var counts: [Signature: Int]
+
+    public init(detectionWindow: TimeInterval = RespawnHistory.defaultDetectionWindow) {
+        self.detectionWindow = detectionWindow
+        self.watches = [:]
+        self.counts = [:]
+    }
+
+    // MARK: - Recording
+
+    /// Arm a watch for a kill `KillCore` verified as a real death. Pure — returns a
+    /// new value. Callers pass the killed process's scan-time identity so a
+    /// same-identity reappearance (PID reuse) can be told apart from a respawn.
+    public func recordingKill(signature: Signature,
+                              pid: Int32,
+                              startTime: ProcStartTime?,
+                              at now: Date) -> RespawnHistory {
+        var copy = self
+        copy.watches[signature] = Watch(pid: pid, startTime: startTime, killedAt: now)
+        return copy
+    }
+
+    /// Fold one scan's observations into a new history: every open watch is either
+    /// expired (past `detectionWindow`), matched by a same-signature process under a
+    /// *different* identity — a respawn, counted and the watch consumed — or left
+    /// open for the next scan. Pure; observations are only ever read, and with no
+    /// watch open (the common case — nothing killed yet) the value is returned
+    /// unchanged.
+    public func recording(_ observations: [Observation], at now: Date) -> RespawnHistory {
+        guard !watches.isEmpty else { return self }
+        var copy = self
+        for (signature, watch) in watches {
+            guard now.timeIntervalSince(watch.killedAt) <= detectionWindow else {
+                copy.watches[signature] = nil
+                continue
+            }
+            let respawned = observations.contains {
+                $0.signature == signature
+                    && ($0.pid != watch.pid || $0.startTime != watch.startTime)
+            }
+            if respawned {
+                copy.counts[signature, default: 0] += 1
+                copy.watches[signature] = nil
+            }
+        }
+        return copy
+    }
+
+    // MARK: - Queries
+
+    /// How many times this signature has come back after a verified kill this session.
+    public func respawnCount(for signature: Signature) -> Int {
+        counts[signature] ?? 0
+    }
+
+    /// True once a signature has respawned at least once — the "kill won't stick"
+    /// signal `PID-62.3` / `PID-62.5` surface.
+    public func isRespawner(_ signature: Signature) -> Bool {
+        respawnCount(for: signature) > 0
+    }
+}

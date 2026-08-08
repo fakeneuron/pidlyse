@@ -32,12 +32,13 @@ Pidlyse/
         IgnoreRule.swift          # model: command-substring ignore, optionally scoped to a cwd path prefix
         CustomRule.swift          # model: user-defined command-substring rule + friendly label (always Needs Review)
         ScanHistory.swift         # rolling-window per-process CPU cache (PID+startTime keyed) + sustained-low-CPU query
+        RespawnHistory.swift      # session-only respawn cache: command-signature normalization + windowed watch on verified kills
         CleanEvent.swift          # Codable model: kind rawValue, project label, rssKB, timestamp; no command line (privacy-first)
         CleanLog.swift            # pure rolling-window stats (count, RAM reclaimed, top kinds) + count-cap retention
         DockerCore.swift          # pure `docker ps` / `docker stats` output parsing
         Container.swift           # models: Container (id, name, image, status, ports, composeProject) + ContainerStats (cpu, memory)
         DockerService.swift       # impure docker CLI access: trusted-path resolution, shell-out, container listing/owners
-        KillCore.swift            # synchronous kill path: SIGTERM → 2 s grace → SIGKILL; PID-reuse identity guards; docker-stop routing
+        KillCore.swift            # synchronous kill path: SIGTERM → 2 s grace → SIGKILL → death check; PID-reuse identity guards; docker-stop routing
         CleanLogFile.swift        # shared clean-log disk I/O (load / append-capped / atomic save) — one format for both writers
         CLICore.swift             # pure cli-companion command grammar (list/clean/kill/help) + table formatting
         Shell.swift               # shared subprocess primitive (Process/Pipe drain) — all shell-out sites delegate
@@ -124,10 +125,13 @@ Protected-projects awareness (PID-54.4): a safe process whose working directory 
 1. User clicks kill button for a safe process.
 2. `KillService` sends `SIGTERM` (via the shared `KillCore` in `PidlyseCore`).
 3. After 2 s, if process still alive → `SIGKILL` fallback.
-4. Rescan triggered immediately after kill.
-5. PID removed from list on next scan result.
+4. **Death check** ([[PID-62.2]]): after the `SIGKILL` fallback, `KillCore` re-reads the process table before reporting success. The outcome is `confirmed` only when the process is verified gone — no entry, PID recycled, or an unreaped zombie — and `survived` when it is still running under the same identity. (A process that exits during the grace period needs no probe; it is already observed gone.) Together with `notKilled` — identity guard refused, or `EPERM` from a foreign owner — these are the three honest answers a kill can give, and only `confirmed` is written to the clean log, so the "RAM reclaimed" figure counts real deaths only.
+5. Rescan triggered immediately after kill.
+6. PID removed from list on next scan result.
 
 Bulk action: "Kill all safe" applies the same flow to every safe-bucket process.
+
+**Respawn detection** ([[PID-62.2]]): a verified death arms a watch on that process's *command signature* — its command line (lowercased, whitespace-collapsed, with per-launch temp paths and IPC-handle flags stripped) plus its resolved working directory. If a later scan surfaces that signature under a **different** PID within the detection window (default 5 min), something restarted it and killing it again won't stick, so `RespawnHistory` counts it as a respawn. The cache is a pure value type owned by `ScanEngine` (same split as `ScanHistory`) and is session-only: respawn memory earned before a relaunch says nothing about the current session, so a respawner re-earns its badge after one kill attempt. Signal-only — it never feeds the risk tier, the bucket, or the kill bar.
 
 Dismiss / ignore: snoozes that PID for the session (does not survive restart).
 

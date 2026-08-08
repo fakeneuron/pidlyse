@@ -140,6 +140,12 @@ final class ScanEngine: ObservableObject {
     /// `PidlyseCore.ScanHistory`. Signal-only — never influences the kill bar.
     private var scanHistory = ScanHistory()
 
+    /// Session-only respawn cache (PID-62.2). Armed at the kill-completion hook for
+    /// every verified death and folded once per scan from `filtered`; consulted by
+    /// `isRespawner(_:)`. In-memory for the session; pure logic lives in
+    /// `PidlyseCore.RespawnHistory`. Signal-only — never influences the kill bar.
+    private var respawnHistory = RespawnHistory()
+
     private var timer: Timer?
 
     init() {
@@ -220,6 +226,8 @@ final class ScanEngine: ObservableObject {
                 self?.cwds = cwdMap
                 self?.processTable = procTable
                 self?.recordScanHistory(filtered)
+                // After `cwds` is published — signatures are built from it.
+                self?.recordRespawnHistory(filtered)
                 self?.isScanning = false
                 self?.fireNotificationIfNeeded(newItems: filtered, previousPIDs: oldPIDs)
             }
@@ -257,12 +265,14 @@ final class ScanEngine: ObservableObject {
 
     // MARK: - Clean log (PID-53.2)
 
-    /// Record a single kill's outcome. Logs only `.confirmed` deaths — labelled
-    /// from the scan-time `cwds` project label (fallback: `displayPath`). Called
-    /// on the main thread from the kill-completion hook **before** the rescan, so
-    /// `cwds` still holds the pre-kill label.
+    /// Record a single kill's outcome. Logs only `.confirmed` deaths — verified
+    /// gone, per `KillCore`'s death check (PID-62.2) — labelled from the scan-time
+    /// `cwds` project label (fallback: `displayPath`). Called on the main thread
+    /// from the kill-completion hook **before** the rescan, so `cwds` still holds
+    /// the pre-kill label. A verified death also arms respawn watching.
     func recordCleaned(_ item: ProcessItem, outcome: KillService.KillOutcome) {
         guard outcome == .confirmed else { return }
+        armRespawnWatch(item)
         cleanLog.record(makeCleanEvent(item))
     }
 
@@ -270,6 +280,7 @@ final class ScanEngine: ObservableObject {
     /// resolving each pid back to its `ProcessItem` for the kind/rss/label.
     func recordCleaned(_ items: [ProcessItem], outcomes: [Int32: KillService.KillOutcome]) {
         for item in items where outcomes[item.pid] == .confirmed {
+            armRespawnWatch(item)
             cleanLog.record(makeCleanEvent(item))
         }
     }
@@ -400,6 +411,44 @@ final class ScanEngine: ObservableObject {
             && item.elapsed >= elapsedThreshold
             && !item.hasTTY
             && ScanCore.hasDevModeFlag(item.command)
+    }
+
+    // MARK: - Respawn detection (PID-62.2)
+
+    /// A process's logical identity, built from its command line plus the scan-time
+    /// working directory. Single source of the signature so the kill hook and the
+    /// scan feed can't derive it differently.
+    private func signature(for item: ProcessItem) -> RespawnHistory.Signature {
+        RespawnHistory.Signature(command: item.command, cwd: cwds[item.pid]?.fullPath)
+    }
+
+    /// Start watching for a verified-dead process coming back under a new PID.
+    /// Called from `recordCleaned` on the main thread, before the post-kill rescan,
+    /// so the signature is built from the pre-kill `cwds` entry.
+    private func armRespawnWatch(_ item: ProcessItem) {
+        respawnHistory = respawnHistory.recordingKill(signature: signature(for: item),
+                                                      pid: item.pid,
+                                                      startTime: item.startTime,
+                                                      at: Date())
+    }
+
+    /// Fold the completed scan into the respawn cache — a watched signature seen
+    /// again under a different identity counts as a respawn. Called on the main
+    /// thread from the scan-publish block, after `cwds` is published.
+    private func recordRespawnHistory(_ items: [ProcessItem]) {
+        respawnHistory = respawnHistory.recording(items.map {
+            RespawnHistory.Observation(pid: $0.pid,
+                                       startTime: $0.startTime,
+                                       signature: signature(for: $0))
+        }, at: Date())
+    }
+
+    /// Whether this process has already come back after a verified kill this session
+    /// (PID-62.2) — something restarts it, so killing it again won't stick. Advisory
+    /// only; `PID-62.3` / `PID-62.5` own how it reaches the user. Never influences
+    /// the risk tier / bucket / kill bar.
+    func isRespawner(_ item: ProcessItem) -> Bool {
+        respawnHistory.isRespawner(signature(for: item))
     }
 
     // MARK: - Notifications

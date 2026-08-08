@@ -867,6 +867,45 @@ final class KillCoreTests: XCTestCase {
         XCTAssertTrue(KillCore.shouldSendSIGTERM(expected: nil, current: a))
         XCTAssertTrue(KillCore.shouldSendSIGTERM(expected: nil, current: nil))
     }
+
+    // MARK: - isStillRunning death check (PID-62.2 — post-SIGKILL verification)
+
+    func testIsStillRunning_sameIdentity_stillRunning() {
+        // Survived both signals under the same identity → the honest `.survived` path.
+        let same = ProcStartTime(sec: 1000, usec: 500)
+        XCTAssertTrue(KillCore.isStillRunning(snapshot: a, current: same, isZombie: false))
+    }
+
+    func testIsStillRunning_noProcessEntry_isDead() {
+        XCTAssertFalse(KillCore.isStillRunning(snapshot: a, current: nil, isZombie: false))
+    }
+
+    func testIsStillRunning_recycledPID_isDead() {
+        // A different start time means ours died and the PID was reassigned.
+        let reused = ProcStartTime(sec: 2000, usec: 0)
+        XCTAssertFalse(KillCore.isStillRunning(snapshot: a, current: reused, isZombie: false))
+    }
+
+    func testIsStillRunning_zombie_isDead() {
+        // Exited but not yet reaped: the entry (and start time) persist, so without
+        // the zombie check this identical-token case would read as a false survival.
+        let same = ProcStartTime(sec: 1000, usec: 500)
+        XCTAssertFalse(KillCore.isStillRunning(snapshot: a, current: same, isZombie: true))
+    }
+
+    func testIsStillRunning_noSnapshot_fallsBackToExistence() {
+        // Identity never established (legacy no-token path) → existence is all we
+        // can honestly assert, so a live entry counts as still running.
+        XCTAssertTrue(KillCore.isStillRunning(snapshot: nil, current: a, isZombie: false))
+        XCTAssertFalse(KillCore.isStillRunning(snapshot: nil, current: nil, isZombie: false))
+        XCTAssertFalse(KillCore.isStillRunning(snapshot: nil, current: a, isZombie: true))
+    }
+
+    func testVerificationDelay_isShorterThanGracePeriod() {
+        // A settle, not a second grace period — bulk sweeps must not slow down.
+        XCTAssertLessThan(KillCore.verificationDelay, KillCore.gracePeriod)
+        XCTAssertGreaterThan(KillCore.verificationDelay, 0)
+    }
 }
 
 /// Tests for the pure `docker ps` parser added in PID-28.2. The impure
@@ -1141,6 +1180,151 @@ final class ScanHistoryTests: XCTestCase {
         XCTAssertEqual(ScanHistory.defaultWindowDepth, 5)
         XCTAssertEqual(ScanHistory.defaultLowCPUThreshold, 1.0)
         XCTAssertEqual(ScanHistory.defaultMinimumSamples, 3)
+    }
+}
+
+/// Tests for the PID-62.2 pure respawn cache: command-signature normalization,
+/// the armed-watch lifecycle after a verified kill, and the detection window.
+/// In-memory value type; the `ScanEngine` feed is not unit-tested (same split as
+/// `ScanHistoryTests`).
+final class RespawnHistoryTests: XCTestCase {
+
+    private let t1 = ProcStartTime(sec: 1000, usec: 0)
+    private let t2 = ProcStartTime(sec: 2000, usec: 0)
+    private let now = Date(timeIntervalSince1970: 1_000_000)
+
+    private func sig(_ command: String, _ cwd: String? = nil) -> RespawnHistory.Signature {
+        RespawnHistory.Signature(command: command, cwd: cwd)
+    }
+
+    private func obs(_ pid: Int32, _ start: ProcStartTime?,
+                     _ signature: RespawnHistory.Signature) -> RespawnHistory.Observation {
+        RespawnHistory.Observation(pid: pid, startTime: start, signature: signature)
+    }
+
+    // MARK: - Signature normalization
+
+    func testSignature_collapsesWhitespaceAndCase() {
+        XCTAssertEqual(sig("NPM   run    dev"), sig("npm run dev"))
+    }
+
+    func testSignature_cwdDistinguishesIdenticalCommands() {
+        // The same dev-server command in two repos is two logical processes.
+        XCTAssertNotEqual(sig("npm run dev", "~/code/bidviz"),
+                          sig("npm run dev", "~/code/wandora"))
+    }
+
+    func testSignature_dropsPerLaunchTempPaths() {
+        XCTAssertEqual(sig("node /var/folders/ab/T/xyz123/server.js --port 5173"),
+                       sig("node --port 5173"))
+    }
+
+    func testSignature_dropsIPCHandleFlags() {
+        // Chrome's helper flags carry a fresh handle every launch — the whole point
+        // of the signature is that they don't defeat the match.
+        XCTAssertEqual(sig("chrome --type=renderer --field-trial-handle=1,i,999 --seatbelt-client=42"),
+                       sig("chrome --type=renderer --field-trial-handle=2,i,111 --seatbelt-client=7"))
+    }
+
+    func testSignature_keepsMeaningfulFlags() {
+        // Conservative normalization: a port is significant, not volatile noise.
+        XCTAssertNotEqual(sig("vite --port=5173"), sig("vite --port=5184"))
+        XCTAssertNotEqual(sig("npm run dev"), sig("npm run build"))
+    }
+
+    // MARK: - Respawn detection
+
+    func testRespawn_sameSignatureNewPID_isCounted() {
+        let s = sig("npm run dev", "~/code/bidviz")
+        var h = RespawnHistory()
+        h = h.recordingKill(signature: s, pid: 100, startTime: t1, at: now)
+        h = h.recording([obs(200, t2, s)], at: now.addingTimeInterval(5))
+        XCTAssertTrue(h.isRespawner(s))
+        XCTAssertEqual(h.respawnCount(for: s), 1)
+    }
+
+    func testRespawn_sameIdentityReappearing_isNotCounted() {
+        // Same PID *and* start time is the process never having died — that is
+        // `KillCore`'s `.survived`, not a respawn.
+        let s = sig("npm run dev")
+        var h = RespawnHistory()
+        h = h.recordingKill(signature: s, pid: 100, startTime: t1, at: now)
+        h = h.recording([obs(100, t1, s)], at: now.addingTimeInterval(5))
+        XCTAssertFalse(h.isRespawner(s))
+    }
+
+    func testRespawn_unrelatedSignature_isNotCounted() {
+        let killed = sig("npm run dev")
+        var h = RespawnHistory()
+        h = h.recordingKill(signature: killed, pid: 100, startTime: t1, at: now)
+        h = h.recording([obs(200, t2, sig("vitest run"))], at: now.addingTimeInterval(5))
+        XCTAssertFalse(h.isRespawner(killed))
+    }
+
+    func testRespawn_watchIsConsumed_soOneKillCountsOnce() {
+        // Without consuming the watch, every scan while the process lives would
+        // re-count the same reappearance.
+        let s = sig("npm run dev")
+        var h = RespawnHistory()
+        h = h.recordingKill(signature: s, pid: 100, startTime: t1, at: now)
+        h = h.recording([obs(200, t2, s)], at: now.addingTimeInterval(5))
+        h = h.recording([obs(200, t2, s)], at: now.addingTimeInterval(10))
+        XCTAssertEqual(h.respawnCount(for: s), 1)
+    }
+
+    func testRespawn_secondKillRearmsTheWatch() {
+        let s = sig("npm run dev")
+        var h = RespawnHistory()
+        h = h.recordingKill(signature: s, pid: 100, startTime: t1, at: now)
+        h = h.recording([obs(200, t2, s)], at: now.addingTimeInterval(5))
+        h = h.recordingKill(signature: s, pid: 200, startTime: t2, at: now.addingTimeInterval(10))
+        h = h.recording([obs(300, t1, s)], at: now.addingTimeInterval(15))
+        XCTAssertEqual(h.respawnCount(for: s), 2)
+    }
+
+    // MARK: - Detection window
+
+    func testRespawn_outsideDetectionWindow_isNotCounted() {
+        let s = sig("npm run dev")
+        var h = RespawnHistory(detectionWindow: 60)
+        h = h.recordingKill(signature: s, pid: 100, startTime: t1, at: now)
+        h = h.recording([obs(200, t2, s)], at: now.addingTimeInterval(61))
+        XCTAssertFalse(h.isRespawner(s))
+    }
+
+    func testRespawn_atWindowBoundary_isCounted() {
+        let s = sig("npm run dev")
+        var h = RespawnHistory(detectionWindow: 60)
+        h = h.recordingKill(signature: s, pid: 100, startTime: t1, at: now)
+        h = h.recording([obs(200, t2, s)], at: now.addingTimeInterval(60))
+        XCTAssertTrue(h.isRespawner(s))
+    }
+
+    func testRespawn_expiredWatchIsDropped_soALaterMatchDoesNotCount() {
+        let s = sig("npm run dev")
+        var h = RespawnHistory(detectionWindow: 60)
+        h = h.recordingKill(signature: s, pid: 100, startTime: t1, at: now)
+        h = h.recording([], at: now.addingTimeInterval(61))
+        h = h.recording([obs(200, t2, s)], at: now.addingTimeInterval(62))
+        XCTAssertFalse(h.isRespawner(s))
+    }
+
+    // MARK: - Baseline
+
+    func testUnwatchedSignature_isNotARespawner() {
+        let h = RespawnHistory()
+        XCTAssertFalse(h.isRespawner(sig("npm run dev")))
+        XCTAssertEqual(h.respawnCount(for: sig("npm run dev")), 0)
+    }
+
+    func testRecording_withNoWatches_isUnchanged() {
+        let h = RespawnHistory()
+        XCTAssertEqual(h.recording([obs(100, t1, sig("npm run dev"))], at: now), h)
+    }
+
+    func testDefaults_areExposed() {
+        XCTAssertEqual(RespawnHistory.defaultDetectionWindow, 300)
+        XCTAssertEqual(RespawnHistory().detectionWindow, RespawnHistory.defaultDetectionWindow)
     }
 }
 

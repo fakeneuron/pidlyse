@@ -165,6 +165,9 @@ private func commandKill(pid: Int32) -> Int32 {
     case .confirmed:
         print("✓ killed  \(pid)  \(item.displayLabel)  \(scan.cwds[pid]?.label ?? item.displayPath)")
         return 0
+    case .survived:
+        printErr("pidlyse: PID \(pid) survived — SIGTERM and SIGKILL delivered, process still running")
+        return 1
     case .notKilled:
         printErr("pidlyse: PID \(pid) not killed — gone, recycled since the scan, or owned by another user")
         return 1
