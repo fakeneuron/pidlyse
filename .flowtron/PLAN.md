@@ -6,6 +6,16 @@ Pidlyse is a native macOS menu bar app (Swift + SwiftUI, M-series) that scans fo
 
 See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
+## High
+
+- [ ] **PID-EPIC-62** [heavy]🧠 | killability-truth — Make "kill" mean *gone*: kill-verification + session-only respawn detection core (.2), honest unkillable/respawner rows where explanation replaces the kill button (.3), process-tree redundancy collapse into one killable row (.4), verified per-row kill-feedback lifecycle + honest Clean-all summary + stability fixes (.5). Constitution/spec in PID-62.1 deep pre-pass; docker scope untouched ([[PID-063]]).
+  - [x] **PID-62.1** [heavy]🧠 | killability-truth discovery — Completed 2026-08-08.
+  - [ ] **PID-62.2** [heavy]🧠 | respawn-detection-core — Kill-verification + respawn detection in PidlyseCore: post-kill rescan confirms death stuck; command-signature matcher flags the same logical process reappearing under a new PID after a confirmed kill. Session-only cache mirroring ScanHistory; ScanEngine feeds it each scan. App-only (CLI parity deferred).
+  - [ ] **PID-62.3** [medium]🧠 | honest-unkillable-ux — Surface unkillable and respawning rows honestly: EPERM/foreign-owned gets an explicit "unkillable" state (thread KillCore outcomes to UI); detected respawners get explanation-replaces-kill-button ("respawns — managed by X; kill won't stick") + inspector reasoning line. Overlay like 🔒, never a third bucket.
+  - [ ] **PID-62.4** [medium]🧠 | tree-redundancy-collapse — Collapse parent+child chains that live and die together (npm→node→vite, Chrome helper broods) into one logical row with group kill; extends PID-039 npm-surface-dedup + AncestryResolver. Clean-all counts each group once; respawn signatures from .2 apply per logical group.
+  - [ ] **PID-62.5** [medium]🧠 | kill-feedback-stability — Visible per-row kill lifecycle ("killing… → gone / didn't die / respawned") driven by .2 verification; honest Clean-all outcome summary (N killed / M didn't die / K respawned); targeted stability fixes surfaced during the epic (scan churn, stale rows).
+  - [ ] **PID-62.N** [heavy]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed now with the reserved terminal `.N` suffix (never renumbers as children are added).
+
 ## Medium
 
 (none)
@@ -17,6 +27,8 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## Future Opportunities
 
 - **PID-030** [medium]🧠 | notarize-and-sign — Replace ad-hoc signing with Developer ID + Apple notarization + stapling (and the Hardened Runtime entitlement notarization requires). Removes the Gatekeeper "Apple could not verify…" warning on the public download. **Deferred 2026-06-28** — gated on $99/yr Apple Developer Program enrollment (operator opted to defer). Until then the public-trust story rests on the public source + SHA-256 checksum (shipped via `make dmg` + release.yml) + the honest right-click→Open install note in the README "Security" section. (Confirmed home for the no-sandbox / Hardened-Runtime posture by the [[PID-EPIC-35]] security sweep — F3/F4 folded here, no duplicate child filed.)
+- [ ] **PID-063** [medium]🧠 | docker-scope-trim — Explore trimming docker/container surfaces to metrics-only (or dropping them): operator kills containers via Docker Desktop, not Pidlyse; weigh value for other users. Parked from [[PID-62.1]].
+
 ## Completed
 
 - [x] **PID-060** [light]🔧 | readme-visuals — Completed 2026-07-03.
