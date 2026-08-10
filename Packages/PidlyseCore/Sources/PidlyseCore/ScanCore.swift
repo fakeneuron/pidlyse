@@ -24,14 +24,16 @@ public enum ScanCore {
                                  dismissedPIDs: Set<Int32> = [],
                                  disabledKinds: Set<ProcessKind> = [],
                                  customRules: [CustomRule] = [],
-                                 startTimeProvider: ((Int32) -> ProcStartTime?)? = nil) -> [ProcessItem] {
+                                 startTimeProvider: ((Int32) -> ProcStartTime?)? = nil,
+                                 uidProvider: ((Int32) -> uid_t?)? = nil) -> [ProcessItem] {
         let output = psOutput ?? runPS()
         let portPIDs = registeredPIDs ?? PortRegistry.listeningPIDs()
         var all = output
             .split(separator: "\n", omittingEmptySubsequences: true)
             .compactMap { makeItem(from: String($0), elapsedThreshold: elapsedThreshold,
                                    registeredPIDs: portPIDs, customRules: customRules,
-                                   startTimeProvider: startTimeProvider) }
+                                   startTimeProvider: startTimeProvider,
+                                   uidProvider: uidProvider) }
         if !ignoredNames.isEmpty {
             all = all.filter { item in
                 !ignoredNames.contains { prefix in
@@ -57,8 +59,8 @@ public enum ScanCore {
     /// launcher whose meaningful payload is the child it spawned (vite, the
     /// playwright-mcp node process); surfacing both reads as a duplicate — the
     /// same `npm` appearing as its own row and again under its child. The merged
-    /// row takes its **identity** (pid/ppid/tty/startTime — i.e. the kill target
-    /// and the PID-reuse guard) from the wrapper root, so killing it tears down
+    /// row takes its **identity** (pid/ppid/tty/startTime/uid — i.e. the kill target,
+    /// the PID-reuse guard, and the owner) from the wrapper root, so killing it tears down
     /// the whole subtree; but its **kind/command/riskTier** come from the child,
     /// so it groups and labels as the real process. CPU + RAM are summed.
     ///
@@ -81,7 +83,8 @@ public enum ScanCore {
                 elapsed: wrapper.elapsed, tty: wrapper.tty, kind: child.kind,
                 riskTier: child.riskTier,
                 cpuPercent: wrapper.cpuPercent + child.cpuPercent,
-                rssKB: wrapper.rssKB + child.rssKB, startTime: wrapper.startTime)
+                rssKB: wrapper.rssKB + child.rssKB, startTime: wrapper.startTime,
+                uid: wrapper.uid)
         }
         guard !consumed.isEmpty else { return items }
         return items.compactMap { item in
@@ -108,13 +111,17 @@ public enum ScanCore {
     /// doesn't parse or matches no known `ProcessKind`.
     /// A process whose PID is in `registeredPIDs` is demoted from `.easy` to `.moderate`
     /// so it always lands in the Needs Review bucket.
+    /// `startTimeProvider` and `uidProvider` are the two scan-time identity reads (both
+    /// backed by `KillCore`'s single `kinfo_proc` fetch); omitting either leaves the
+    /// corresponding `ProcessItem` field `nil`, which every consumer reads as "unknown".
     /// User `customRules` are consulted **ahead of** `detectKind`: a custom-rule
     /// match relabels the process (`.custom` kind + `customLabel`) even when a
     /// built-in kind would also match, and always lands in Needs Review. (PID-54.3)
     public static func makeItem(from line: String, elapsedThreshold: TimeInterval,
                                 registeredPIDs: Set<Int32> = [],
                                 customRules: [CustomRule] = [],
-                                startTimeProvider: ((Int32) -> ProcStartTime?)? = nil) -> ProcessItem? {
+                                startTimeProvider: ((Int32) -> ProcStartTime?)? = nil,
+                                uidProvider: ((Int32) -> uid_t?)? = nil) -> ProcessItem? {
         guard let p = parsePSLine(line) else { return nil }
         let kind: ProcessKind
         let customLabel: String?
@@ -141,10 +148,13 @@ public enum ScanCore {
         // Capture the scan-time start-time identity token (when a provider is
         // supplied) so the kill path can detect PID reuse before SIGTERM. (PID-35.3)
         let startTime = startTimeProvider.flatMap { $0(p.pid) }
+        // Capture the owning uid the same way, so a foreign-owned process can be shown
+        // as unkillable without a dead-end click first. (PID-62.3)
+        let uid = uidProvider.flatMap { $0(p.pid) }
         return ProcessItem(pid: p.pid, ppid: p.ppid, command: p.args,
                            elapsed: elapsed, tty: p.tty, kind: kind, riskTier: tier,
                            cpuPercent: cpuPercent, rssKB: rssKB, startTime: startTime,
-                           customLabel: customLabel)
+                           customLabel: customLabel, uid: uid)
     }
 
     // MARK: - Scoped ignores (PID-54.4)

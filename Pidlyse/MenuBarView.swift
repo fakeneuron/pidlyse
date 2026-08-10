@@ -306,6 +306,7 @@ struct MenuBarView: View {
         // 🔒 badge + lock toggle are gated there (PID-54.4).
         let protectable = item.bucket == .safe && engine.cwds[item.pid] != nil
         let protected = item.bucket == .safe && isProtected(item)
+        let killability = engine.killability(item)
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 if protected {
@@ -359,19 +360,29 @@ struct MenuBarView: View {
                 }
                 .buttonStyle(.borderless)
                 .help("Ignore for session")
-                Button {
-                    KillService.kill(item, containerOwners: engine.containerOwners) { outcome in
-                        engine.recordCleaned(item, outcome: outcome)
-                        engine.scan()
+                // A kill button is a promise the process will die and stay dead
+                // (PID-62.3). Where we can't make it — foreign-owned, or a known
+                // respawner — the button is replaced by a badge carrying the
+                // explanation, rather than left as a dead end.
+                if let explanation = killability.explanation {
+                    Image(systemName: killabilityBadge(killability))
+                        .foregroundStyle(.secondary)
+                        .help(explanation)
+                } else {
+                    Button {
+                        KillService.kill(item, containerOwners: engine.containerOwners) { outcome in
+                            engine.recordCleaned(item, outcome: outcome)
+                            engine.scan()
+                        }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
                     }
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
+                    .buttonStyle(.borderless)
+                    .help("Kill PID \(item.pid)")
                 }
-                .buttonStyle(.borderless)
-                .help("Kill PID \(item.pid)")
             }
             if isExpanded {
-                reasoningBlock(item: item, isOld: isOld)
+                reasoningBlock(item: item, isOld: isOld, killability: killability)
                     // On-demand open-files fetch (PID-52.3): fires whenever the inspector
                     // appears, decoupled from the ⓘ toggle; the engine caches per session.
                     .onAppear { engine.loadOpenFiles(for: item.pid) }
@@ -403,7 +414,17 @@ struct MenuBarView: View {
         NSPasteboard.general.setString(string, forType: .string)
     }
 
-    private func reasoningBlock(item: ProcessItem, isOld: Bool) -> some View {
+    /// SF Symbol standing in for the kill button on a row we can't honestly kill
+    /// (PID-62.3): a no-entry sign for foreign-owned, a cycle for a known respawner.
+    private func killabilityBadge(_ killability: Killability) -> String {
+        switch killability {
+        case .killable:   return "xmark.circle.fill"   // unreachable — the button renders instead
+        case .unkillable: return "nosign"
+        case .respawner:  return "arrow.triangle.2.circlepath"
+        }
+    }
+
+    private func reasoningBlock(item: ProcessItem, isOld: Bool, killability: Killability) -> some View {
         // Full ancestor chain to launchd (PID-52.2): walks the whole process table,
         // so it names non-stray shells / login that `ScanCore.parentCommand` couldn't.
         let ancestors = AncestryResolver.ancestorChain(ofPPID: item.ppid, in: engine.processTable)
@@ -419,6 +440,16 @@ struct MenuBarView: View {
             // never touches the risk dot / bucket / kill bar.
             if engine.isIdleDevServer(item) {
                 Text("idle dev server — sustained low CPU across recent scans")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            // Why this row has no kill button (PID-62.3). Same sentence the row badge
+            // carries as its tooltip — `Killability.explanation` is the one source —
+            // and the same graceful-degrade shape as the line above: rendered when the
+            // state applies, absent otherwise.
+            if let explanation = killability.explanation {
+                Text(explanation)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -501,10 +532,12 @@ struct MenuBarView: View {
     private var reviewItems: [ProcessItem] { engine.items.filter { $0.bucket == .needsReview && matchesFilter($0) } }
 
     /// The safe rows that "Clean all" (and the ⌘⌫ shortcut) actually sweep — safe items
-    /// minus any the user has protected (PID-54.4). Protected rows stay *listed* in the
-    /// Safe section (badged 🔒) but are excluded from the bulk sweep, the section count,
-    /// and the reclaimable total; their individual kill button still works.
-    private var sweepableSafeItems: [ProcessItem] { safeItems.filter { !isProtected($0) } }
+    /// minus any the user has protected (PID-54.4) and minus any Pidlyse can't honestly
+    /// kill (PID-62.3). Both kinds stay *listed* in the Safe section, badged, but are
+    /// excluded from the bulk sweep, the section count, and the reclaimable total.
+    /// Delegates the predicate to `ScanEngine.isSweepable` so the popover and the
+    /// headless sweep can't drift; still reactive (reads `@Published` state).
+    private var sweepableSafeItems: [ProcessItem] { safeItems.filter { engine.isSweepable($0) } }
 
     /// True when `item`'s resolved working directory sits under any protected project
     /// tree. Delegates to the engine-side SSOT (`ScanEngine.isProtected`, PID-58.2) so

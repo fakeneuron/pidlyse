@@ -2025,3 +2025,144 @@ final class URLSchemeTests: XCTestCase {
         XCTAssertNil(URLScheme.parse(URL(string: "pidlyse://")!))
     }
 }
+
+// MARK: - Killability overlay (PID-62.3)
+
+/// The pure derivation behind "explanation replaces the kill button": which rows
+/// Pidlyse can honestly offer to kill, and what it says about the ones it can't.
+final class KillabilityTests: XCTestCase {
+
+    private let me: uid_t = 501
+
+    // MARK: - Foreign-owner predicate
+
+    func testForeignOwned_differentUID() {
+        XCTAssertTrue(Killability.isForeignOwned(ownerUID: 0, currentUID: me))
+        XCTAssertTrue(Killability.isForeignOwned(ownerUID: 502, currentUID: me))
+    }
+
+    func testForeignOwned_ownUID_isNotForeign() {
+        XCTAssertFalse(Killability.isForeignOwned(ownerUID: me, currentUID: me))
+    }
+
+    func testForeignOwned_unknownUID_neverRemovesTheButton() {
+        // `nil` means the uid wasn't resolved. Not knowing is not evidence, so the
+        // permissive default holds — same posture as a missing identity token.
+        XCTAssertFalse(Killability.isForeignOwned(ownerUID: nil, currentUID: me))
+    }
+
+    // MARK: - Owner labels
+
+    func testOwnerLabel_rootIsNamed() {
+        XCTAssertEqual(Killability.ownerLabel(uid: 0), "root")
+    }
+
+    func testOwnerLabel_otherUserCarriesTheRawUID() {
+        XCTAssertEqual(Killability.ownerLabel(uid: 502), "another user (uid 502)")
+    }
+
+    func testOwnerLabel_unknownDegradesGracefully() {
+        XCTAssertEqual(Killability.ownerLabel(uid: nil), "another user")
+    }
+
+    // MARK: - Respawn attribution
+
+    func testManager_containerOwnerWins() {
+        // A container's restart policy is the most specific answer available, so it
+        // outranks the ancestor chain even when both resolve.
+        XCTAssertEqual(Killability.manager(ancestors: ["node", "zsh"], containerOwner: "bidviz-db"),
+                       "container bidviz-db")
+    }
+
+    func testManager_fallsBackToNearestAncestor() {
+        XCTAssertEqual(Killability.manager(ancestors: ["node", "zsh", "launchd"], containerOwner: nil),
+                       "node")
+    }
+
+    func testManager_orphanNamesLaunchd() {
+        // A reparented orphan's nearest ancestor *is* launchd — the right answer, not
+        // a fallback.
+        XCTAssertEqual(Killability.manager(ancestors: ["launchd"], containerOwner: nil), "launchd")
+    }
+
+    func testManager_unresolvableIsNil() {
+        XCTAssertNil(Killability.manager(ancestors: [], containerOwner: nil))
+        XCTAssertNil(Killability.manager(ancestors: [], containerOwner: ""))
+    }
+
+    // MARK: - State derivation
+
+    func testDerive_ordinaryRowStaysKillable() {
+        XCTAssertEqual(Killability.derive(ownerUID: me, currentUID: me, killDenied: false,
+                                          isRespawner: false, manager: nil),
+                       .killable)
+    }
+
+    func testDerive_foreignOwnedBeforeAnyClick() {
+        // The whole point of reading the uid at scan time: no dead-end click needed.
+        XCTAssertEqual(Killability.derive(ownerUID: 0, currentUID: me, killDenied: false,
+                                          isRespawner: false, manager: nil),
+                       .unkillable(owner: "root"))
+    }
+
+    func testDerive_observedEPERMIsTheBackstop() {
+        // uid never resolved, but an actual attempt came back EPERM — still unkillable,
+        // with the label degrading to the generic form.
+        XCTAssertEqual(Killability.derive(ownerUID: nil, currentUID: me, killDenied: true,
+                                          isRespawner: false, manager: nil),
+                       .unkillable(owner: "another user"))
+    }
+
+    func testDerive_respawner() {
+        XCTAssertEqual(Killability.derive(ownerUID: me, currentUID: me, killDenied: false,
+                                          isRespawner: true, manager: "node"),
+                       .respawner(manager: "node"))
+    }
+
+    func testDerive_unkillableOutranksRespawner() {
+        // Near-disjoint in practice (respawn detection requires a verified kill), but
+        // the precedence is pinned so the derivation stays a total function.
+        XCTAssertEqual(Killability.derive(ownerUID: 0, currentUID: me, killDenied: false,
+                                          isRespawner: true, manager: "launchd"),
+                       .unkillable(owner: "root"))
+    }
+
+    // MARK: - Explanation (single source for tooltip + inspector)
+
+    func testExplanation_killableHasNothingToExplain() {
+        XCTAssertNil(Killability.killable.explanation)
+    }
+
+    func testExplanation_unkillableNamesTheOwnerAndOurPosture() {
+        XCTAssertEqual(Killability.unkillable(owner: "root").explanation,
+                       "unkillable — owned by root; Pidlyse never escalates")
+    }
+
+    func testExplanation_respawnerNamesTheManager() {
+        XCTAssertEqual(Killability.respawner(manager: "container bidviz-db").explanation,
+                       "respawns — managed by container bidviz-db; kill won't stick")
+    }
+
+    func testExplanation_respawnerWithoutAManagerStillStatesTheBehavior() {
+        // Attribution failed, but the actionable half — killing it again won't work —
+        // is still true and still said.
+        XCTAssertEqual(Killability.respawner(manager: nil).explanation,
+                       "respawns after a kill — kill won't stick")
+    }
+
+    // MARK: - Scan plumbing
+
+    func testUIDProviderReachesTheItem() {
+        let line = " 4711     1    30:13 ??       0.1  12345  /usr/local/bin/npm run dev"
+        let item = ScanCore.makeItem(from: line, elapsedThreshold: 60,
+                                     uidProvider: { pid in pid == 4711 ? 0 : nil })
+        XCTAssertEqual(item?.uid, 0)
+        XCTAssertTrue(Killability.isForeignOwned(ownerUID: item?.uid, currentUID: me))
+    }
+
+    func testUIDIsNilWithoutAProvider() {
+        // Every pre-PID-62.3 construction path: no provider, no uid, no behavior change.
+        let line = " 4711     1    30:13 ??       0.1  12345  /usr/local/bin/npm run dev"
+        XCTAssertNil(ScanCore.makeItem(from: line, elapsedThreshold: 60)?.uid)
+    }
+}

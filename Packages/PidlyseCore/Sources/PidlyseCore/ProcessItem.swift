@@ -112,11 +112,18 @@ public struct ProcessItem: Identifiable {
     /// captured (tests, or a sysctl miss). The kill path re-verifies it before the
     /// initial SIGTERM to refuse killing a PID recycled since the scan. (PID-35.3)
     public let startTime: ProcStartTime?
+    /// The user id that owns the process, captured at scan time, or `nil` when it
+    /// wasn't resolved (no provider injected — e.g. unit tests). Pidlyse runs
+    /// unprivileged, so a uid other than the current user's means every signal we
+    /// could send hits EPERM: the row is unkillable and says so instead of offering
+    /// a dead-end button. `nil` means "unknown", which never removes an
+    /// affordance. (PID-62.3)
+    public let uid: uid_t?
 
     public init(pid: Int32, ppid: Int32, command: String, elapsed: TimeInterval,
                 tty: String, kind: ProcessKind, riskTier: RiskTier,
                 cpuPercent: Double, rssKB: Int, startTime: ProcStartTime? = nil,
-                customLabel: String? = nil) {
+                customLabel: String? = nil, uid: uid_t? = nil) {
         self.pid = pid
         self.ppid = ppid
         self.command = command
@@ -128,6 +135,7 @@ public struct ProcessItem: Identifiable {
         self.cpuPercent = cpuPercent
         self.rssKB = rssKB
         self.startTime = startTime
+        self.uid = uid
     }
 
     public var id: Int32 { pid }

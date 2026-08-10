@@ -65,7 +65,8 @@ private func runScan(_ settings: Settings) -> ScanResult {
                                     ignoredNames: settings.globalIgnores,
                                     disabledKinds: settings.disabledKinds,
                                     customRules: settings.customRules,
-                                    startTimeProvider: KillCore.startTime)
+                                    startTimeProvider: KillCore.startTime,
+                                    uidProvider: KillCore.ownerUID)
     let cwdMap = CwdResolver.processCwds(forPIDs: result.map { $0.pid })
     let filtered = ScanCore.applyScopedIgnores(result, cwds: cwdMap, rules: settings.scopedIgnores)
     let protectedPIDs = Set(filtered.filter { item in
@@ -131,8 +132,16 @@ private func commandList(safeOnly: Bool) -> Int32 {
 
 private func commandClean() -> Int32 {
     let scan = runScan(Settings.load())
-    // The app's "Clean all" sweep set: safe bucket minus protected (PID-54.4).
-    let sweepable = scan.items.filter { $0.bucket == .safe && !scan.protectedPIDs.contains($0.pid) }
+    // The app's "Clean all" sweep set: safe bucket, minus protected (PID-54.4), minus
+    // foreign-owned processes no signal of ours can reach (PID-62.3). The app also
+    // excludes known respawners, which a one-shot CLI has no session memory of — the
+    // respawn half of the overlay stays app-only (PID-62.1 clarification #4).
+    let currentUID = getuid()
+    let sweepable = scan.items.filter {
+        $0.bucket == .safe
+            && !scan.protectedPIDs.contains($0.pid)
+            && !Killability.isForeignOwned(ownerUID: $0.uid, currentUID: currentUID)
+    }
     guard !sweepable.isEmpty else {
         print("Nothing to clean — no unprotected safe-bucket processes.")
         return 0
@@ -168,8 +177,11 @@ private func commandKill(pid: Int32) -> Int32 {
     case .survived:
         printErr("pidlyse: PID \(pid) survived — SIGTERM and SIGKILL delivered, process still running")
         return 1
+    case .unkillable:
+        printErr("pidlyse: PID \(pid) is owned by another user — pidlyse never escalates, so no signal of ours reaches it")
+        return 1
     case .notKilled:
-        printErr("pidlyse: PID \(pid) not killed — gone, recycled since the scan, or owned by another user")
+        printErr("pidlyse: PID \(pid) not killed — gone or recycled since the scan")
         return 1
     }
 }

@@ -5,8 +5,8 @@ import Foundation
 /// confirms the process is actually gone before reporting success (PID-62.2).
 /// Docker processes route through `docker stop` (graceful container shutdown)
 /// before falling back to signals. EPERM is detected and reported as
-/// `.notKilled` (the process stays visible to callers, indicating it's
-/// unkillable by the current user).
+/// `.unkillable` (PID-62.3) — the process belongs to another user and no
+/// signal of ours will ever reach it.
 ///
 /// The call shape is deliberately **blocking** — `kill` sleeps through the
 /// grace period on the calling thread — so a run-loop-free consumer (the
@@ -31,16 +31,19 @@ public enum KillCore {
     /// succeeded. `survived` = our signals landed but the process is still running
     /// under the same identity after the SIGKILL fallback — rare (uninterruptible
     /// state), and the honest answer where the old contract claimed success
-    /// (PID-62.2). `notKilled` = the two paths where nothing of ours killed
-    /// anything: the PID was recycled/gone before SIGTERM (identity guard refused),
-    /// or SIGTERM hit EPERM (foreign owner, e.g. the root Docker daemon).
+    /// (PID-62.2). `unkillable` = SIGTERM hit EPERM: the process is owned by another
+    /// user (e.g. the root Docker daemon), so no signal of ours will ever reach it
+    /// and no amount of retrying changes that (PID-62.3). `notKilled` = the PID was
+    /// recycled or gone before SIGTERM and the identity guard refused to signal a
+    /// bystander — nothing of ours killed anything, and nothing was wrong either.
     ///
-    /// Only `confirmed` is logged as a clean — excluding the other two keeps
+    /// Only `confirmed` is logged as a clean — excluding the other three keeps
     /// "RAM reclaimed" honest. A process that *does* die but comes back under a new
     /// PID is still `confirmed` here; that is respawn, tracked by `RespawnHistory`.
     public enum KillOutcome {
         case confirmed
         case survived
+        case unkillable
         case notKilled
     }
 
@@ -72,9 +75,19 @@ public enum KillCore {
                                               usec: Int($0.kp_proc.p_starttime.tv_usec)) }
     }
 
+    /// Read a process's **owning** user id (`kinfo_proc.kp_eproc.e_ucred.cr_uid`),
+    /// or `nil` if the process no longer exists or can't be queried. Injected into
+    /// the scan as `ScanCore`'s `uidProvider` so a row owned by another user can be
+    /// shown as unkillable *before* the user clicks a dead-end button — Pidlyse runs
+    /// unprivileged, so a uid that isn't ours means every signal we send hits EPERM.
+    /// Rides on the same `kinfo_proc` read as `startTime(of:)`. (PID-62.3)
+    public static func ownerUID(of pid: Int32) -> uid_t? {
+        procInfo(of: pid).map { $0.kp_eproc.e_ucred.cr_uid }
+    }
+
     /// One `sysctl` read of a PID's process-table entry, or `nil` when the kernel
-    /// has no entry for it. Shared by `startTime(of:)` and the death check so the
-    /// `sysctl` call shape lives in one place. (PID-62.2)
+    /// has no entry for it. Shared by `startTime(of:)`, `ownerUID(of:)`, and the
+    /// death check so the `sysctl` call shape lives in one place. (PID-62.2)
     private static func procInfo(of pid: Int32) -> kinfo_proc? {
         var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
         var info = kinfo_proc()
@@ -159,10 +172,11 @@ public enum KillCore {
         }
         let result = Darwin.kill(pid, SIGTERM)
         if result == -1 && errno == EPERM {
-            // Process is owned by another user (e.g. root Docker daemon). The caller
-            // rescans; the process will reappear, indicating to the user that it
-            // cannot be killed without privileges. We killed nothing → notKilled.
-            return .notKilled
+            // Process is owned by another user (e.g. root Docker daemon). Pidlyse
+            // never escalates, so this is permanent, not transient — reported as its
+            // own outcome (PID-62.3) so the row can say so and drop its kill button
+            // instead of silently reappearing on the next scan.
+            return .unkillable
         }
         // SIGTERM was delivered. Reuse the just-read token as the SIGKILL-escalation
         // snapshot (it matched `expected`, so the PID still maps to the scanned

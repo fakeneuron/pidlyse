@@ -146,6 +146,18 @@ final class ScanEngine: ObservableObject {
     /// `PidlyseCore.RespawnHistory`. Signal-only — never influences the kill bar.
     private var respawnHistory = RespawnHistory()
 
+    /// Identities whose kill came back `EPERM` this session (PID-62.3) — the backstop
+    /// half of the unkillable signal, for anything the scan-time uid read missed.
+    /// Stores each denied PID's scan-time start time so a recycled PID doesn't inherit
+    /// the state. Session-only and deliberately *not* a `PidlyseCore` value type: it
+    /// holds no logic, just a fact the engine observed; the derivation that consumes it
+    /// is pure and lives in `Killability`.
+    private var killDeniedIdentities: [Int32: ProcStartTime?] = [:]
+
+    /// The user Pidlyse runs as. Read once — it cannot change during the process's
+    /// lifetime — and compared against each row's scan-time owner. (PID-62.3)
+    private let currentUID = getuid()
+
     private var timer: Timer?
 
     init() {
@@ -200,14 +212,17 @@ final class ScanEngine: ObservableObject {
             // per-click inspect (PID-037.2, retiring F9).
             let owners = DockerService.containerOwners()
             // Capture each candidate's start time at scan so the kill path can detect
-            // a PID recycled between this scan and a later kill click. (PID-35.3)
+            // a PID recycled between this scan and a later kill click (PID-35.3), and
+            // its owning uid so a foreign-owned row can be shown as unkillable before
+            // the user clicks a button that can't work (PID-62.3).
             let result = ScanCore.enumerate(elapsedThreshold: threshold,
                                             registeredPIDs: Set(portMap.keys),
                                             ignoredNames: globalIgnores,
                                             dismissedPIDs: dismissed,
                                             disabledKinds: disabled,
                                             customRules: rules,
-                                            startTimeProvider: KillCore.startTime)
+                                            startTimeProvider: KillCore.startTime,
+                                            uidProvider: KillCore.ownerUID)
             // Resolve each candidate's working directory once per scan (single bulk
             // lsof over the matched PIDs); the row-expansion hint reads it (PID-038).
             let cwdMap = CwdResolver.processCwds(forPIDs: result.map { $0.pid })
@@ -265,23 +280,37 @@ final class ScanEngine: ObservableObject {
 
     // MARK: - Clean log (PID-53.2)
 
-    /// Record a single kill's outcome. Logs only `.confirmed` deaths — verified
-    /// gone, per `KillCore`'s death check (PID-62.2) — labelled from the scan-time
-    /// `cwds` project label (fallback: `displayPath`). Called on the main thread
-    /// from the kill-completion hook **before** the rescan, so `cwds` still holds
-    /// the pre-kill label. A verified death also arms respawn watching.
+    /// Record a single kill's outcome. Called on the main thread from the
+    /// kill-completion hook **before** the rescan, so `cwds` still holds the
+    /// pre-kill label.
     func recordCleaned(_ item: ProcessItem, outcome: KillService.KillOutcome) {
-        guard outcome == .confirmed else { return }
-        armRespawnWatch(item)
-        cleanLog.record(makeCleanEvent(item))
+        record(item, outcome: outcome)
     }
 
-    /// Batch variant: record every confirmed kill from a `[pid: outcome]` map,
-    /// resolving each pid back to its `ProcessItem` for the kind/rss/label.
+    /// Batch variant: record every outcome from a `[pid: outcome]` map, resolving
+    /// each pid back to its `ProcessItem` for the kind/rss/label.
     func recordCleaned(_ items: [ProcessItem], outcomes: [Int32: KillService.KillOutcome]) {
-        for item in items where outcomes[item.pid] == .confirmed {
+        for item in items {
+            guard let outcome = outcomes[item.pid] else { continue }
+            record(item, outcome: outcome)
+        }
+    }
+
+    /// What each outcome means to the engine, in one place so the single-item and
+    /// batch hooks can't diverge. Only `.confirmed` — verified gone, per `KillCore`'s
+    /// death check (PID-62.2) — is logged as a clean and arms respawn watching;
+    /// `.unkillable` is remembered so the row can say why it kept its process
+    /// (PID-62.3); `.survived` and `.notKilled` are neither a clean nor a permanent
+    /// fact about the row, so nothing is recorded.
+    private func record(_ item: ProcessItem, outcome: KillService.KillOutcome) {
+        switch outcome {
+        case .confirmed:
             armRespawnWatch(item)
             cleanLog.record(makeCleanEvent(item))
+        case .unkillable:
+            killDeniedIdentities[item.pid] = item.startTime
+        case .survived, .notKilled:
+            break
         }
     }
 
@@ -317,12 +346,22 @@ final class ScanEngine: ObservableObject {
         return protectedProjects.contains { CwdResolver.isUnderPrefix(cwd, $0) }
     }
 
+    /// Whether `item` belongs in a bulk sweep at all: not protected (PID-54.4), and
+    /// something Pidlyse can honestly kill (PID-62.3). The engine-side SSOT for the
+    /// sweep predicate — `sweepableSafeItems` below and the popover's filtered variant
+    /// both call it, so a row that shows no kill button can't still be swept by
+    /// "Clean all".
+    func isSweepable(_ item: ProcessItem) -> Bool {
+        !isProtected(item) && killability(item) == .killable
+    }
+
     /// The "Clean all safe" sweep set: safe bucket minus protected projects
-    /// (PID-54.4). Engine-side SSOT shared by the popover button (which folds in
-    /// its quick-filter on top) and every external trigger (URL scheme,
-    /// AppIntents) — the same set the CLI's `commandClean()` derives.
+    /// (PID-54.4) and minus rows we can't honestly kill (PID-62.3). Engine-side SSOT
+    /// shared by the popover button (which folds in its quick-filter on top) and every
+    /// external trigger (URL scheme, AppIntents) — the same set the CLI's
+    /// `commandClean()` derives.
     var sweepableSafeItems: [ProcessItem] {
-        items.filter { $0.bucket == .safe && !isProtected($0) }
+        items.filter { $0.bucket == .safe && isSweepable($0) }
     }
 
     /// Headless "Clean all safe": kill the sweepable set, log confirmed deaths to
@@ -449,6 +488,38 @@ final class ScanEngine: ObservableObject {
     /// the risk tier / bucket / kill bar.
     func isRespawner(_ item: ProcessItem) -> Bool {
         respawnHistory.isRespawner(signature(for: item))
+    }
+
+    // MARK: - Killability overlay (PID-62.3)
+
+    /// Whether an actual kill attempt on *this* identity came back `EPERM` this
+    /// session. Identity-checked against the scan-time start time, so a recycled PID
+    /// starts clean rather than inheriting the previous occupant's verdict.
+    private func wasKillDenied(_ item: ProcessItem) -> Bool {
+        guard let denied = killDeniedIdentities[item.pid] else { return false }
+        return denied == item.startTime
+    }
+
+    /// Whether Pidlyse can honestly offer to kill this row — and if not, why, in a
+    /// sentence the user can act on (PID-62.3). Folds the scan-time owner uid, the
+    /// session's observed `EPERM`s, the respawn signal (PID-62.2), and the
+    /// container/ancestor attribution into the pure `PidlyseCore.Killability`
+    /// derivation. An **overlay**: it removes an affordance and adds an explanation,
+    /// but never touches the risk tier, the bucket, or the classification.
+    func killability(_ item: ProcessItem) -> Killability {
+        let respawner = isRespawner(item)
+        // Attribution is only needed for the respawner sentence, so the common
+        // killable row doesn't pay for an ancestor walk.
+        let manager = respawner
+            ? Killability.manager(ancestors: AncestryResolver.ancestorChain(ofPPID: item.ppid,
+                                                                           in: processTable),
+                                  containerOwner: containerOwners[item.pid])
+            : nil
+        return Killability.derive(ownerUID: item.uid,
+                                  currentUID: currentUID,
+                                  killDenied: wasKillDenied(item),
+                                  isRespawner: respawner,
+                                  manager: manager)
     }
 
     // MARK: - Notifications
