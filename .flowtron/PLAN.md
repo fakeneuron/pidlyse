@@ -22,7 +22,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-(none)
+- [ ] **PID-064** [light]🔧 | gitleaks-ci-step — Add secret-scanning: deposit `.gitleaks.toml` + `.pre-commit-config.yaml` (copy natabula's canonical templates at `configs/.gitleaks.toml` / `configs/.pre-commit-config.yaml`) and wire a `gitleaks` step into `.github/workflows/test.yml`'s `test` job (curl-fetch pinned `gitleaks v8.30.1`, run `gitleaks dir . --config .gitleaks.toml --no-banner --redact`). Neither deposit exists here yet, unlike most other fleet repos. Routed by natabula `NAT-245` (lazy fleet backfill per `NAT-103.4`).
 
 ## Future Opportunities
 
