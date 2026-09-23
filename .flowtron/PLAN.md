@@ -18,7 +18,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-- [ ] **PID-068** [light] | brand-kit-back-port — Place the existing mark into brand/ (logo.svg + favicon.svg + filled BRAND.md; promo only if a real 1600×900 still exists). Filed with starter at `.flowtron/tasknote/PID-068.md`.
+(none)
 
 ## Low
 
@@ -34,6 +34,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-068** [light] | brand-kit-back-port — Completed 2026-09-23.
 - [x] **PID-060** [light]🔧 | readme-visuals — Completed 2026-07-03.
 - [x] **PID-EPIC-58** [medium]🧠 | integrations — Completed 2026-07-02.
   - [x] **PID-58.1** [medium]🧠 | discovery — Completed 2026-07-02.

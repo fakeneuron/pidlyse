@@ -58,6 +58,7 @@ Pidlyse/
   PidlyseTests/
     ScanEngineTests.swift     # unit tests for the PidlyseCore pipeline
   logo.png                    # master brand/icon source (532×543 RGBA); wired into AppIcon.appiconset as 7 PNG sizes (16–1024px)
+  brand/                       # public identity kit (BRAND.md blurb, logo.svg/favicon.svg hand-redrawn from logo.png, PROMPTS.md provenance) — natabula fleet-brand standard
 ```
 
 ---

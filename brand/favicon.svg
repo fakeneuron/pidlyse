@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- chip body -->
+  <rect x="96" y="96" width="320" height="320" rx="56" fill="#C7D1D9" stroke="#7C8D9A" stroke-width="14"/>
+
+  <!-- pins (chunky, 4 per side) -->
+  <g fill="#C7D1D9" stroke="#7C8D9A" stroke-width="10">
+    <rect x="152" y="60" width="34" height="40" rx="8"/>
+    <rect x="239" y="60" width="34" height="40" rx="8"/>
+    <rect x="326" y="60" width="34" height="40" rx="8"/>
+
+    <rect x="152" y="412" width="34" height="40" rx="8"/>
+    <rect x="239" y="412" width="34" height="40" rx="8"/>
+    <rect x="326" y="412" width="34" height="40" rx="8"/>
+
+    <rect x="60" y="152" width="40" height="34" rx="8"/>
+    <rect x="60" y="239" width="40" height="34" rx="8"/>
+    <rect x="60" y="326" width="40" height="34" rx="8"/>
+
+    <rect x="412" y="152" width="40" height="34" rx="8"/>
+    <rect x="412" y="239" width="40" height="34" rx="8"/>
+    <rect x="412" y="326" width="40" height="34" rx="8"/>
+  </g>
+
+  <!-- broom: bold handle (filled quad + round caps) + solid fan, no bristle lines -->
+  <polygon points="157.91,328.05 323.91,160.05 348.09,183.95 182.09,351.95" fill="#FFFFFF"/>
+  <circle cx="170" cy="340" r="17" fill="#FFFFFF"/>
+  <circle cx="336" cy="172" r="17" fill="#FFFFFF"/>
+  <polygon points="182,358 158,436 96,358 156,318" fill="#FFFFFF"/>
+
+  <!-- target: bold ring + solid center, no ticks (two filled discs, no stroke-only ring) -->
+  <circle cx="344" cy="196" r="55" fill="#4FD873"/>
+  <circle cx="344" cy="196" r="37" fill="#3E6E96"/>
+  <circle cx="344" cy="196" r="16" fill="#4FD873"/>
+</svg>
