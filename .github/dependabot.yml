@@ -1,0 +1,22 @@
+# Fleet-wide Dependabot config: security-update PRs on, weekly version-update
+# PRs off. Keeps the CVE signal without ongoing version-bump review volume.
+# See natabula docs/STACK-TENDENCIES.md §"Dependency updates".
+#
+# IMPORTANT: this file does not by itself enable Dependabot security updates.
+# That is a one-time per-repo GitHub setting (Settings > Code security >
+# "Dependabot security updates"), independent of this file. This config only
+# governs *version* updates; `open-pull-requests-limit: 0` below suppresses
+# version-update PRs while leaving security-update PRs (once the repo setting
+# is on) unaffected.
+#
+# pidlyse has no npm/uv manifest, and its one SwiftPM package
+# (Packages/PidlyseCore) declares zero external dependencies — so no
+# ecosystem block beyond the always-on github-actions one applies today.
+version: 2
+
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0

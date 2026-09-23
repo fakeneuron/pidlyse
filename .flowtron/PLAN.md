@@ -23,7 +23,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## Low
 
 - [ ] **PID-66** [light]🔧 | ci-spine-shape — Bring `.github/workflows/test.yml` onto the fleet CI spine shape: add a bare `pull_request:` trigger beside `push: {branches: [main]}` (`:3-5`) and a `concurrency: { group: ci-${{ github.ref }}, cancel-in-progress: true }` block. Per natabula `docs/STACK-TENDENCIES.md` §"Continuous integration" (Triggers, Concurrency). The SHA-pinned `actions/checkout` (`:11`, v4.3.1) is deliberately **not** in scope — natabula NAT-166/167 ruled SHA-pinning a stricter posture the floor permits. Surfaced by natabula fleet audit 2026-09-12 at `5b80741`, routed by `NAT-254`.
-- [ ] **PID-65** [light]🔧 | quality-stack-gaps — Adopt missing fleet quality-stack items: dependabot security-only, justfile coverage recipe. Recipes: STACK-TENDENCIES.md §Dependency updates / §Command interface. Routed by natabula `NAT-247.4` (NAT-EPIC-247 gap sweep, NAT-103.4 lazy backfill).
 - [ ] **PID-064** [light]🔧 | gitleaks-ci-step — Add secret-scanning: deposit `.gitleaks.toml` + `.pre-commit-config.yaml` (copy natabula's canonical templates at `configs/.gitleaks.toml` / `configs/.pre-commit-config.yaml`) and wire a `gitleaks` step into `.github/workflows/test.yml`'s `test` job (curl-fetch pinned `gitleaks v8.30.1`, run `gitleaks dir . --config .gitleaks.toml --no-banner --redact`). Neither deposit exists here yet, unlike most other fleet repos. Routed by natabula `NAT-245` (lazy fleet backfill per `NAT-103.4`).
 
 ## Future Opportunities
@@ -33,6 +32,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-65** [light]🔧 | quality-stack-gaps — Completed 2026-09-23.
 - [x] **PID-67** [light]🔧 | typecheck-verb-missing — Completed 2026-09-23.
 - [x] **PID-068** [light] | brand-kit-back-port — Completed 2026-09-23.
 - [x] **PID-060** [light]🔧 | readme-visuals — Completed 2026-07-03.

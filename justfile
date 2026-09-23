@@ -31,6 +31,10 @@ typecheck: lint
 test:
     make test
 
+# run the test suite with code coverage enabled, print a per-file report
+coverage:
+    make coverage
+
 # build an ad-hoc signed Release .app → build/Release/Pidlyse.app
 build:
     make build-release

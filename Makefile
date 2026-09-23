@@ -1,10 +1,18 @@
-.PHONY: test build-release install dmg build-cli install-cli
+.PHONY: test coverage build-release install dmg build-cli install-cli
 
 # Run the Pidlyse test suite.
 # CODE_SIGNING_ALLOWED=NO is required for CLI test runs (code-signing limitation
 # in this environment); see .flowtron/tasknote/README.md "Project quick commands".
 test:
 	xcodebuild test -scheme Pidlyse -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO
+
+# Run the test suite with code coverage enabled and print a per-file report.
+# Output: build/coverage.xcresult (open in Xcode for the line-by-line view).
+coverage:
+	rm -rf build/coverage.xcresult
+	xcodebuild test -scheme Pidlyse -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO \
+		-enableCodeCoverage YES -resultBundlePath build/coverage.xcresult
+	xcrun xccov view --report build/coverage.xcresult
 
 # Ad-hoc signed Release build. Output: build/Release/Pidlyse.app
 build-release:
