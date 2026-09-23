@@ -24,6 +24,9 @@ setup:
 lint:
     xcodebuild build -scheme Pidlyse
 
+# type-check — fleet `typecheck` verb; same xcodebuild build as `lint`
+typecheck: lint
+
 # run the test suite (CODE_SIGNING_ALLOWED=NO required for CLI runs)
 test:
     make test
