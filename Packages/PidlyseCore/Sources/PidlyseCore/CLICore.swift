@@ -69,7 +69,8 @@ public enum CLICore {
 
           list [--safe]   Scan and print stray candidates (--safe: safe bucket only)
           clean           Kill what the app's "Clean all" would sweep
-                          (safe bucket minus protected projects)
+                          (safe bucket minus protected projects and
+                          processes owned by another user)
           kill <pid>      Kill one scanned candidate by PID (any bucket)
           help            Show this help
 

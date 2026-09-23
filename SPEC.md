@@ -24,7 +24,7 @@ Pidlyse/
     PidlyseCore/                  # pure, injectable, unit-tested core (SPM package)
       Sources/PidlyseCore/
         ScanCore.swift            # ps parse + stray detection + risk-tier classification
-        ProcessItem.swift         # model: pid, ppid, command, elapsed, tty, kind, riskTier, cpu%, rss; derived bucket
+        ProcessItem.swift         # model: pid, ppid, command, elapsed, tty, kind, riskTier, cpu%, rss, owning uid; derived bucket
         PortRegistry.swift        # compiled port table + user-override merge + lsof listener parse
         CwdResolver.swift         # lsof cwd parse + git-root project label & root path (row descriptor + protect scope)
         AncestryResolver.swift    # pure `ps -axo pid/ppid/comm` parse; `processTable(psOutput:)` + `ancestorChain(ofPPID:in:)` cycle-guarded walk to launchd
@@ -33,6 +33,7 @@ Pidlyse/
         CustomRule.swift          # model: user-defined command-substring rule + friendly label (always Needs Review)
         ScanHistory.swift         # rolling-window per-process CPU cache (PID+startTime keyed) + sustained-low-CPU query
         RespawnHistory.swift      # session-only respawn cache: command-signature normalization + windowed watch on verified kills
+        Killability.swift         # pure killability overlay: killable / unkillable (foreign owner) / respawner derivation + the one explanation sentence
         CleanEvent.swift          # Codable model: kind rawValue, project label, rssKB, timestamp; no command line (privacy-first)
         CleanLog.swift            # pure rolling-window stats (count, RAM reclaimed, top kinds) + count-cap retention
         DockerCore.swift          # pure `docker ps` / `docker stats` output parsing
@@ -119,6 +120,8 @@ Port registry awareness ([[PID-005]]): any process listening on a port in the CL
 
 Protected-projects awareness (PID-54.4): a safe process whose working directory sits under a user-protected project tree stays *listed* in the Safe section (badged 🔒) but is excluded from the "Clean all" sweep, the section count, and the reclaimable total — a display/sweep overlay, not a bucket change. Its individual kill button still works.
 
+Killability awareness ([[PID-62.3]]): a row Pidlyse cannot honestly kill carries a killability state (`Killability`) — **unkillable** when the process belongs to another user (owning uid read at scan time from the same `kinfo_proc` `KillCore` uses, with an observed `EPERM` outcome as the backstop; Pidlyse never escalates) or **respawner** when [[PID-62.2]]'s respawn detection saw it come back after a verified kill (attributed to its owning container, else its nearest ancestor). The row stays *listed* in its section, but a badge (🚫 unkillable / ↻ respawner) replaces the ✕ button, its tooltip and a ⓘ inspector line carry the one explanation sentence, and it is excluded from "Clean all", ⌘⌫, the section count, and the reclaimable total through the engine-side `ScanEngine.isSweepable(_:)` predicate the popover shares. Same overlay shape as 🔒 — `riskTier` and `bucket` are untouched. Unkillable outranks respawner; an unresolved uid degrades to killable. The CLI's `clean` excludes foreign-owned rows too; the respawn half stays app-only (a one-shot CLI has no session memory).
+
 ---
 
 ## Kill Flow
@@ -126,7 +129,7 @@ Protected-projects awareness (PID-54.4): a safe process whose working directory 
 1. User clicks kill button for a safe process.
 2. `KillService` sends `SIGTERM` (via the shared `KillCore` in `PidlyseCore`).
 3. After 2 s, if process still alive → `SIGKILL` fallback.
-4. **Death check** ([[PID-62.2]]): after the `SIGKILL` fallback, `KillCore` re-reads the process table before reporting success. The outcome is `confirmed` only when the process is verified gone — no entry, PID recycled, or an unreaped zombie — and `survived` when it is still running under the same identity. (A process that exits during the grace period needs no probe; it is already observed gone.) Together with `notKilled` — identity guard refused, or `EPERM` from a foreign owner — these are the three honest answers a kill can give, and only `confirmed` is written to the clean log, so the "RAM reclaimed" figure counts real deaths only.
+4. **Death check** ([[PID-62.2]]): after the `SIGKILL` fallback, `KillCore` re-reads the process table before reporting success. The outcome is `confirmed` only when the process is verified gone — no entry, PID recycled, or an unreaped zombie — and `survived` when it is still running under the same identity. (A process that exits during the grace period needs no probe; it is already observed gone.) Together with `notKilled` (identity guard refused) and `unkillable` (`EPERM` — a foreign owner, [[PID-62.3]]) these are the four honest answers a kill can give, and only `confirmed` is written to the clean log, so the "RAM reclaimed" figure counts real deaths only.
 5. Rescan triggered immediately after kill.
 6. PID removed from list on next scan result.
 

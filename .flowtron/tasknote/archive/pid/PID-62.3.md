@@ -1,6 +1,6 @@
 ---
 title: honest-unkillable-ux
-status: blocked
+status: completed
 tags: []
 created: 2026-08-08
 related-tasks: [PID-EPIC-62, PID-62.1, PID-62.2, PID-62.5]
@@ -8,13 +8,11 @@ related-tasks: [PID-EPIC-62, PID-62.1, PID-62.2, PID-62.5]
 
 # PID-62.3 | honest-unkillable-ux
 
-[← PLAN.md](../PLAN.md) · ⏸ Blocked · 🔗 [[PID-EPIC-62]] [[PID-62.1]] [[PID-62.2]] [[PID-62.5]]
+[← PLAN.md](../PLAN.md) · ✅ Completed · 🔗 [[PID-EPIC-62]] [[PID-62.1]] [[PID-62.2]] [[PID-62.5]]
 
-> **⏸ Parked 2026-08-10** at the Phase 3 visual-confirmation step, by operator
-> request (not a code blocker). Implementation is complete and green: 271/271
-> tests, core + CLI + Release app all build clean. **Everything below is
-> uncommitted working-tree state.** What remains: the 👁️ visual confirmation
-> (see Testing Notes for exactly what to look at), then Phase 4 closure.
+> **Resumed 2026-09-23** — parked 2026-08-10 at the Phase 3 👁️ step by operator
+> request (no `park-reason:` was written). The parked implementation landed as
+> `07c12cb` (partial); resume drift-check found no drift against HEAD.
 
 ## 🎯 Goal
 
@@ -22,26 +20,26 @@ Stop offering a kill button on rows Pidlyse cannot actually kill: foreign-owned 
 
 ## ✅ Acceptance
 
-- [ ] `KillCore.KillOutcome` gains `.unkillable` — EPERM split out of `.notKilled`, which keeps its "identity guard refused" meaning. The one exhaustive CLI `switch` reports it honestly; clean-log honesty unchanged (still `.confirmed` only).
-- [ ] Foreign ownership is known **before** a click: `ProcessItem` carries the owning `uid`, resolved at scan time from the `kinfo_proc` read `KillCore` already performs (new injectable `uidProvider`, `nil`-defaulted — `ps` column layout untouched).
-- [ ] New pure `PidlyseCore/Killability.swift`: `Killability` (`killable` / `unkillable` / `respawner`), the foreign-owner predicate, the "managed by X" attribution, and the one-per-state explanation sentence — unit-tested, with the sentence living in exactly one place so tooltip and inspector can't drift.
-- [ ] `ScanEngine` folds the signals into `killability(_:)` (uid check **or** a session-remembered EPERM outcome; respawn from [[PID-62.2]]'s `isRespawner`) and remembers `.unkillable` outcomes at the existing kill hook.
-- [ ] Overlay, not a bucket: `riskTier` / `bucket` are untouched; affected rows stay listed in their section, show a badge + explanatory tooltip where ✕ was, and carry the explanation as an inspector reasoning line beside the idle-dev-server line.
-- [ ] Unkillable / respawner rows are excluded from the sweep set (`Clean all`, ⌘⌫, the section count and reclaimable total) via one engine-side `isSweepable(_:)` SSOT shared with the popover — same overlay shape 🔒 protection established in PID-54.4.
-- [ ] `make test` green; `make build-cli` builds; visual confirmation of the two new row states.
-- [ ] Docs updated: `SPEC.md` (§Project Structure, §Classification overlay, §Kill Flow outcomes), `CLAUDE.md` conventions, `README.md` foreign-owner bullet.
+- [x] `KillCore.KillOutcome` gains `.unkillable` — EPERM split out of `.notKilled`, which keeps its "identity guard refused" meaning. The one exhaustive CLI `switch` reports it honestly; clean-log honesty unchanged (still `.confirmed` only).
+- [x] Foreign ownership is known **before** a click: `ProcessItem` carries the owning `uid`, resolved at scan time from the `kinfo_proc` read `KillCore` already performs (new injectable `uidProvider`, `nil`-defaulted — `ps` column layout untouched).
+- [x] New pure `PidlyseCore/Killability.swift`: `Killability` (`killable` / `unkillable` / `respawner`), the foreign-owner predicate, the "managed by X" attribution, and the one-per-state explanation sentence — unit-tested, with the sentence living in exactly one place so tooltip and inspector can't drift.
+- [x] `ScanEngine` folds the signals into `killability(_:)` (uid check **or** a session-remembered EPERM outcome; respawn from [[PID-62.2]]'s `isRespawner`) and remembers `.unkillable` outcomes at the existing kill hook.
+- [x] Overlay, not a bucket: `riskTier` / `bucket` are untouched; affected rows stay listed in their section, show a badge + explanatory tooltip where ✕ was, and carry the explanation as an inspector reasoning line beside the idle-dev-server line.
+- [x] Unkillable / respawner rows are excluded from the sweep set (`Clean all`, ⌘⌫, the section count and reclaimable total) via one engine-side `isSweepable(_:)` SSOT shared with the popover — same overlay shape 🔒 protection established in PID-54.4.
+- [x] `make test` green; `make build-cli` builds; visual confirmation of the two new row states.
+- [x] Docs updated: `SPEC.md` (§Project Structure, §Classification overlay, §Kill Flow outcomes), `CLAUDE.md` conventions, `README.md` foreign-owner bullet.
 
 ## 🧩 Subtasks
 
-- [ ] `KillCore`: add `.unkillable`, return it on the EPERM branch, add `ownerUID(of:)` on the shared `procInfo(of:)`; update the CLI `switch`
-- [ ] `ProcessItem`: add `uid: uid_t?` (defaulted, so existing constructions are untouched); `ScanCore.enumerate`/`makeItem`: add the `nil`-defaulted `uidProvider`
-- [ ] New `PidlyseCore/Killability.swift` — state enum, `isForeignOwned(uid:currentUID:)`, `manager(ancestors:containerOwner:)`, `explanation`
-- [ ] `ScanEngine`: pass `KillCore.ownerUID` into the scan, remember `.unkillable` outcomes at the kill hook, expose `killability(_:)` + `isSweepable(_:)`, narrow `sweepableSafeItems`
-- [ ] `MenuBarView`: badge + tooltip in place of ✕, inspector reasoning line, sweep-set filter delegated to `isSweepable`
-- [ ] Tests in `PidlyseTests/ScanEngineTests.swift` — new `KillabilityTests` (state precedence, owner predicate, manager attribution, explanation text) + a `.unkillable` outcome case
-- [ ] `make test` + `make build-cli`; 👁️ visual confirmation of both row states
-- [ ] Docs: `SPEC.md`, `CLAUDE.md`, `README.md`
-- [ ] Phase 4 closure (doc-drift sweep, PLAN stub flip nested under the parent, archive)
+- [x] `KillCore`: add `.unkillable`, return it on the EPERM branch, add `ownerUID(of:)` on the shared `procInfo(of:)`; update the CLI `switch`
+- [x] `ProcessItem`: add `uid: uid_t?` (defaulted, so existing constructions are untouched); `ScanCore.enumerate`/`makeItem`: add the `nil`-defaulted `uidProvider`
+- [x] New `PidlyseCore/Killability.swift` — state enum, `isForeignOwned(uid:currentUID:)`, `manager(ancestors:containerOwner:)`, `explanation`
+- [x] `ScanEngine`: pass `KillCore.ownerUID` into the scan, remember `.unkillable` outcomes at the kill hook, expose `killability(_:)` + `isSweepable(_:)`, narrow `sweepableSafeItems`
+- [x] `MenuBarView`: badge + tooltip in place of ✕, inspector reasoning line, sweep-set filter delegated to `isSweepable`
+- [x] Tests in `PidlyseTests/ScanEngineTests.swift` — new `KillabilityTests` (state precedence, owner predicate, manager attribution, explanation text) + a `.unkillable` outcome case
+- [x] `make test` + `make build-cli`; 👁️ visual confirmation of both row states
+- [x] Docs: `SPEC.md`, `CLAUDE.md`, `README.md`
+- [x] Phase 4 closure (doc-drift sweep, PLAN stub flip nested under the parent, archive)
 
 ## 🔗 Related
 
@@ -126,13 +124,15 @@ Stop offering a kill button on rows Pidlyse cannot actually kill: foreign-owned 
 
 ## 🧪 Phase 3: Testing & Linting
 
-- [x] Ran targeted test suite for changed code — `make test`: **271/271 passing, 0 failures** (250 pre-task; +21 new `KillabilityTests`)
+- [x] Ran targeted test suite for changed code — `make test`: **273/273 passing, 0 failures** (250 pre-task; +23 new `KillabilityTests`)
 
 - [x] Ran lint/type-check on changed code — the Swift compiler is the type-check (per `.flowtron/tasknote/README.md` §Project quick commands): `swift build --package-path Packages/PidlyseCore`, `make build-cli`, and `make build-release` all clean, no warnings. (SourceKit again reported phantom "No such module `PidlyseCore`" / "no member `unkillable`" diagnostics on the package sources mid-edit — the same stale-index artifact PID-62.2 recorded; all four real compilers disagree.)
 
 - [x] **Quality assertions** — the two duplications the change would have introduced were extracted instead (`ScanEngine.record(_:outcome:)`, `ScanEngine.isSweepable(_:)`), so the diff leaves less repetition than it found. No dead code: every new symbol has a consumer in this same diff — including `Killability.isForeignOwned`, which both the app derivation and the CLI sweep filter call. Public-surface growth is one type (`Killability`), one `KillOutcome` case, one `ProcessItem` field, one `KillCore` function, one `ScanCore` parameter — each load-bearing and tested. The one non-obvious ordering decision (unkillable outranks respawner) carries its reason inline *and* a test pinning it. Code-facing docs updated in the same diff: `KillOutcome`'s doc comment, `KillCore`'s file header, `ScanCore.makeItem`'s + `collapseWrappers`' contract lines, `ScanEngine.recordCleaned`, both `sweepableSafeItems`.
 
-- [ ] (frontend) Asked the user for visual confirmation (👁️ prefix on the prose ask) — **asked, awaiting the operator; this is the one open item.**
+- [x] (frontend) Asked the user for visual confirmation (👁️ prefix on the prose ask) — **confirmed by the operator 2026-09-23 ("looks good")**: 🚫 badge + explanation on root-owned `com.docker.vmnetd`, sweep count/total exclude it.
+
+- [x] **External review** — `/code-review medium` scoped to `07c12cb` + the resume working tree; 5 findings, all **note**, all fixed in place (see Testing Notes).
 
 > **Choosing a test strategy (guidance, not a gate).** Default to targeted
 > tests on the changed behavior. Where the input space is wide — parsers,
@@ -162,14 +162,28 @@ Not unit-tested, deliberately and consistently with the existing suite: the impu
 `sysctl` read and the `ScanEngine` fold (the same exclusion `ScanHistoryTests` /
 `RespawnHistoryTests` already document for their scan feeds).
 
-### ⏸ Outstanding on resume — the 👁️ visual confirmation
+**Resume 2026-09-23 — verification receipt:**
+
+- `make test` → exit 0 — **273/273** (271 at park + 2 new docker-route cases)
+- `make build-cli` → exit 0; `make build-release` → exit 0, no warnings
+- Live-kernel check of the new real-uid read (`e_pcred.p_ruid`): launchd → 0, self → 501, `com.docker.vmnetd` (PID 590) → 0, absent PID → nil
+
+**External review** (`/code-review medium`, scoped to `07c12cb` + this resume's working tree) — 5 findings, all graded **note** (none contradicts an Acceptance line), all fixed in place:
+
+1. `ownerUID` read the *effective* uid → a self-launched setuid-root helper would be falsely unkillable. **Fixed:** reads the real uid (`kp_eproc.e_pcred.p_ruid`), which is what the kernel's signal-permission check matches; doc comment says why.
+2. Foreign-owned docker container roots route via `docker stop` (no signal permission needed) but lost their ✕. **Fixed:** new `KillCore.routesViaDockerStop(_:containerOwners:)` — used by `kill()` itself, `ScanEngine.killability`, and the CLI `clean` filter, so the three can't drift; +2 tests.
+3. `wasKillDenied` matched `nil == nil` start times → a recycled PID could inherit a sticky "unkillable". **Fixed:** a denial is remembered only with a verified start time (map is now `[Int32: ProcStartTime]`); unverifiable identity degrades to killable.
+4. CLAUDE.md CLI bullet + `CLICore.usage` still said `clean` sweeps exactly "safe minus protected". **Fixed** both.
+5. `KillService.swift` header said EPERM → `.notKilled`; CLI empty-clean message misstated the reason. **Fixed** both.
+
+### 👁️ Visual confirmation (asked 2026-09-23)
 
 `build/Release/Pidlyse.app` was built from this working tree and launched (the
 stale Debug instance from DerivedData was quit first). If it is no longer running,
 `make build-release && open build/Release/Pidlyse.app`. What to check:
 
 1. **Processes** tab → **Needs review** → expand the **Docker** group (starts
-   collapsed — it's high-risk tier). **PID 561** `com.docker.vmnetd` is root-owned
+   collapsed — it's high-risk tier). **PID 590** `com.docker.vmnetd` is root-owned
    (verified via `ps -o uid=`), so it should show the 🚫 `nosign` badge where ✕
    normally sits, with hover text *"unkillable — owned by root; Pidlyse never
    escalates"*, and the same sentence as a line in its ⓘ inspector. Every other
@@ -183,12 +197,20 @@ stale Debug instance from DerivedData was quit first). If it is no longer runnin
 
 ## 🚀 Phase 4: Closure
 
-- [ ] **Doc-drift sweep** — for each entry in `.flowtron/tasknote/README.md` §"AI-referenced docs", state "no change" or the update
+- [x] **Doc-drift sweep** — `README.md`: updated (foreign-owner bullet names the unkillable badge + sweep exclusion). `AGENTS.md`: no change (flowtron wiring only, no kill-flow content). `CLAUDE.md`: updated (Killability split + `isSweepable` SSOT, EPERM → `.unkillable`, `.notKilled`/`.unkillable` meanings, CLI `clean` set wording). `SPEC.md`: updated (Project Structure `Killability.swift` + `uid`, Classification killability overlay paragraph, Kill Flow four outcomes). `.flowtron/PLAN.md`: PID-62.3 flipped to stub form, nested under PID-EPIC-62.
 
-- [ ] Closed — PLAN.md line flipped to stub form `Completed YYYY-MM-DD.` and placed per SPEC/tasknote-selection.md §"`## Completed` archive convention" (standalone → top of `## Completed`; epic child → kept nested beneath its active parent), then tasknote moved to `.flowtron/tasknote/archive/<area>/`
+- [x] Closed — PLAN.md line flipped to stub form `Completed YYYY-MM-DD.` and placed per SPEC/tasknote-selection.md §"`## Completed` archive convention" (standalone → top of `## Completed`; epic child → kept nested beneath its active parent), then tasknote moved to `.flowtron/tasknote/archive/<area>/`
 
-- [ ] **Evidence-based recap** drafted — changed files/LOC where meaningful, verification commands/results, refactors made or deferred with rationale, documentation verdict, and concrete maintainability effect (surfaces at the 📦 ready-to-commit gate, or inline on conditional skip)
+- [x] **Evidence-based recap** drafted — changed files/LOC where meaningful, verification commands/results, refactors made or deferred with rationale, documentation verdict, and concrete maintainability effect (surfaces at the 📦 ready-to-commit gate, or inline on conditional skip)
 
 **Final Summary:**
 
-**Archived:** YYYY-MM-DD
+Rows Pidlyse can't honestly kill no longer offer a kill button. Foreign-owned processes (real uid ≠ ours, known at scan time, with observed EPERM as backstop) and detected respawners show a 🚫 / ↻ badge with a one-sentence explanation (tooltip + ⓘ inspector) and drop out of Clean all / ⌘⌫ / the count / the reclaimable total — an overlay like 🔒, never a third bucket.
+
+- **Code:** implementation in `07c12cb` (9 files, +641/−55: new `Killability.swift`, `KillOutcome.unkillable`, `ProcessItem.uid`, `ScanCore` `uidProvider`, `ScanEngine.killability`/`isSweepable`, `MenuBarView` badge + inspector line, CLI parity); resume fixes (+87/−35 across 10 files incl. docs): real-uid read, `KillCore.routesViaDockerStop` shared by `kill()` / engine / CLI, start-time-verified EPERM memory, stale doc/usage text.
+- **Verification:** `make test` 273/273; `make build-cli` + `make build-release` clean; live-kernel real-uid check; operator 👁️ confirmed.
+- **Refactors:** `ScanEngine.record(_:outcome:)` and `ScanEngine.isSweepable(_:)` extracted to avoid duplication; `routesViaDockerStop` extracted so the three docker-route readers can't drift. None deferred.
+- **Docs:** SPEC.md, CLAUDE.md, README.md updated; AGENTS.md no change.
+- **Maintainability:** killability is one pure core type with one explanation string; the sweep predicate has one home. `touches:` not declared (pre-dates the key) — changed paths match the Subtasks list plus `KillService.swift` / `CLICore.swift` (doc-text only).
+
+**Archived:** 2026-09-23

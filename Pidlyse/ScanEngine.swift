@@ -149,10 +149,11 @@ final class ScanEngine: ObservableObject {
     /// Identities whose kill came back `EPERM` this session (PID-62.3) — the backstop
     /// half of the unkillable signal, for anything the scan-time uid read missed.
     /// Stores each denied PID's scan-time start time so a recycled PID doesn't inherit
-    /// the state. Session-only and deliberately *not* a `PidlyseCore` value type: it
+    /// the state; a denial with no start time is not remembered (an unverifiable
+    /// identity degrades to killable, never to a sticky dead end). Session-only and deliberately *not* a `PidlyseCore` value type: it
     /// holds no logic, just a fact the engine observed; the derivation that consumes it
     /// is pure and lives in `Killability`.
-    private var killDeniedIdentities: [Int32: ProcStartTime?] = [:]
+    private var killDeniedIdentities: [Int32: ProcStartTime] = [:]
 
     /// The user Pidlyse runs as. Read once — it cannot change during the process's
     /// lifetime — and compared against each row's scan-time owner. (PID-62.3)
@@ -308,7 +309,7 @@ final class ScanEngine: ObservableObject {
             armRespawnWatch(item)
             cleanLog.record(makeCleanEvent(item))
         case .unkillable:
-            killDeniedIdentities[item.pid] = item.startTime
+            if let startTime = item.startTime { killDeniedIdentities[item.pid] = startTime }
         case .survived, .notKilled:
             break
         }
@@ -508,6 +509,10 @@ final class ScanEngine: ObservableObject {
     /// but never touches the risk tier, the bucket, or the classification.
     func killability(_ item: ProcessItem) -> Killability {
         let respawner = isRespawner(item)
+        // A container root stopped via `docker stop` needs no signal permission, so
+        // its owner uid says nothing about whether the kill will work.
+        let ownerUID = KillCore.routesViaDockerStop(item, containerOwners: containerOwners)
+            ? nil : item.uid
         // Attribution is only needed for the respawner sentence, so the common
         // killable row doesn't pay for an ancestor walk.
         let manager = respawner
@@ -515,7 +520,7 @@ final class ScanEngine: ObservableObject {
                                                                            in: processTable),
                                   containerOwner: containerOwners[item.pid])
             : nil
-        return Killability.derive(ownerUID: item.uid,
+        return Killability.derive(ownerUID: ownerUID,
                                   currentUID: currentUID,
                                   killDenied: wasKillDenied(item),
                                   isRespawner: respawner,

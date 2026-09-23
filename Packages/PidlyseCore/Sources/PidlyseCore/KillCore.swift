@@ -57,7 +57,8 @@ public enum KillCore {
     /// means no container resolution is available and docker items fall through
     /// to POSIX.
     public static func kill(_ item: ProcessItem, containerOwners: [Int32: String] = [:]) -> KillOutcome {
-        if item.kind == .docker, dockerStopByName(containerOwners[item.pid]) {
+        if routesViaDockerStop(item, containerOwners: containerOwners),
+           dockerStopByName(containerOwners[item.pid]) {
             return .confirmed
         }
         return killPosix(item.pid, expected: item.startTime)
@@ -75,14 +76,26 @@ public enum KillCore {
                                               usec: Int($0.kp_proc.p_starttime.tv_usec)) }
     }
 
-    /// Read a process's **owning** user id (`kinfo_proc.kp_eproc.e_ucred.cr_uid`),
-    /// or `nil` if the process no longer exists or can't be queried. Injected into
+    /// Read a process's **owning** user id — its *real* uid
+    /// (`kinfo_proc.kp_eproc.e_pcred.p_ruid`) — or `nil` if the process no longer
+    /// exists or can't be queried. Real, not effective: the kernel lets us signal a
+    /// process whose real uid matches ours, so a setuid-root helper we launched
+    /// ourselves (effective uid 0, real uid ours) is still killable and must not be
+    /// labelled unkillable. Injected into
     /// the scan as `ScanCore`'s `uidProvider` so a row owned by another user can be
     /// shown as unkillable *before* the user clicks a dead-end button — Pidlyse runs
     /// unprivileged, so a uid that isn't ours means every signal we send hits EPERM.
     /// Rides on the same `kinfo_proc` read as `startTime(of:)`. (PID-62.3)
     public static func ownerUID(of pid: Int32) -> uid_t? {
-        procInfo(of: pid).map { $0.kp_eproc.e_ucred.cr_uid }
+        procInfo(of: pid).map { $0.kp_eproc.e_pcred.p_ruid }
+    }
+
+    /// Whether `kill(_:containerOwners:)` stops this item with `docker stop` rather
+    /// than a signal — a docker-kind PID that is a container's root process. Such a
+    /// kill needs no signal permission, so the killability overlay must not call it
+    /// unkillable just because the PID is foreign-owned. (PID-62.3)
+    public static func routesViaDockerStop(_ item: ProcessItem, containerOwners: [Int32: String]) -> Bool {
+        item.kind == .docker && containerOwners[item.pid] != nil
     }
 
     /// One `sysctl` read of a PID's process-table entry, or `nil` when the kernel

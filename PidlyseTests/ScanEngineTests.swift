@@ -2165,4 +2165,21 @@ final class KillabilityTests: XCTestCase {
         let line = " 4711     1    30:13 ??       0.1  12345  /usr/local/bin/npm run dev"
         XCTAssertNil(ScanCore.makeItem(from: line, elapsedThreshold: 60)?.uid)
     }
+
+    // MARK: - Docker-stop route
+
+    func testDockerContainerRootRoutesViaDockerStop() throws {
+        let line = " 4711     1    30:13 ??       0.1  12345  /usr/local/bin/docker run redis"
+        let item = try XCTUnwrap(ScanCore.makeItem(from: line, elapsedThreshold: 60))
+        XCTAssertEqual(item.kind, .docker)
+        XCTAssertTrue(KillCore.routesViaDockerStop(item, containerOwners: [4711: "redis"]))
+        // Daemon/helper PIDs with no container owner fall through to signals.
+        XCTAssertFalse(KillCore.routesViaDockerStop(item, containerOwners: [:]))
+    }
+
+    func testNonDockerKindNeverRoutesViaDockerStop() throws {
+        let line = " 4711     1    30:13 ??       0.1  12345  /usr/local/bin/npm run dev"
+        let item = try XCTUnwrap(ScanCore.makeItem(from: line, elapsedThreshold: 60))
+        XCTAssertFalse(KillCore.routesViaDockerStop(item, containerOwners: [4711: "redis"]))
+    }
 }

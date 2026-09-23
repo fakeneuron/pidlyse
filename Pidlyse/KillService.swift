@@ -3,7 +3,7 @@ import PidlyseCore
 
 /// Thin async wrapper over the shared `KillCore` kill path (SIGTERM → 2 s grace
 /// → SIGKILL with PID-reuse identity guards, docker-stop routing, EPERM →
-/// `.notKilled`). The blocking core call runs on a background queue and every
+/// `.unkillable`). The blocking core call runs on a background queue and every
 /// `onComplete` fires on the main queue, so SwiftUI callers never block. All
 /// kill semantics live in `PidlyseCore.KillCore` (shared with the
 /// cli-companion binary, PID-EPIC-57); this file owns only the queue hops.

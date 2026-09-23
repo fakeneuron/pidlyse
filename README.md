@@ -69,7 +69,7 @@ The icon pulses once when a new stray appears (suppressed under Reduce Motion).
 
 Pidlyse sends real kill signals, so its trust story matters. The source is public precisely so you can verify all of the below:
 
-- **Runs as you, never root.** Kills use `Darwin.kill(pid, …)` and only succeed against your own processes; anything owned by another user (e.g. the root Docker daemon) returns `EPERM` and is left untouched. Pidlyse never escalates, never asks for an admin password.
+- **Runs as you, never root.** Kills use `Darwin.kill(pid, …)` and only succeed against your own processes; anything owned by another user (e.g. the root Docker daemon) returns `EPERM` and is left untouched — and because the owner is read at scan time, such rows show an "unkillable" badge in place of the kill button and are left out of "Clean all". Pidlyse never escalates, never asks for an admin password.
 - **No network, no telemetry, no analytics.** Pidlyse makes zero network connections. It reads local process state and writes nothing back out.
 - **Minimal disk footprint.** Reads `~/Library/Application Support/Pidlyse/ports.json` if the user-created file exists (the app never writes it); its only disk write is the settings plist via `UserDefaults` (`~/Library/Preferences/com.fakeneuron.pidlyse.plist`).
 - **Launch at login is opt-in.** Enabling it registers a login item via `SMAppService`. The registration persists until the app is removed or you disable the option in Settings.
