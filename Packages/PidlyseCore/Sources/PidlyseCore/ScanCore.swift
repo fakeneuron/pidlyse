@@ -290,13 +290,16 @@ public enum ScanCore {
     }
 
     /// Map a command line to a `ProcessKind`, or `nil` if it's not a stray
-    /// candidate. Order matters: the Chrome-under-`ms-playwright-mcp` case is
-    /// tested before the generic playwright-mcp case (its user-data-dir path
-    /// contains the `playwright-mcp` substring too).
+    /// candidate. Order matters: Chrome-helper matching is tested before the
+    /// generic playwright-mcp case (a persistent `ms-playwright-mcp` user-data-dir
+    /// contains the `playwright-mcp` substring too). Isolated playwright-mcp
+    /// launches via `browserType.launch()`, whose temp profile is
+    /// `playwright_chromiumdev_profile-` — no `ms-playwright-mcp` token. (PID-071)
     public static func detectKind(_ args: String) -> ProcessKind? {
         let s = args.lowercased()
 
-        if s.contains("ms-playwright-mcp") && (s.contains("chrome") || s.contains("chromium")) {
+        if (s.contains("chrome") || s.contains("chromium")),
+           s.contains("ms-playwright-mcp") || s.contains("playwright_chromiumdev_profile") {
             return .chromeHelper
         }
         if s.contains("@playwright/mcp") || s.contains("playwright-mcp") {

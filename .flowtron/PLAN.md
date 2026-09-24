@@ -20,7 +20,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - [ ] **PID-064** [light]🔧 | gitleaks-ci-step — Add secret-scanning: deposit `.gitleaks.toml` + `.pre-commit-config.yaml` (copy natabula's canonical templates at `configs/.gitleaks.toml` / `configs/.pre-commit-config.yaml`) and wire a `gitleaks` step into `.github/workflows/test.yml`'s `test` job (curl-fetch pinned `gitleaks v8.30.1`, run `gitleaks dir . --config .gitleaks.toml --no-banner --redact`). Neither deposit exists here yet, unlike most other fleet repos. Routed by natabula `NAT-245` (lazy fleet backfill per `NAT-103.4`).
 - [ ] **PID-069** [medium]🧠 | respawn-per-identity-watches — One `RespawnHistory` watch per killed identity, not per signature, so same-signature rows killed in separate clicks can't share or overwrite one respawn verdict. Parked from [[PID-62.5]].
 - [ ] **PID-070** [light]🔧 | row-layout-legibility — Popover rows at 320 pt: single-line verbatim PID (no wrap, no `81,113` grouping), a descriptor that tells identical commands apart, and killability badges that don't read as buttons. Parked from [[PID-62.5]].
-- [ ] **PID-071** [medium]🧠 [unattended] | isolated-chrome-helper-detection — Chrome helpers launched by `--isolated` playwright-mcp don't match `.chromeHelper` (`ScanCore.detectKind` keys on `ms-playwright-mcp` in their args, absent under isolated temp profiles), so they go undetected and never collapse under their playwright-mcp row. Find a reliable isolated-mode signal. Parked from [[PID-62.4]].
 - [ ] **PID-072** [light]🔧 [unattended] | shell-snapshot-misclassify — Claude Code's `/bin/zsh -c source …shell-snapshot…` processes classify as `.npm` because `ScanCore.detectKind`'s `hasTokenBoundary(s, "npm")` matches the snapshot's inline command text, producing a false stray row. Exclude shell-snapshot wrappers (or tighten the npm match) with a regression test. Parked from [[PID-62.4]].
 
 ## Future Opportunities
@@ -30,6 +29,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-071** [medium]🧠 | isolated-chrome-helper-detection — Completed 2026-09-24.
 - [x] **PID-EPIC-62** [heavy]🧠 | killability-truth — Completed 2026-09-24.
   - [x] **PID-62.1** [heavy]🧠 | killability-truth discovery — Completed 2026-08-08.
   - [x] **PID-62.2** [heavy]🧠 | respawn-detection-core — Completed 2026-08-08.

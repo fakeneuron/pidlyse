@@ -102,6 +102,22 @@ final class ScanEngineTests: XCTestCase {
         XCTAssertEqual(ScanCore.detectKind(args), .chromeHelper)
     }
 
+    func testDetectKind_chromeUnderIsolatedPlaywrightProfile_isChromeHelper() {
+        // `--isolated` playwright-mcp uses browserType.launch(), whose temp
+        // user-data-dir is playwright_chromiumdev_profile- (no ms-playwright-mcp).
+        let chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome " +
+                     "--user-data-dir=/var/folders/xx/T/playwright_chromiumdev_profile-XXXX " +
+                     "--no-startup-window"
+        XCTAssertEqual(ScanCore.detectKind(chrome), .chromeHelper)
+        let helper = "Google Chrome Helper (GPU) --type=gpu-process " +
+                     "--user-data-dir=/var/folders/xx/T/playwright_chromiumdev_profile-XXXX"
+        XCTAssertEqual(ScanCore.detectKind(helper), .chromeHelper)
+        let bundled = "/Users/me/Library/Caches/ms-playwright/chromium-1187/chrome-mac/" +
+                      "Chromium.app/Contents/MacOS/Chromium " +
+                      "--user-data-dir=/var/folders/xx/T/playwright_chromiumdev_profile-AbC123"
+        XCTAssertEqual(ScanCore.detectKind(bundled), .chromeHelper)
+    }
+
     func testDetectKind_normalChrome_isExcluded() {
         let args = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --user-data-dir=/Users/me/Default"
         XCTAssertNil(ScanCore.detectKind(args))
@@ -1873,6 +1889,23 @@ final class ScanCoreTreeCollapseTests: XCTestCase {
         XCTAssertEqual(items.count, 1)
         XCTAssertEqual(items.first?.pid, 105)
         XCTAssertEqual(items.first?.kind, .playwrightMCP)
+    }
+
+    func testEnumerate_isolatedChromeBrood_collapsesUnderPlaywrightMCP() {
+        // Isolated-mode Chrome helpers have no ms-playwright-mcp token; they must
+        // still classify as .chromeHelper and fold under the mcp row. (PID-071)
+        let output = """
+          10     5 14:55:40 ?? 0.0 336 node /x/.bin/playwright-mcp --isolated
+          20    10 14:55:40 ?? 0.0 80 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome --user-data-dir=/var/folders/xx/T/playwright_chromiumdev_profile-XXXX --no-startup-window
+          30    20 14:55:40 ?? 0.0 40 Google Chrome Helper (GPU) --type=gpu-process --user-data-dir=/var/folders/xx/T/playwright_chromiumdev_profile-XXXX
+          31    20 14:55:40 ?? 0.0 40 Google Chrome Helper (Renderer) --type=renderer --user-data-dir=/var/folders/xx/T/playwright_chromiumdev_profile-XXXX
+        """
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60, psOutput: output)
+        XCTAssertEqual(items.count, 1)
+        XCTAssertEqual(items.first?.pid, 10)
+        XCTAssertEqual(items.first?.kind, .playwrightMCP)
+        XCTAssertEqual(items.first?.members.map { $0.pid }, [20, 30, 31])
+        XCTAssertTrue(items.first?.members.allSatisfy { $0.kind == .chromeHelper } ?? false)
     }
 
     func testEnumerate_disabledKind_filtersPerProcessBeforeCollapse() {

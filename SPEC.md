@@ -75,7 +75,7 @@ Runs on a configurable timer (default: every 2 min). Shells out to `ps -axww -o 
 | `playwright-mcp` / `@playwright/mcp` | `playwrightMCP` | Orphaned MCP browser tooling |
 | `@modelcontextprotocol` / `mcp-server-*` | `mcpServer` | Orphaned MCP servers (filesystem/git/etc.) |
 | `pytest`, `vitest`, `jest`, `playwright test` | `pytest` / `vitest` / `jest` / `playwrightTest` | Hung test runners |
-| Chrome processes under `ms-playwright-mcp/` user-data dirs | `chromeHelper` | Zombie browser helpers |
+| Chrome processes under `ms-playwright-mcp/` user-data dirs, or Playwright's isolated temp profile (`playwright_chromiumdev_profile`) | `chromeHelper` | Zombie browser helpers |
 | `docker` (daemon + helpers) | `docker` | Real dev infra — never an easy kill |
 | `uvicorn` | `uvicorn` | Backend dev server — never an easy kill |
 | `next` / `next-server` | `nextjs` | Next.js dev server |
