@@ -159,6 +159,12 @@ final class ScanEngine: ObservableObject {
     /// lifetime — and compared against each row's scan-time owner. (PID-62.3)
     private let currentUID = getuid()
 
+    /// A `scan()` arrived while one was in flight; run one more when it publishes.
+    private var rescanQueued = false
+
+    /// Completions waiting on the next scan to *start* (see `scan(then:)`).
+    private var completionsForNextScan: [() -> Void] = []
+
     private var timer: Timer?
 
     init() {
@@ -187,11 +193,22 @@ final class ScanEngine: ObservableObject {
 
     // MARK: - Scanning
 
-    /// Kick off a background scan. Debounces if already in-flight.
-    /// Must be called from the main thread (timer + SwiftUI actions always are).
-    func scan() {
-        guard !isScanning else { return }
+    /// Kick off a background scan. Must be called from the main thread (timer +
+    /// SwiftUI actions always are). A request that lands while a scan is in flight
+    /// isn't dropped: it queues exactly one follow-up scan (PID-62.5), because the
+    /// in-flight one may have enumerated before whatever prompted the request — a
+    /// kill, most often — and would otherwise leave a stale row up until the next
+    /// timer tick. `completion` runs on the main thread after a scan that *started*
+    /// after this call has published.
+    func scan(then completion: (() -> Void)? = nil) {
+        if let completion { completionsForNextScan.append(completion) }
+        guard !isScanning else {
+            rescanQueued = true
+            return
+        }
         isScanning = true
+        let completions = completionsForNextScan
+        completionsForNextScan = []
         let threshold = elapsedThreshold
         // Split the ignore editor lines: global substrings hide inside `enumerate`
         // (unchanged path); scoped `substring @ prefix` rules need the cwd map and are
@@ -234,18 +251,27 @@ final class ScanEngine: ObservableObject {
             // the inspector's parent-chain hint walks it to launchd (PID-52.2).
             let procTable = AncestryResolver.processTable()
             DispatchQueue.main.async {
-                let oldPIDs = self?.previousPIDs
-                self?.previousPIDs = Set(filtered.map { $0.pid })
-                self?.items = filtered
-                self?.listeningPorts = portMap
-                self?.containerOwners = owners
-                self?.cwds = cwdMap
-                self?.processTable = procTable
-                self?.recordScanHistory(filtered)
+                guard let self else { return }
+                // Re-apply dismissals: a row dismissed while this scan ran isn't in
+                // the snapshot it started with, and must not come back (PID-62.5).
+                let visible = filtered.filter { !self.dismissedPIDs.contains($0.pid) }
+                let oldPIDs = self.previousPIDs
+                self.previousPIDs = Set(visible.map { $0.pid })
+                self.items = visible
+                self.listeningPorts = portMap
+                self.containerOwners = owners
+                self.cwds = cwdMap
+                self.processTable = procTable
+                self.recordScanHistory(visible)
                 // After `cwds` is published — signatures are built from it.
-                self?.recordRespawnHistory(filtered)
-                self?.isScanning = false
-                self?.fireNotificationIfNeeded(newItems: filtered, previousPIDs: oldPIDs)
+                self.recordRespawnHistory(visible)
+                self.isScanning = false
+                self.fireNotificationIfNeeded(newItems: visible, previousPIDs: oldPIDs)
+                completions.forEach { $0() }
+                if self.rescanQueued {
+                    self.rescanQueued = false
+                    self.scan()
+                }
             }
         }
     }
@@ -281,19 +307,16 @@ final class ScanEngine: ObservableObject {
 
     // MARK: - Clean log (PID-53.2)
 
-    /// Record a single kill's outcome. Called on the main thread from the
-    /// kill-completion hook **before** the rescan, so `cwds` still holds the
-    /// pre-kill label.
-    func recordCleaned(_ item: ProcessItem, outcome: KillService.KillOutcome) {
-        record(item, outcome: outcome)
-    }
-
-    /// Batch variant: record every outcome from a `[pid: outcome]` map, resolving
-    /// each pid back to its `ProcessItem` for the kind/rss/label.
-    func recordCleaned(_ items: [ProcessItem], outcomes: [Int32: KillService.KillOutcome]) {
+    /// Record every outcome from a `[pid: outcome]` map, resolving each pid back to
+    /// its `ProcessItem` for the kind/rss/label. Called on the main thread from the
+    /// kill-completion hook in `kill(_:completion:)`. `preKillCwds` is the cwd map
+    /// captured when the kill began: a scan during the ≥ 2 s kill may already have
+    /// dropped a dead process's entry from `cwds`.
+    private func recordCleaned(_ items: [ProcessItem], outcomes: [Int32: KillService.KillOutcome],
+                               preKillCwds: [Int32: ProcessCwd], killStartedAt: Date) {
         for item in items {
             guard let outcome = outcomes[item.pid] else { continue }
-            record(item, outcome: outcome)
+            record(item, outcome: outcome, cwd: preKillCwds[item.pid], killStartedAt: killStartedAt)
         }
     }
 
@@ -303,11 +326,12 @@ final class ScanEngine: ObservableObject {
     /// `.unkillable` is remembered so the row can say why it kept its process
     /// (PID-62.3); `.survived` and `.notKilled` are neither a clean nor a permanent
     /// fact about the row, so nothing is recorded.
-    private func record(_ item: ProcessItem, outcome: KillService.KillOutcome) {
+    private func record(_ item: ProcessItem, outcome: KillService.KillOutcome, cwd: ProcessCwd?,
+                        killStartedAt: Date) {
         switch outcome {
         case .confirmed:
-            armRespawnWatch(item)
-            cleanLog.record(makeCleanEvent(item))
+            armRespawnWatch(item, cwd: cwd, killStartedAt: killStartedAt)
+            cleanLog.record(makeCleanEvent(item, cwd: cwd))
         case .unkillable:
             if let startTime = item.startTime { killDeniedIdentities[item.pid] = startTime }
         case .survived, .notKilled:
@@ -315,28 +339,122 @@ final class ScanEngine: ObservableObject {
         }
     }
 
-    private func makeCleanEvent(_ item: ProcessItem) -> CleanEvent {
+    private func makeCleanEvent(_ item: ProcessItem, cwd: ProcessCwd?) -> CleanEvent {
         // For a custom-rule match, persist the friendly label as the `kind` string:
         // the Cleaned tab's `ProcessKind(rawValue:)?.label ?? kc.kind` fallback then
         // shows the user's label (an unknown rawValue falls through to the raw string).
         CleanEvent(kind: item.kind == .custom ? item.displayLabel : item.kind.rawValue,
-                   projectLabel: cwds[item.pid]?.label ?? item.displayPath,
+                   projectLabel: cwd?.label ?? item.displayPath,
                    rssKB: item.rssKB,
                    timestamp: Date())
     }
 
-    // MARK: - Headless clean action (PID-58.2)
+    // MARK: - Kill lifecycle (PID-62.5)
 
-    /// Outcome of a headless `cleanAllSafe` sweep, surfaced to external triggers
-    /// (the `pidlyse://clean` result notification, later the AppIntents bridge).
-    struct CleanSummary {
-        /// Processes in the sweep set (safe minus protected) the sweep attempted.
-        let requested: Int
-        /// Confirmed deaths (`KillOutcome.confirmed`).
-        let cleaned: Int
-        /// Resident memory the confirmed kills freed, in KB.
-        let reclaimedKB: Int
+    /// How long a row keeps showing its kill's final phase ("gone", "didn't die", …)
+    /// before it returns to normal — or, for a process that's gone, leaves the list.
+    static let killFeedbackLinger: TimeInterval = 3
+
+    /// One row's kill, in flight or just answered. `startTime` is the scan-time
+    /// identity, so a recycled PID doesn't inherit the state; `token` identifies the
+    /// kill that set it, so an older kill's linger timer can't clear a newer one.
+    struct KillStatus {
+        let startTime: ProcStartTime?
+        let phase: KillPhase
+        let token: Int
     }
+
+    /// Per-row kill state, keyed by pid (PID-62.5). Survives intervening scans —
+    /// a timer scan landing mid-kill re-lists the row, and the row keeps saying
+    /// "killing…". Cleared `killFeedbackLinger` after the final phase.
+    @Published private(set) var killStatuses: [Int32: KillStatus] = [:]
+
+    /// Rows whose process is verified gone, kept only for the linger window so the
+    /// user sees the verdict before the row leaves (PID-62.5). The popover renders
+    /// them beside `items`; they're never counted, swept, or logged.
+    @Published private(set) var departedItems: [Int32: ProcessItem] = [:]
+
+    private var killToken = 0
+
+    /// Where `item`'s kill stands, if it has one on this identity.
+    func killPhase(for item: ProcessItem) -> KillPhase? {
+        guard let status = killStatuses[item.pid], status.startTime == item.startTime else { return nil }
+        return status.phase
+    }
+
+    /// The one kill path every trigger rides on — row ✕, ⌘⌫, Clean all, and the
+    /// headless sweep (PID-62.5). Marks each row `.killing`, kills through
+    /// `KillService` (SIGTERM → 2 s → SIGKILL, verified), logs confirmed deaths and
+    /// arms respawn watches, then rescans and checks each verified death against
+    /// its pre-kill respawn count: back already means `.respawned`, not `.gone`.
+    /// `completion` gets the honest tally on the main thread once that scan has
+    /// published. Must be called on the main thread; never kills without an
+    /// explicit trigger.
+    func kill(_ targets: [ProcessItem], completion: @escaping (KillReport) -> Void = { _ in }) {
+        guard !targets.isEmpty else {
+            completion(KillReport(items: [], phases: [:]))
+            return
+        }
+        killToken += 1
+        let token = killToken
+        let startedAt = Date()
+        // Snapshot the cwds now: a scan during the kill can drop a dead process's
+        // entry, which would strip the cwd from its signature and clean-log label.
+        let preKillCwds = cwds.filter { pid, _ in targets.contains { $0.pid == pid } }
+        let signatures = Dictionary(uniqueKeysWithValues: targets.map {
+            ($0.pid, signature(for: $0, cwd: preKillCwds[$0.pid]))
+        })
+        targets.forEach { setKillPhase(.killing, for: $0, token: token) }
+        KillService.kill(targets, containerOwners: containerOwners) { [weak self] outcomes in
+            guard let self else { return }
+            // Before arming and before the rescan, so the counts don't yet include
+            // this kill.
+            let baselines = Dictionary(uniqueKeysWithValues: Set(signatures.values).map {
+                ($0, self.respawnHistory.respawnCount(for: $0))
+            })
+            self.recordCleaned(targets, outcomes: outcomes, preKillCwds: preKillCwds, killStartedAt: startedAt)
+            var phases = outcomes.mapValues(KillPhase.init)
+            for item in targets {
+                guard let phase = phases[item.pid] else { continue }
+                self.setKillPhase(phase, for: item, token: token)
+                if phase.isDeparted { self.departedItems[item.pid] = item }
+            }
+            self.scan { [weak self] in
+                guard let self else { return }
+                // Each new respawn is attributed to one killed row: two identical
+                // processes killed together share one watch, so a single comeback
+                // raises the count once and must not mark both rows respawned.
+                var unclaimed = Dictionary(uniqueKeysWithValues: Set(signatures.values).map {
+                    ($0, self.respawnHistory.respawnCount(for: $0) - (baselines[$0] ?? 0))
+                })
+                for item in targets where phases[item.pid] == .gone {
+                    guard let signature = signatures[item.pid], unclaimed[signature, default: 0] > 0 else { continue }
+                    unclaimed[signature, default: 0] -= 1
+                    phases[item.pid] = .respawned
+                    self.setKillPhase(.respawned, for: item, token: token)
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + Self.killFeedbackLinger) { [weak self] in
+                    self?.clearKillFeedback(targets, token: token)
+                }
+                completion(KillReport(items: targets, phases: phases))
+            }
+        }
+    }
+
+    private func setKillPhase(_ phase: KillPhase, for item: ProcessItem, token: Int) {
+        killStatuses[item.pid] = KillStatus(startTime: item.startTime, phase: phase, token: token)
+    }
+
+    /// Drop the feedback a kill left behind, unless a newer kill of the same row
+    /// has since replaced it.
+    private func clearKillFeedback(_ targets: [ProcessItem], token: Int) {
+        for item in targets where killStatuses[item.pid]?.token == token {
+            killStatuses[item.pid] = nil
+            departedItems[item.pid] = nil
+        }
+    }
+
+    // MARK: - Headless clean action (PID-58.2)
 
     /// Whether `item`'s resolved working directory sits under a protected project
     /// tree (PID-54.4) — the engine-side SSOT for the protected overlay. Both the
@@ -351,9 +469,10 @@ final class ScanEngine: ObservableObject {
     /// something Pidlyse can honestly kill (PID-62.3). The engine-side SSOT for the
     /// sweep predicate — `sweepableSafeItems` below and the popover's filtered variant
     /// both call it, so a row that shows no kill button can't still be swept by
-    /// "Clean all".
+    /// "Clean all" — nor can a row showing its kill's phase in place of the button.
     func isSweepable(_ item: ProcessItem) -> Bool {
-        !isProtected(item) && killability(item) == .killable
+        // A row already being killed — or just answered — isn't swept again (PID-62.5).
+        !isProtected(item) && killability(item) == .killable && killPhase(for: item) == nil
     }
 
     /// The "Clean all safe" sweep set: safe bucket minus protected projects
@@ -365,27 +484,13 @@ final class ScanEngine: ObservableObject {
         items.filter { $0.bucket == .safe && isSweepable($0) }
     }
 
-    /// Headless "Clean all safe": kill the sweepable set, log confirmed deaths to
-    /// the shared clean-log, rescan, and report a `CleanSummary`. The shared action
-    /// layer every external trigger rides on (PID-58.2). Mirrors the popover's
-    /// "Clean all" sequence (kill → `recordCleaned` → `scan`) and the CLI
-    /// `commandClean()`. Must be called on the main thread; `completion` fires on
-    /// the main thread after every grace period resolves.
-    func cleanAllSafe(completion: @escaping (CleanSummary) -> Void = { _ in }) {
-        let killed = sweepableSafeItems
-        guard !killed.isEmpty else {
-            completion(CleanSummary(requested: 0, cleaned: 0, reclaimedKB: 0))
-            return
-        }
-        KillService.kill(killed, containerOwners: containerOwners) { [weak self] outcomes in
-            self?.recordCleaned(killed, outcomes: outcomes)
-            let confirmed = killed.filter { outcomes[$0.pid] == .confirmed }
-            let reclaimedKB = confirmed.reduce(0) { $0 + $1.rssKB }
-            self?.scan()
-            completion(CleanSummary(requested: killed.count,
-                                    cleaned: confirmed.count,
-                                    reclaimedKB: reclaimedKB))
-        }
+    /// Headless "Clean all safe": kill the sweepable set through the one kill path
+    /// and report what actually happened. The shared action layer every external
+    /// trigger rides on (PID-58.2) — the same set the CLI's `commandClean()` derives.
+    /// Must be called on the main thread; `completion` fires on the main thread once
+    /// every kill is verified and the follow-up scan has published.
+    func cleanAllSafe(completion: @escaping (KillReport) -> Void = { _ in }) {
+        kill(sweepableSafeItems, completion: completion)
     }
 
     /// Post a system notification summarising a headless clean (PID-58.2). Unlike
@@ -394,14 +499,14 @@ final class ScanEngine: ObservableObject {
     /// on demand if not yet determined — independent of the `notificationsEnabled`
     /// setting (which stays scoped to new-stray scan notifications). Silently
     /// no-ops if the user has denied notifications.
-    func fireCleanResultNotification(_ summary: CleanSummary) {
+    func fireCleanResultNotification(_ report: KillReport) {
         let content = UNMutableNotificationContent()
-        if summary.requested == 0 {
+        if report.requested == 0 {
             content.title = "Nothing to clean"
             content.body = "No unprotected safe-to-clean processes."
         } else {
-            content.title = "Cleaned \(summary.cleaned) of \(summary.requested)"
-            content.body = "~\(ByteCountFormatter.string(fromByteCount: Int64(summary.reclaimedKB) * 1024, countStyle: .memory)) reclaimed"
+            content.title = report.headline
+            content.body = report.details
         }
         content.sound = .default
 
@@ -459,17 +564,23 @@ final class ScanEngine: ObservableObject {
     /// working directory. Single source of the signature so the kill hook and the
     /// scan feed can't derive it differently.
     private func signature(for item: ProcessItem) -> RespawnHistory.Signature {
-        RespawnHistory.Signature(command: item.command, cwd: cwds[item.pid]?.fullPath)
+        signature(for: item, cwd: cwds[item.pid])
+    }
+
+    /// The same signature from an explicit cwd — the kill path passes the one it
+    /// snapshotted before signalling (PID-62.5).
+    private func signature(for item: ProcessItem, cwd: ProcessCwd?) -> RespawnHistory.Signature {
+        RespawnHistory.Signature(command: item.command, cwd: cwd?.fullPath)
     }
 
     /// Start watching for a verified-dead process coming back under a new PID.
-    /// Called from `recordCleaned` on the main thread, before the post-kill rescan,
-    /// so the signature is built from the pre-kill `cwds` entry.
-    private func armRespawnWatch(_ item: ProcessItem) {
-        respawnHistory = respawnHistory.recordingKill(signature: signature(for: item),
+    /// Called from `recordCleaned` on the main thread with the cwd snapshotted when
+    /// the kill began, so the signature matches what the process had before it died.
+    private func armRespawnWatch(_ item: ProcessItem, cwd: ProcessCwd?, killStartedAt: Date) {
+        respawnHistory = respawnHistory.recordingKill(signature: signature(for: item, cwd: cwd),
                                                       pid: item.pid,
                                                       startTime: item.startTime,
-                                                      at: Date())
+                                                      at: killStartedAt)
     }
 
     /// Fold the completed scan into the respawn cache — a watched signature seen

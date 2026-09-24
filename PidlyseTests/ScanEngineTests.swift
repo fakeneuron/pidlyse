@@ -1218,9 +1218,13 @@ final class ScanHistoryTests: XCTestCase {
 /// `ScanHistoryTests`).
 final class RespawnHistoryTests: XCTestCase {
 
-    private let t1 = ProcStartTime(sec: 1000, usec: 0)
-    private let t2 = ProcStartTime(sec: 2000, usec: 0)
     private let now = Date(timeIntervalSince1970: 1_000_000)
+    /// Started long before the kill at `now`.
+    private let t1 = ProcStartTime(sec: 1000, usec: 0)
+    /// Started just after the kill at `now` — what a respawn looks like.
+    private let t2 = ProcStartTime(sec: 1_000_001, usec: 0)
+    /// Started after the re-kill at `now + 10`.
+    private let t3 = ProcStartTime(sec: 1_000_012, usec: 0)
 
     private func sig(_ command: String, _ cwd: String? = nil) -> RespawnHistory.Signature {
         RespawnHistory.Signature(command: command, cwd: cwd)
@@ -1307,8 +1311,32 @@ final class RespawnHistoryTests: XCTestCase {
         h = h.recordingKill(signature: s, pid: 100, startTime: t1, at: now)
         h = h.recording([obs(200, t2, s)], at: now.addingTimeInterval(5))
         h = h.recordingKill(signature: s, pid: 200, startTime: t2, at: now.addingTimeInterval(10))
-        h = h.recording([obs(300, t1, s)], at: now.addingTimeInterval(15))
+        h = h.recording([obs(300, t3, s)], at: now.addingTimeInterval(15))
         XCTAssertEqual(h.respawnCount(for: s), 2)
+    }
+
+    func testRespawn_siblingAlreadyRunningAtKillTime_isNotCounted() {
+        // Two identical `node server.js` in one repo share a signature. Killing one
+        // leaves the other listed under a different PID — that's a sibling that was
+        // there all along, not the killed one coming back (PID-62.5).
+        let s = sig("node server.js", "~/code/bidviz")
+        var h = RespawnHistory()
+        h = h.recordingKill(signature: s, pid: 100, startTime: t1, at: now)
+        h = h.recording([obs(101, t1, s)], at: now.addingTimeInterval(5))
+        XCTAssertFalse(h.isRespawner(s))
+        // The watch stays open: a genuine respawn later still counts.
+        h = h.recording([obs(101, t1, s), obs(200, t2, s)], at: now.addingTimeInterval(10))
+        XCTAssertEqual(h.respawnCount(for: s), 1)
+    }
+
+    func testRespawn_unknownStartTime_isNotCounted() {
+        // Without a start time the process can't be placed after the kill, so it
+        // can't be proven a respawn.
+        let s = sig("npm run dev")
+        var h = RespawnHistory()
+        h = h.recordingKill(signature: s, pid: 100, startTime: t1, at: now)
+        h = h.recording([obs(200, nil, s)], at: now.addingTimeInterval(5))
+        XCTAssertFalse(h.isRespawner(s))
     }
 
     // MARK: - Detection window
@@ -2329,5 +2357,79 @@ final class KillabilityTests: XCTestCase {
         let line = " 4711     1    30:13 ??       0.1  12345  /usr/local/bin/npm run dev"
         let item = try XCTUnwrap(ScanCore.makeItem(from: line, elapsedThreshold: 60))
         XCTAssertFalse(KillCore.routesViaDockerStop(item, containerOwners: [4711: "redis"]))
+    }
+}
+
+// MARK: - Kill feedback (PID-62.5)
+
+final class KillFeedbackTests: XCTestCase {
+
+    private func proc(_ pid: Int32, rssKB: Int = 0) -> ProcessItem {
+        ProcessItem(pid: pid, ppid: 1, command: "node x", elapsed: 0, tty: "??", kind: .node,
+                    riskTier: .easy, cpuPercent: 0, rssKB: rssKB)
+    }
+
+    func testPhase_fromEveryOutcome() {
+        XCTAssertEqual(KillPhase(.confirmed), .gone)
+        XCTAssertEqual(KillPhase(.survived), .survived)
+        XCTAssertEqual(KillPhase(.unkillable), .unkillable)
+        XCTAssertEqual(KillPhase(.notKilled), .skipped)
+    }
+
+    func testPhase_onlyGoneAndRespawnedAreDeparted() {
+        XCTAssertTrue(KillPhase.gone.isDeparted)
+        XCTAssertTrue(KillPhase.respawned.isDeparted)
+        for phase: KillPhase in [.killing, .survived, .unkillable, .skipped] {
+            XCTAssertFalse(phase.isDeparted, "\(phase)")
+        }
+    }
+
+    func testReport_countsEachPhase_andRespawnedIsNotCleaned() {
+        let items = (1...6).map { proc(Int32($0), rssKB: 1024) }
+        let phases: [Int32: KillPhase] = [1: .gone, 2: .gone, 3: .respawned, 4: .survived, 5: .unkillable, 6: .skipped]
+        let report = KillReport(items: items, phases: phases)
+        XCTAssertEqual(report.requested, 6)
+        XCTAssertEqual(report.gone, 2)
+        XCTAssertEqual(report.respawned, 1)
+        XCTAssertEqual(report.survived, 1)
+        XCTAssertEqual(report.unkillable, 1)
+        XCTAssertEqual(report.skipped, 1)
+    }
+
+    func testReport_reclaimedCountsOnlyRowsThatStayedGone() {
+        // A respawned process's memory came straight back; a survivor never freed any.
+        let items = [proc(1, rssKB: 2048), proc(2, rssKB: 4096), proc(3, rssKB: 8192)]
+        let report = KillReport(items: items, phases: [1: .gone, 2: .respawned, 3: .survived])
+        XCTAssertEqual(report.reclaimedKB, 2048)
+    }
+
+    func testReport_missingOrInFlightPhase_countsOnlyAsRequested() {
+        let report = KillReport(items: [proc(1), proc(2)], phases: [2: .killing])
+        XCTAssertEqual(report.requested, 2)
+        XCTAssertEqual(report.gone + report.respawned + report.survived + report.unkillable + report.skipped, 0)
+    }
+
+    func testSummaryLine_allGone_isHeadlinePlusReclaimed() {
+        let report = KillReport(items: [proc(1, rssKB: 2048), proc(2, rssKB: 1024)], phases: [1: .gone, 2: .gone])
+        XCTAssertEqual(report.summaryLine, "Cleaned 2 of 2 \u{00B7} 3 MB reclaimed")
+    }
+
+    func testSummaryLine_namesEveryNonCleanOutcome() {
+        let items = (1...5).map { proc(Int32($0)) }
+        let report = KillReport(items: items, phases: [1: .gone, 2: .respawned, 3: .survived, 4: .unkillable, 5: .skipped])
+        XCTAssertEqual(report.headline, "Cleaned 1 of 5")
+        XCTAssertEqual(report.details,
+                       "1 respawned \u{00B7} 1 didn\u{2019}t die \u{00B7} 1 can\u{2019}t kill \u{00B7} 1 skipped")
+    }
+
+    func testSummaryLine_nothingFreed_omitsReclaimed() {
+        let report = KillReport(items: [proc(1, rssKB: 0)], phases: [1: .survived])
+        XCTAssertEqual(report.summaryLine, "Cleaned 0 of 1 \u{00B7} 1 didn\u{2019}t die")
+    }
+
+    func testReport_empty() {
+        let report = KillReport(items: [], phases: [:])
+        XCTAssertEqual(report.requested, 0)
+        XCTAssertEqual(report.summaryLine, "Cleaned 0 of 0")
     }
 }

@@ -85,7 +85,7 @@ public struct RespawnHistory: Equatable {
         }
     }
 
-    /// An open watch: the identity we verified dead, and when.
+    /// An open watch: the identity we verified dead, and when the kill began.
     private struct Watch: Equatable {
         let pid: Int32
         let startTime: ProcStartTime?
@@ -114,7 +114,9 @@ public struct RespawnHistory: Equatable {
 
     /// Arm a watch for a kill `KillCore` verified as a real death. Pure — returns a
     /// new value. Callers pass the killed process's scan-time identity so a
-    /// same-identity reappearance (PID reuse) can be told apart from a respawn.
+    /// same-identity reappearance (PID reuse) can be told apart from a respawn, and
+    /// `now` as the moment the kill *began*: only a process started after it can be
+    /// the killed one coming back (PID-62.5).
     public func recordingKill(signature: Signature,
                               pid: Int32,
                               startTime: ProcStartTime?,
@@ -126,7 +128,8 @@ public struct RespawnHistory: Equatable {
 
     /// Fold one scan's observations into a new history: every open watch is either
     /// expired (past `detectionWindow`), matched by a same-signature process under a
-    /// *different* identity — a respawn, counted and the watch consumed — or left
+    /// *different* identity that started after the kill began — a respawn, counted
+    /// and the watch consumed — or left
     /// open for the next scan. Pure; observations are only ever read, and with no
     /// watch open (the common case — nothing killed yet) the value is returned
     /// unchanged.
@@ -138,9 +141,13 @@ public struct RespawnHistory: Equatable {
                 copy.watches[signature] = nil
                 continue
             }
+            // A same-signature process already running at kill time is a sibling
+            // (two identical `node server.js` in one repo), not a respawn. One with
+            // no start time can't be placed, so it doesn't count either.
             let respawned = observations.contains {
                 $0.signature == signature
                     && ($0.pid != watch.pid || $0.startTime != watch.startTime)
+                    && $0.startTime.map { Self.date(of: $0) >= watch.killedAt } == true
             }
             if respawned {
                 copy.counts[signature, default: 0] += 1
@@ -148,6 +155,11 @@ public struct RespawnHistory: Equatable {
             }
         }
         return copy
+    }
+
+    /// A `ProcStartTime` (the kernel's `timeval`, since the epoch) as a `Date`.
+    private static func date(of startTime: ProcStartTime) -> Date {
+        Date(timeIntervalSince1970: TimeInterval(startTime.sec) + TimeInterval(startTime.usec) / 1_000_000)
     }
 
     // MARK: - Queries

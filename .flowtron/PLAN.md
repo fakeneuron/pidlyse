@@ -13,7 +13,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-62.2** [heavy]🧠 | respawn-detection-core — Completed 2026-08-08.
   - [x] **PID-62.3** [medium]🧠 | honest-unkillable-ux — Completed 2026-09-23.
   - [x] **PID-62.4** [medium]🧠 | tree-redundancy-collapse — Completed 2026-09-23.
-  - [ ] **PID-62.5** [medium]🧠 | kill-feedback-stability — Visible per-row kill lifecycle ("killing… → gone / didn't die / respawned") driven by .2 verification; honest Clean-all outcome summary (N killed / M didn't die / K respawned); targeted stability fixes surfaced during the epic (scan churn, stale rows).
+  - [x] **PID-62.5** [medium]🧠 | kill-feedback-stability — Completed 2026-09-24.
   - [ ] **PID-62.N** [heavy]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed now with the reserved terminal `.N` suffix (never renumbers as children are added).
 
 ## Medium

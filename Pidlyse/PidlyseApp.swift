@@ -1,5 +1,6 @@
 import AppIntents
 import AppKit
+import PidlyseCore
 import SwiftUI
 
 @main
@@ -50,18 +51,18 @@ struct CleanSafeStraysIntent: AppIntent {
     static var openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let summary: ScanEngine.CleanSummary = await withCheckedContinuation { continuation in
+        let report: KillReport = await withCheckedContinuation { continuation in
             Task { @MainActor in
                 guard let engine = sharedEngine() else {
-                    continuation.resume(returning: .init(requested: 0, cleaned: 0, reclaimedKB: 0))
+                    continuation.resume(returning: KillReport(items: [], phases: [:]))
                     return
                 }
                 engine.cleanAllSafe { continuation.resume(returning: $0) }
             }
         }
-        let dialog: IntentDialog = summary.requested == 0
+        let dialog: IntentDialog = report.requested == 0
             ? "No unprotected safe-to-clean processes."
-            : "Cleaned \(summary.cleaned) of \(summary.requested)."
+            : "\(report.summaryLine)."
         return .result(dialog: dialog)
     }
 }

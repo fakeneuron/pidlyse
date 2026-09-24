@@ -4,8 +4,9 @@ import PidlyseCore
 /// The popover content: a live two-section list (Safe / Needs Review) bound to
 /// `ScanEngine`, with rows grouped by `kind`. Safe items can be swept with one
 /// "Clean all safe" click; every row also carries an individual kill button.
-/// Kills route through `KillService` (SIGTERM → 2 s → SIGKILL) and trigger a
-/// rescan. Never auto-kills — every kill is an explicit click (per CLAUDE.md).
+/// Kills route through `ScanEngine.kill` (SIGTERM → 2 s → SIGKILL, verified, then a
+/// rescan), and each killed row shows its phase in place of the button (PID-62.5).
+/// Never auto-kills — every kill is an explicit click (per CLAUDE.md).
 struct MenuBarView: View {
     /// The popover tabs, switched via the segmented control below the header.
     private enum Tab { case processes, containers, cleaned }
@@ -28,6 +29,12 @@ struct MenuBarView: View {
     /// reused across popover opens (see `AppDelegate`), so `@State` persists — the
     /// `.onDisappear` below clears it so each open starts unfiltered.
     @State private var filterText = ""
+    /// The last popover "Clean all" tally, shown under the Safe header for
+    /// `cleanReportLinger` (PID-62.5). `cleanReportToken` keeps an older clear
+    /// from wiping a newer report.
+    @State private var cleanReport: KillReport?
+    @State private var cleanReportToken = 0
+    private static let cleanReportLinger: TimeInterval = 8
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -39,7 +46,9 @@ struct MenuBarView: View {
             }
             switch selectedTab {
             case .processes:
-                if engine.items.isEmpty {
+                // Kill feedback (lingering rows, the Clean-all line) keeps the list up
+                // briefly after the last process goes (PID-62.5).
+                if engine.items.isEmpty && engine.departedItems.isEmpty && cleanReport == nil {
                     emptyState
                 } else {
                     content
@@ -69,10 +78,7 @@ struct MenuBarView: View {
     private var soleSafeKillShortcut: some View {
         Button("") {
             guard let sole = sweepableSafeItems.first else { return }
-            KillService.kill(sole, containerOwners: engine.containerOwners) { outcome in
-                engine.recordCleaned(sole, outcome: outcome)
-                engine.scan()
-            }
+            engine.kill([sole])
         }
         .keyboardShortcut(.delete, modifiers: .command)
         .disabled(sweepableSafeItems.count != 1)
@@ -191,16 +197,14 @@ struct MenuBarView: View {
     private var content: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                if safeItems.isEmpty && reviewItems.isEmpty {
-                    // Only reachable with an active filter (content renders only when
-                    // `engine.items` is non-empty), so this is the "no matches" state.
+                if safeRows.isEmpty && reviewRows.isEmpty && !filterText.isEmpty {
                     Text("No processes match \u{201C}\(filterText)\u{201D}.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                if !safeItems.isEmpty { safeSection }
-                if !reviewItems.isEmpty { reviewSection }
+                if !safeRows.isEmpty || cleanReport != nil { safeSection }
+                if !reviewRows.isEmpty { reviewSection }
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
@@ -221,17 +225,17 @@ struct MenuBarView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button("Clean all") {
-                    let killed = sweepableSafeItems
-                    KillService.kill(killed, containerOwners: engine.containerOwners) { outcomes in
-                        engine.recordCleaned(killed, outcomes: outcomes)
-                        engine.scan()
-                    }
+                    engine.kill(sweepableSafeItems) { showCleanReport($0) }
                 }
                 .buttonStyle(.borderless)
                 .foregroundStyle(.red)
                 .disabled(sweepableSafeItems.isEmpty)
             }
-            groups(for: safeItems)
+            if let cleanReport {
+                Text(cleanReport.summaryLine)
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            groups(for: safeRows)
         }
     }
 
@@ -239,7 +243,7 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Needs review (\(reviewItems.count))")
                 .font(.subheadline).bold()
-            groups(for: reviewItems)
+            groups(for: reviewRows)
         }
     }
 
@@ -307,6 +311,7 @@ struct MenuBarView: View {
         let protectable = item.bucket == .safe && engine.cwds[item.pid] != nil
         let protected = item.bucket == .safe && isProtected(item)
         let killability = engine.killability(item)
+        let killPhase = engine.killPhase(for: item)
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 if protected {
@@ -368,20 +373,20 @@ struct MenuBarView: View {
                 }
                 .buttonStyle(.borderless)
                 .help("Ignore for session")
-                // A kill button is a promise the process will die and stay dead
-                // (PID-62.3). Where we can't make it — foreign-owned, or a known
-                // respawner — the button is replaced by a badge carrying the
-                // explanation, rather than left as a dead end.
-                if let explanation = killability.explanation {
+                // A kill in flight or just answered shows its phase where the button
+                // was (PID-62.5). Otherwise, a kill button is a promise the process
+                // will die and stay dead (PID-62.3). Where we can't make it —
+                // foreign-owned, or a known respawner — the button is replaced by a
+                // badge carrying the explanation, rather than left as a dead end.
+                if let killPhase {
+                    killPhaseLabel(killPhase)
+                } else if let explanation = killability.explanation {
                     Image(systemName: killabilityBadge(killability))
                         .foregroundStyle(.secondary)
                         .help(explanation)
                 } else {
                     Button {
-                        KillService.kill(item, containerOwners: engine.containerOwners) { outcome in
-                            engine.recordCleaned(item, outcome: outcome)
-                            engine.scan()
-                        }
+                        engine.kill([item])
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                     }
@@ -396,7 +401,41 @@ struct MenuBarView: View {
                     .onAppear { engine.loadOpenFiles(for: item.pid) }
             }
         }
+        // A row whose process is gone stays only to show the verdict (PID-62.5).
+        .opacity(killPhase?.isDeparted == true ? 0.5 : 1)
         .contextMenu { rowContextMenu(item) }
+    }
+
+    /// The kill's phase in place of the ✕ (PID-62.5): a spinner while in flight,
+    /// then the verified verdict, with `KillPhase.detail` as the tooltip.
+    private func killPhaseLabel(_ phase: KillPhase) -> some View {
+        HStack(spacing: 3) {
+            if phase == .killing {
+                ProgressView().controlSize(.mini)
+            }
+            Text(phase.label).font(.caption2)
+        }
+        .foregroundStyle(killPhaseColor(phase))
+        .help(phase.detail)
+    }
+
+    private func killPhaseColor(_ phase: KillPhase) -> Color {
+        switch phase {
+        case .gone:                          return .green
+        case .respawned:                     return .orange
+        case .survived:                      return .red
+        case .killing, .unkillable, .skipped: return .secondary
+        }
+    }
+
+    /// Show a Clean-all tally under the Safe header for `cleanReportLinger`.
+    private func showCleanReport(_ report: KillReport) {
+        cleanReportToken += 1
+        let token = cleanReportToken
+        cleanReport = report
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.cleanReportLinger) {
+            if cleanReportToken == token { cleanReport = nil }
+        }
     }
 
     /// Right-click affordances for a row (PID-50.2): clipboard copies + reveal the
@@ -548,6 +587,21 @@ struct MenuBarView: View {
 
     private var safeItems: [ProcessItem] { engine.items.filter { $0.bucket == .safe && matchesFilter($0) } }
     private var reviewItems: [ProcessItem] { engine.items.filter { $0.bucket == .needsReview && matchesFilter($0) } }
+
+    /// What each section renders: its live items plus any verified-gone rows still
+    /// lingering to show their verdict (PID-62.5). Counts, the sweep set and the
+    /// reclaimable total stay on the live items alone.
+    private var safeRows: [ProcessItem] { safeItems + departedRows(.safe) }
+    private var reviewRows: [ProcessItem] { reviewItems + departedRows(.needsReview) }
+
+    /// Lingering gone rows for one bucket, minus any PID a scan has already re-listed
+    /// (a recycled PID) so row IDs stay unique.
+    private func departedRows(_ bucket: Bucket) -> [ProcessItem] {
+        let live = Set(engine.items.map(\.pid))
+        return engine.departedItems.values.filter {
+            $0.bucket == bucket && !live.contains($0.pid) && matchesFilter($0)
+        }
+    }
 
     /// The safe rows that "Clean all" (and the ⌘⌫ shortcut) actually sweep — safe items
     /// minus any the user has protected (PID-54.4) and minus any Pidlyse can't honestly

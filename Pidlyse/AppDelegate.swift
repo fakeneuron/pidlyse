@@ -71,8 +71,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for url in urls {
             switch URLScheme.parse(url) {
             case .clean:
-                engine.cleanAllSafe { [weak self] summary in
-                    self?.engine.fireCleanResultNotification(summary)
+                engine.cleanAllSafe { [weak self] report in
+                    self?.engine.fireCleanResultNotification(report)
                 }
             case .scan:
                 engine.rescan()

@@ -34,6 +34,7 @@ Pidlyse/
         ScanHistory.swift         # rolling-window per-process CPU cache (PID+startTime keyed) + sustained-low-CPU query
         RespawnHistory.swift      # session-only respawn cache: command-signature normalization + windowed watch on verified kills
         Killability.swift         # pure killability overlay: killable / unkillable (foreign owner) / respawner derivation + the one explanation sentence
+        KillFeedback.swift        # pure kill-feedback vocabulary: KillPhase (per-row lifecycle label) + KillReport (honest Clean-all tally + summary line)
         CleanEvent.swift          # Codable model: kind rawValue, project label, rssKB, timestamp; no command line (privacy-first)
         CleanLog.swift            # pure rolling-window stats (count, RAM reclaimed, top kinds) + count-cap retention
         DockerCore.swift          # pure `docker ps` / `docker stats` output parsing
@@ -133,12 +134,12 @@ Killability awareness ([[PID-62.3]]): a row Pidlyse cannot honestly kill carries
 3. After 2 s, if process still alive → `SIGKILL` fallback.
 4. **Death check** ([[PID-62.2]]): after the `SIGKILL` fallback, `KillCore` re-reads the process table before reporting success. The outcome is `confirmed` only when the process is verified gone — no entry, PID recycled, or an unreaped zombie — and `survived` when it is still running under the same identity. (A process that exits during the grace period needs no probe; it is already observed gone.) Together with `notKilled` (identity guard refused) and `unkillable` (`EPERM` — a foreign owner, [[PID-62.3]]) these are the four honest answers a kill can give, and only `confirmed` is written to the clean log, so the "RAM reclaimed" figure counts real deaths only.
 5. **Group rows** ([[PID-62.4]]): the root goes through steps 2–4 first, which takes a well-behaved tree down inside its grace period. Then every member runs the same identity-guarded path concurrently: a member that died with its root is simply gone, and one that didn't (a `sh -c` root doesn't forward signals) gets its own SIGTERM → grace → SIGKILL. An `unkillable` root stops the group kill before any member is signalled. `KillCore.groupOutcome` reports `confirmed` only when every member is verified gone, and `survived` when any member lives on (including a foreign-owned one).
-6. Rescan triggered immediately after kill.
-7. PID removed from list on next scan result.
+6. Rescan triggered immediately after kill. A scan requested while another is in flight queues one follow-up rather than being dropped, so the killed row can't be left up by a scan that enumerated before the death ([[PID-62.5]]).
+7. **Per-row lifecycle** ([[PID-62.5]]): every trigger (row ✕, ⌘⌫, Clean all, headless) runs through `ScanEngine.kill`. The row shows `killing…` in place of its ✕, then the verified verdict as a `KillPhase`: `gone`, `didn't die` (survived), `can't kill` (unkillable), or `skipped` (identity guard refused). After the follow-up scan, a verified death whose signature came back under a new PID reads `respawned` instead of `gone`. The state is keyed by pid + scan-time start time, so an intervening scan doesn't reset it, and a row in any phase is out of the sweep set. It clears ~3 s after the final phase. A gone row lingers dimmed for that window, then leaves the list.
 
-Bulk action: "Kill all safe" applies the same flow to every safe-bucket process.
+Bulk action: "Clean all" applies the same flow to the sweep set and reports a `KillReport` — `Cleaned N of M` plus any respawned / didn't die / can't kill / skipped counts and the RAM freed by rows that stayed gone. The popover shows it under the Safe header for ~8 s. The `pidlyse://clean` notification, the Shortcuts dialog, and CLI `clean` print the same line (the CLI has no follow-up scan, so it never reports respawns).
 
-**Respawn detection** ([[PID-62.2]]): a verified death arms a watch on that process's *command signature* — its command line (lowercased, whitespace-collapsed, with per-launch temp paths and IPC-handle flags stripped) plus its resolved working directory. If a later scan surfaces that signature under a **different** PID within the detection window (default 5 min), something restarted it and killing it again won't stick, so `RespawnHistory` counts it as a respawn. The cache is a pure value type owned by `ScanEngine` (same split as `ScanHistory`) and is session-only: respawn memory earned before a relaunch says nothing about the current session, so a respawner re-earns its badge after one kill attempt. Signal-only — it never feeds the risk tier, the bucket, or the kill bar.
+**Respawn detection** ([[PID-62.2]]): a verified death arms a watch on that process's *command signature* — its command line (lowercased, whitespace-collapsed, with per-launch temp paths and IPC-handle flags stripped) plus its resolved working directory. If a later scan surfaces that signature under a **different** PID, started after the kill began, within the detection window (default 5 min), something restarted it and killing it again won't stick, so `RespawnHistory` counts it as a respawn. A same-signature sibling that was already running at kill time doesn't count ([[PID-62.5]]). The cache is a pure value type owned by `ScanEngine` (same split as `ScanHistory`) and is session-only: respawn memory earned before a relaunch says nothing about the current session, so a respawner re-earns its badge after one kill attempt. Signal-only — it never feeds the risk tier, the bucket, or the kill bar.
 
 Dismiss / ignore: snoozes that PID for the session (does not survive restart).
 
@@ -198,7 +199,7 @@ Configurable at runtime (`SettingsView.swift`):
 | Command | Does |
 |---------|------|
 | `pidlyse list [--safe]` | One-shot scan; prints candidates (PID, bucket, kind, age, RAM, project, command). `--safe` filters to the safe bucket; protected rows carry 🔒 |
-| `pidlyse clean` | Kills exactly the app's "Clean all" sweep set — safe bucket minus protected projects |
+| `pidlyse clean` | Kills exactly the app's "Clean all" sweep set — safe bucket minus protected projects; prints each row's verdict and the shared `KillReport` summary line |
 | `pidlyse kill <pid>` | Kills one *scanned candidate* by PID (any bucket, like the app's per-row kill button); refuses PIDs the scan didn't surface |
 | `pidlyse help` | Usage (also the bare-invocation default — never scans or kills) |
 

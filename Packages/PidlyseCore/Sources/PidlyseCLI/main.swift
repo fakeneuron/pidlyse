@@ -150,13 +150,15 @@ private func commandClean() -> Int32 {
     }
     let outcomes = killAll(sweepable, containerOwners: scan.containerOwners)
     recordCleaned(sweepable, outcomes: outcomes, cwds: scan.cwds)
+    // Same phase labels and tally as the app (PID-62.5). No respawn check: a
+    // one-shot CLI has no follow-up scan or session memory to detect one.
+    let phases = outcomes.mapValues(KillPhase.init)
     for item in sweepable {
-        let mark = outcomes[item.pid] == .confirmed ? "✓ killed    " : "✗ not killed"
+        let phase = phases[item.pid]
+        let mark = (phase == .gone ? "✓ " : "✗ ") + (phase?.label ?? "?").padding(toLength: 10, withPad: " ", startingAt: 0)
         print("\(mark)  \(item.pid)  \(item.displayLabel)  \(scan.cwds[item.pid]?.label ?? item.displayPath)")
     }
-    let confirmed = sweepable.filter { outcomes[$0.pid] == .confirmed }
-    let reclaimedKB = confirmed.reduce(0) { $0 + $1.rssKB }
-    print("Cleaned \(confirmed.count)/\(sweepable.count) · \(CLICore.formatRSS(kb: reclaimedKB)) reclaimed")
+    print(KillReport(items: sweepable, phases: phases).summaryLine)
     return 0
 }
 

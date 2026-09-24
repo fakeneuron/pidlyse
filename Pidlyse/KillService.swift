@@ -9,7 +9,8 @@ import PidlyseCore
 /// cli-companion binary, PID-EPIC-57); this file owns only the queue hops.
 ///
 /// Per CLAUDE.md: the grace period is never skipped, and a kill only ever runs
-/// from an explicit user action. Kill logic lives here (not `ScanEngine`).
+/// from an explicit user action. Kill logic lives here (not `ScanEngine`, whose
+/// `kill(_:completion:)` only sequences the per-row feedback around it, PID-62.5).
 enum KillService {
     /// Kill outcome, re-exported so `ScanEngine.recordCleaned` keeps its call
     /// shape (PID-53.2 — only `.confirmed` deaths are logged).
