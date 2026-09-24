@@ -510,9 +510,10 @@ final class ScanEngine: ObservableObject {
     func killability(_ item: ProcessItem) -> Killability {
         let respawner = isRespawner(item)
         // A container root stopped via `docker stop` needs no signal permission, so
-        // its owner uid says nothing about whether the kill will work.
+        // its owner uid says nothing about whether the kill will work. A group row
+        // answers for every member it would kill (PID-62.4).
         let ownerUID = KillCore.routesViaDockerStop(item, containerOwners: containerOwners)
-            ? nil : item.uid
+            ? nil : Killability.groupOwnerUID(item, currentUID: currentUID)
         // Attribution is only needed for the respawner sentence, so the common
         // killable row doesn't pay for an ancestor walk.
         let manager = respawner

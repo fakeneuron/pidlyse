@@ -65,6 +65,17 @@ public enum Killability: Equatable {
         return ownerUID != currentUID
     }
 
+    /// The owner uid that decides a row's killability. For a group row
+    /// (`ScanCore.collapseTrees`, PID-62.4) that's the first foreign-owned member, if
+    /// any: part of the tree would survive the group kill, so the row can't honestly
+    /// offer one. Otherwise it's the root's uid (still `nil` when unresolved).
+    public static func groupOwnerUID(_ item: ProcessItem, currentUID: uid_t) -> uid_t? {
+        let foreign = ([item] + item.members).first {
+            isForeignOwned(ownerUID: $0.uid, currentUID: currentUID)
+        }
+        return foreign?.uid ?? item.uid
+    }
+
     /// Human-readable owner for the explanation sentence. Root is worth naming
     /// outright — it's the case users actually hit (Docker, system daemons); any other
     /// foreign uid is rare enough that the raw number is the most honest thing to show.

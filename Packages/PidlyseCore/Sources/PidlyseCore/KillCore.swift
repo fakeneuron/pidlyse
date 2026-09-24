@@ -56,12 +56,49 @@ public enum KillCore {
     /// `containerOwners` is the scan-time owner cache; an empty map (its default)
     /// means no container resolution is available and docker items fall through
     /// to POSIX.
+    ///
+    /// A group row (`ScanCore.collapseTrees`, PID-62.4) kills its root first, which
+    /// takes a well-behaved tree down with it inside the root's grace period. Then
+    /// every member runs the same identity-guarded path concurrently: one that
+    /// followed its root is already gone and returns at once, and one that didn't
+    /// (e.g. under a `sh -c` root that doesn't forward signals) gets its own SIGTERM →
+    /// grace → SIGKILL. `groupOutcome` folds the per-member answers into the row's one
+    /// outcome.
     public static func kill(_ item: ProcessItem, containerOwners: [Int32: String] = [:]) -> KillOutcome {
         if routesViaDockerStop(item, containerOwners: containerOwners),
            dockerStopByName(containerOwners[item.pid]) {
             return .confirmed
         }
-        return killPosix(item.pid, expected: item.startTime)
+        let root = killPosix(item.pid, expected: item.startTime)
+        // An EPERM root is still alive and foreign-owned: signalling its members would
+        // only half-kill a tree we've already said we can't kill.
+        guard !item.members.isEmpty, root != .unkillable else { return root }
+        var memberOutcomes = [KillOutcome](repeating: .notKilled, count: item.members.count)
+        memberOutcomes.withUnsafeMutableBufferPointer { outcomes in
+            DispatchQueue.concurrentPerform(iterations: item.members.count) { i in
+                outcomes[i] = killPosix(item.members[i].pid, expected: item.members[i].startTime)
+            }
+        }
+        return groupOutcome(root: root, members: memberOutcomes)
+    }
+
+    /// Fold a group kill's per-process outcomes into the row's one honest answer
+    /// (PID-62.4). A member's `notKilled` means it was already gone when its turn came
+    /// (it died with its root), which is exactly what a group kill wants. So:
+    /// - root `unkillable` → `unkillable` (`kill` never signals the members then);
+    /// - else any member still running → `survived`, including an `unkillable`
+    ///   (foreign-owned) member: the root died, so remembering the row as unkillable
+    ///   would pin that verdict on a dead pid, and the survivor surfaces on its own on
+    ///   the next scan with its own owner-derived badge;
+    /// - else `confirmed` if anything was verified killed — every member is gone;
+    /// - else `notKilled` (the root's identity guard refused and nothing else was
+    ///   ours to kill).
+    public static func groupOutcome(root: KillOutcome, members: [KillOutcome]) -> KillOutcome {
+        if root == .unkillable { return .unkillable }
+        let all = [root] + members
+        if all.contains(.survived) || all.contains(.unkillable) { return .survived }
+        if all.contains(.confirmed) { return .confirmed }
+        return .notKilled
     }
 
     // MARK: - Process identity (PID-reuse guard)

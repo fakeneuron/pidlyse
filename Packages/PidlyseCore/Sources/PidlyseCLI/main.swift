@@ -141,7 +141,8 @@ private func commandClean() -> Int32 {
         $0.bucket == .safe
             && !scan.protectedPIDs.contains($0.pid)
             && (KillCore.routesViaDockerStop($0, containerOwners: scan.containerOwners)
-                || !Killability.isForeignOwned(ownerUID: $0.uid, currentUID: currentUID))
+                || !Killability.isForeignOwned(ownerUID: Killability.groupOwnerUID($0, currentUID: currentUID),
+                                              currentUID: currentUID))
     }
     guard !sweepable.isEmpty else {
         print("Nothing to clean — no unprotected, killable safe-bucket processes.")

@@ -41,61 +41,120 @@ public enum ScanCore {
                 }
             }
         }
-        if !dismissedPIDs.isEmpty {
-            all = all.filter { !dismissedPIDs.contains($0.pid) }
+        // Disabled kinds filter per process, *before* the collapse, so a process of a
+        // disabled kind is neither hidden inside a visible group (and killed with it)
+        // nor hides the enabled members beneath it. (PID-62.4)
+        if !disabledKinds.isEmpty {
+            all = all.filter { !disabledKinds.contains($0.kind) }
         }
-        // Filter disabled kinds *after* the wrapper collapse: a merged wrapper row
-        // takes its `kind` from the meaningful child (`npm run dev` → `.vite`), so
-        // judging the final, displayed kind matches what the user sees in the row.
-        let collapsed = collapseWrappers(all)
-        guard !disabledKinds.isEmpty else { return collapsed }
-        return collapsed.filter { !disabledKinds.contains($0.kind) }
+        let collapsed = collapseTrees(all)
+        // Dismissals apply to whole rows, so they filter *after* the collapse: a
+        // dismissed group's root pid drops the group, rather than leaving its members
+        // to re-form a smaller group on the next scan. (PID-62.4)
+        guard !dismissedPIDs.isEmpty else { return collapsed }
+        return collapsed.filter { !dismissedPIDs.contains($0.pid) }
     }
 
-    // MARK: - Wrapper collapse (PID-039)
+    // MARK: - Tree collapse (PID-039, PID-62.4)
 
-    /// Fold each npm/npx *wrapper* parent and its single scanned child into one
-    /// row. A wrapper (`npm run dev`, `npm exec @playwright/mcp`) is just a
-    /// launcher whose meaningful payload is the child it spawned (vite, the
-    /// playwright-mcp node process); surfacing both reads as a duplicate — the
-    /// same `npm` appearing as its own row and again under its child. The merged
-    /// row takes its **identity** (pid/ppid/tty/startTime/uid — i.e. the kill target,
-    /// the PID-reuse guard, and the owner) from the wrapper root, so killing it tears down
-    /// the whole subtree; but its **kind/command/riskTier** come from the child,
-    /// so it groups and labels as the real process. CPU + RAM are summed.
+    /// Fold every scanned process whose direct parent is also scanned (and belongs
+    /// with it — see `belongsWithParent`) into its topmost linked ancestor, so a chain that lives and dies together — `sh -c
+    /// npm run dev` → `npm` → `vite`, `uv run` → uvicorn, `next dev` → `next-server`,
+    /// playwright-mcp → its Chrome brood — surfaces as one row instead of one per PID.
+    /// Generalizes PID-039's 1:1 npm-wrapper merge to any depth and fan-out.
     ///
-    /// Only the 1:1 case collapses. A wrapper with zero scanned children (e.g. an
-    /// orphaned `npm run dev` whose server already died) or with more than one is
-    /// left untouched — that keeps every row's `id` (its pid) unique and the kill
-    /// target unambiguous. All observed real trees are 1:1.
-    public static func collapseWrappers(_ items: [ProcessItem]) -> [ProcessItem] {
-        let childrenByPPID = Dictionary(grouping: items, by: { $0.ppid })
-        var consumed = Set<Int32>()
-        var mergedByWrapperPID: [Int32: ProcessItem] = [:]
-        for wrapper in items where isNpmWrapper(wrapper.command) {
-            guard !consumed.contains(wrapper.pid) else { continue }
-            let children = (childrenByPPID[wrapper.pid] ?? []).filter { !consumed.contains($0.pid) }
-            guard children.count == 1, let child = children.first else { continue }
-            consumed.insert(wrapper.pid)
-            consumed.insert(child.pid)
-            mergedByWrapperPID[wrapper.pid] = ProcessItem(
-                pid: wrapper.pid, ppid: wrapper.ppid, command: child.command,
-                elapsed: wrapper.elapsed, tty: wrapper.tty, kind: child.kind,
-                riskTier: child.riskTier,
-                cpuPercent: wrapper.cpuPercent + child.cpuPercent,
-                rssKB: wrapper.rssKB + child.rssKB, startTime: wrapper.startTime,
-                uid: wrapper.uid)
+    /// The group row takes its **identity** (pid/ppid/tty/startTime/uid/elapsed —
+    /// the kill target, the PID-reuse guard, the owner) from the root. Its **label**
+    /// (kind/command/customLabel) comes from the *representative*: the first member,
+    /// breadth-first from the root, that isn't a launcher (npm/npx, a `sh -c` shell,
+    /// `uv run`), so the row reads as the real process. Its `riskTier` is the most
+    /// cautious of any member — a group is never easier to kill than its riskiest
+    /// process — and CPU + RAM are summed. The other members ride on `members` so
+    /// `KillCore` can kill and verify each one.
+    ///
+    /// Links are direct parent → child within the scanned set only, and only where the
+    /// pair plausibly lives and dies together (`belongsWithParent`); a chain broken by
+    /// an unscanned or unrelated process stays separate rows. Docker processes never
+    /// group (the daemon tree is Docker Desktop's to manage, and container roots stop
+    /// via `docker stop`).
+    public static func collapseTrees(_ items: [ProcessItem]) -> [ProcessItem] {
+        let groupable = items.filter { $0.kind != .docker }
+        let byPID = Dictionary(groupable.map { ($0.pid, $0) }, uniquingKeysWith: { first, _ in first })
+        let linked = groupable.filter { child in
+            byPID[child.ppid].map { belongsWithParent(child, $0) } ?? false
         }
-        guard !consumed.isEmpty else { return items }
+        let linkedPIDs = Set(linked.map { $0.pid })
+        let childrenByPPID = Dictionary(grouping: linked, by: { $0.ppid })
+        guard !childrenByPPID.isEmpty else { return items }
+        var consumed = Set<Int32>()
+        var groupByRootPID: [Int32: ProcessItem] = [:]
+        for root in groupable where !linkedPIDs.contains(root.pid) {
+            // Breadth-first: a real process table is acyclic, and every descendant's
+            // parent chain ends at this root, so the walk terminates.
+            var members: [ProcessItem] = []
+            var queue = childrenByPPID[root.pid] ?? []
+            while !queue.isEmpty {
+                let member = queue.removeFirst()
+                members.append(member)
+                queue += childrenByPPID[member.pid] ?? []
+            }
+            guard !members.isEmpty else { continue }
+            let all = [root] + members
+            let representative = all.first { !isLauncher($0.command) } ?? root
+            consumed.formUnion(members.map { $0.pid })
+            groupByRootPID[root.pid] = ProcessItem(
+                pid: root.pid, ppid: root.ppid, command: representative.command,
+                elapsed: root.elapsed, tty: root.tty, kind: representative.kind,
+                riskTier: all.map { $0.riskTier }.max() ?? root.riskTier,
+                cpuPercent: all.reduce(0) { $0 + $1.cpuPercent },
+                rssKB: all.reduce(0) { $0 + $1.rssKB },
+                startTime: root.startTime, customLabel: representative.customLabel,
+                uid: root.uid, members: members)
+        }
         return items.compactMap { item in
-            if let merged = mergedByWrapperPID[item.pid] { return merged }
+            if let group = groupByRootPID[item.pid] { return group }
             if consumed.contains(item.pid) { return nil }
             return item
         }
     }
 
+    /// Whether a scanned `child` folds into its scanned `parent`'s row. Being in the
+    /// scanned set is not enough: a `node`-run agent CLI that starts MCP servers is a
+    /// scanned `.node` parent, and folding its children would put the user's live
+    /// session behind a stray server's kill button. So a link needs one of these:
+    /// - the parent is a launcher (npm/npx, `sh -c`, `uv run`) and exists only to run
+    ///   the child;
+    /// - both are the same kind (`next dev` → `next-server`, `wrangler` → its worker);
+    /// - the child is a Chrome helper, i.e. the browser brood of whatever drives it;
+    /// - the child is a generic `.node` worker of a framework parent (turbopack's
+    ///   `pool_entry` under `next-server`) — never the reverse.
+    private static func belongsWithParent(_ child: ProcessItem, _ parent: ProcessItem) -> Bool {
+        if isLauncher(parent.command) { return true }
+        if child.kind == parent.kind { return true }
+        if child.kind == .chromeHelper { return true }
+        return child.kind == .node && parent.kind != .node
+    }
+
+    /// True when `command` only launches the process that does the real work — an
+    /// npm/npx wrapper, a `sh`/`bash`/`zsh -c …` shell, or `uv run` — so a group row
+    /// labels itself after the next member instead. (PID-62.4)
+    private static func isLauncher(_ command: String) -> Bool {
+        if isNpmWrapper(command) { return true }
+        let tokens = command.lowercased().split(separator: " ", maxSplits: 2).map(String.init)
+        guard tokens.count > 1 else { return false }
+        // A login shell reports its argv[0] as `-zsh`.
+        var leaf = (tokens[0] as NSString).lastPathComponent
+        if leaf.hasPrefix("-") { leaf.removeFirst() }
+        let flag = tokens[1]
+        if ["sh", "bash", "zsh"].contains(leaf), flag.hasPrefix("-"), !flag.hasPrefix("--"),
+           flag.contains("c") {
+            return true
+        }
+        return leaf == "uv" && flag == "run"
+    }
+
     /// True when `command` is an npm/npx launcher invocation — the wrapper-process
-    /// shape `collapseWrappers` folds into its child. Matches a bare `npm`/`npx`,
+    /// shape `collapseTrees` treats as a launcher. Matches a bare `npm`/`npx`,
     /// a path-qualified launcher (`/usr/local/bin/npm run …`), or the
     /// `npm-cli.js` / `npx-cli.js` form. Deliberately command-based, not
     /// `kind`-based: `npm exec @playwright/mcp` classifies as `.playwrightMCP`

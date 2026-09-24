@@ -59,7 +59,7 @@ public enum ProcessKind: String, CaseIterable {
 
 /// How risky it is to kill a process. The display gradient (PID-003 may render
 /// all three); the kill-action `Bucket` is derived from it.
-public enum RiskTier {
+public enum RiskTier: Comparable {
     case easy       // obvious stray — orphaned, old, no terminal
     case moderate   // probably stray, but verify
     case high       // real dev infra (docker / uvicorn) or actively managed
@@ -119,11 +119,16 @@ public struct ProcessItem: Identifiable {
     /// a dead-end button. `nil` means "unknown", which never removes an
     /// affordance. (PID-62.3)
     public let uid: uid_t?
+    /// The other scanned processes folded into this row by `ScanCore.collapseTrees`
+    /// (PID-62.4) — descendants of this row's root that live and die with it, in
+    /// breadth-first order. Empty for a standalone process. Each keeps its own
+    /// pid/startTime/uid so the group kill can signal and verify every member.
+    public let members: [ProcessItem]
 
     public init(pid: Int32, ppid: Int32, command: String, elapsed: TimeInterval,
                 tty: String, kind: ProcessKind, riskTier: RiskTier,
                 cpuPercent: Double, rssKB: Int, startTime: ProcStartTime? = nil,
-                customLabel: String? = nil, uid: uid_t? = nil) {
+                customLabel: String? = nil, uid: uid_t? = nil, members: [ProcessItem] = []) {
         self.pid = pid
         self.ppid = ppid
         self.command = command
@@ -136,6 +141,7 @@ public struct ProcessItem: Identifiable {
         self.rssKB = rssKB
         self.startTime = startTime
         self.uid = uid
+        self.members = members
     }
 
     public var id: Int32 { pid }

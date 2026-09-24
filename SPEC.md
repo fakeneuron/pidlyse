@@ -116,6 +116,8 @@ Each candidate carries a descriptive **`kind`** (see the Scan Engine table) and 
 
 `bucket = (riskTier == .easy) ? .safe : .needsReview`. A process is **never auto-killed**; `safe` items still require an explicit click (per CLAUDE.md).
 
+Tree collapse ([[PID-039]], [[PID-62.4]]): `ScanCore.collapseTrees` folds every scanned process whose direct parent is also scanned *and belongs with it* (the parent is a launcher, the two share a kind, or the child is a Chrome helper / generic `.node` worker — so a `node`-run agent CLI never swallows the MCP servers it starts) into its topmost linked ancestor, so a chain that lives and dies together (`sh -c npm run dev` → `npm` → `vite`, `uv run` → uvicorn, `next dev` → `next-server`, playwright-mcp → its Chrome brood) is **one row**. The row keeps the root's identity (pid, start-time token, owner — the kill target), labels itself after the first member that isn't a launcher (npm/npx, `sh -c`, `uv run`), takes the **most cautious** `riskTier` of any member, and sums CPU/RAM. The members ride on `ProcessItem.members` and appear as a read-only "group of N" inspector line and a ×N row count. "Clean all", the section counts, the clean log and respawn signatures all see one logical unit. A group is foreign-owned (unkillable) if any member is. Docker processes never group. Disabled kinds filter per process before grouping. Dismissing a group row dismisses the whole group.
+
 Port registry awareness ([[PID-005]]): any process listening on a port in the CLAUDE.md global port table is automatically demoted to "needs review" — never auto-killed.
 
 Protected-projects awareness (PID-54.4): a safe process whose working directory sits under a user-protected project tree stays *listed* in the Safe section (badged 🔒) but is excluded from the "Clean all" sweep, the section count, and the reclaimable total — a display/sweep overlay, not a bucket change. Its individual kill button still works.
@@ -130,8 +132,9 @@ Killability awareness ([[PID-62.3]]): a row Pidlyse cannot honestly kill carries
 2. `KillService` sends `SIGTERM` (via the shared `KillCore` in `PidlyseCore`).
 3. After 2 s, if process still alive → `SIGKILL` fallback.
 4. **Death check** ([[PID-62.2]]): after the `SIGKILL` fallback, `KillCore` re-reads the process table before reporting success. The outcome is `confirmed` only when the process is verified gone — no entry, PID recycled, or an unreaped zombie — and `survived` when it is still running under the same identity. (A process that exits during the grace period needs no probe; it is already observed gone.) Together with `notKilled` (identity guard refused) and `unkillable` (`EPERM` — a foreign owner, [[PID-62.3]]) these are the four honest answers a kill can give, and only `confirmed` is written to the clean log, so the "RAM reclaimed" figure counts real deaths only.
-5. Rescan triggered immediately after kill.
-6. PID removed from list on next scan result.
+5. **Group rows** ([[PID-62.4]]): the root goes through steps 2–4 first, which takes a well-behaved tree down inside its grace period. Then every member runs the same identity-guarded path concurrently: a member that died with its root is simply gone, and one that didn't (a `sh -c` root doesn't forward signals) gets its own SIGTERM → grace → SIGKILL. An `unkillable` root stops the group kill before any member is signalled. `KillCore.groupOutcome` reports `confirmed` only when every member is verified gone, and `survived` when any member lives on (including a foreign-owned one).
+6. Rescan triggered immediately after kill.
+7. PID removed from list on next scan result.
 
 Bulk action: "Kill all safe" applies the same flow to every safe-bucket process.
 

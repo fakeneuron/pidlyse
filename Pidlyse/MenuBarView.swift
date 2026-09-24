@@ -321,7 +321,15 @@ struct MenuBarView: View {
                         .frame(width: 8, height: 8)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("PID \(item.pid)").font(.caption).monospaced()
+                    HStack(spacing: 4) {
+                        Text("PID \(item.pid)").font(.caption).monospaced()
+                        // Group row (PID-62.4): how many processes the one kill covers.
+                        if !item.members.isEmpty {
+                            Text("\u{00D7}\(item.members.count + 1)")
+                                .font(.caption2).foregroundStyle(.secondary)
+                                .help("\(item.members.count + 1) processes that live and die together")
+                        }
+                    }
                     Text(rowDescriptor(item))
                         .font(.caption2).foregroundStyle(.secondary)
                         .lineLimit(1).truncationMode(.tail)
@@ -471,10 +479,20 @@ struct MenuBarView: View {
             // shows fewer lines (graceful degrade). The cwd / project-folder hint
             // (PID-038) is promoted to the always-visible row descriptor instead of a
             // line here — see `rowDescriptor`.
-            if let ports = engine.listeningPorts[item.pid], !ports.isEmpty {
+            if let ports = listeningPorts(item) {
                 Text("\(ports.sorted().map { ":\($0)" }.joined(separator: ", ")) listening")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+            }
+            // The processes folded into this row (PID-62.4) — read-only: the row's one
+            // kill covers them all.
+            if !item.members.isEmpty {
+                Text("group of \(item.members.count + 1) — "
+                     + ([item] + item.members).map { "PID \($0.pid) \(memberLabel($0))" }
+                        .joined(separator: " · "))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             if !ancestors.isEmpty {
                 Text("child of \(ancestors.joined(separator: " ← "))")
@@ -569,11 +587,28 @@ struct MenuBarView: View {
         guard !query.isEmpty else { return true }
         if item.command.localizedCaseInsensitiveContains(query) { return true }
         if rowDescriptor(item).localizedCaseInsensitiveContains(query) { return true }
-        if let ports = engine.listeningPorts[item.pid],
+        if let ports = listeningPorts(item),
            ports.contains(where: { String($0).contains(query) }) {
             return true
         }
         return false
+    }
+
+    /// Registered ports any process in the row listens on — the root plus, for a group
+    /// row, every member (PID-62.4), since the listener is often a child (`next-server`,
+    /// `vite`). `nil` when none.
+    private func listeningPorts(_ item: ProcessItem) -> Set<Int>? {
+        let ports = ([item] + item.members).reduce(into: Set<Int>()) {
+            $0.formUnion(engine.listeningPorts[$1.pid] ?? [])
+        }
+        return ports.isEmpty ? nil : ports
+    }
+
+    /// Short executable name for a group member in the inspector (`sh`, `npm`,
+    /// `next-server`) — the first command token's last path component.
+    private func memberLabel(_ item: ProcessItem) -> String {
+        let first = item.command.split(separator: " ", maxSplits: 1).first.map(String.init) ?? item.command
+        return AncestryResolver.compactLabel(first)
     }
 
     /// Total resident memory the *sweepable* safe processes would free if cleaned —
