@@ -24,6 +24,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 - [ ] **PID-66** [light]🔧 | ci-spine-shape — Bring `.github/workflows/test.yml` onto the fleet CI spine shape: add a bare `pull_request:` trigger beside `push: {branches: [main]}` (`:3-5`) and a `concurrency: { group: ci-${{ github.ref }}, cancel-in-progress: true }` block. Per natabula `docs/STACK-TENDENCIES.md` §"Continuous integration" (Triggers, Concurrency). The SHA-pinned `actions/checkout` (`:11`, v4.3.1) is deliberately **not** in scope — natabula NAT-166/167 ruled SHA-pinning a stricter posture the floor permits. Surfaced by natabula fleet audit 2026-09-12 at `5b80741`, routed by `NAT-254`.
 - [ ] **PID-064** [light]🔧 | gitleaks-ci-step — Add secret-scanning: deposit `.gitleaks.toml` + `.pre-commit-config.yaml` (copy natabula's canonical templates at `configs/.gitleaks.toml` / `configs/.pre-commit-config.yaml`) and wire a `gitleaks` step into `.github/workflows/test.yml`'s `test` job (curl-fetch pinned `gitleaks v8.30.1`, run `gitleaks dir . --config .gitleaks.toml --no-banner --redact`). Neither deposit exists here yet, unlike most other fleet repos. Routed by natabula `NAT-245` (lazy fleet backfill per `NAT-103.4`).
+- [ ] **PID-069** [medium]🧠 | respawn-per-identity-watches — One `RespawnHistory` watch per killed identity, not per signature, so same-signature rows killed in separate clicks can't share or overwrite one respawn verdict. Parked from [[PID-62.5]].
 
 ## Future Opportunities
 
