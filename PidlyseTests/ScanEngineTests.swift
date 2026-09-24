@@ -127,6 +127,26 @@ final class ScanEngineTests: XCTestCase {
         XCTAssertNil(ScanCore.detectKind("/usr/sbin/cfprefsd agent"))
     }
 
+    func testDetectKind_shellSnapshotWrapper_isNotNpm() {
+        // PID-072: Claude Code's sourced shell snapshot inlines prior commands.
+        // `npm` inside that text must not classify the wrapper as `.npm`.
+        let wrapper = "/bin/zsh -c source /Users/me/.claude/shell-snapshots/" +
+            "snapshot-zsh-1.sh && setopt NO_EXTENDED_GLOB && eval 'npm run dev'"
+        XCTAssertNil(ScanCore.detectKind(wrapper))
+        let bash = "/bin/bash -lc source /tmp/shell-snapshots/snapshot.sh && node server.js"
+        XCTAssertNil(ScanCore.detectKind(bash))
+        // A real npm (or node) invocation is unchanged, even if its args mention
+        // the snapshot directory without being a shell -c wrapper.
+        XCTAssertEqual(ScanCore.detectKind("npm run dev"), .npm)
+        XCTAssertEqual(ScanCore.detectKind("/usr/local/bin/npm run dev"), .npm)
+        XCTAssertEqual(ScanCore.detectKind("npm run dev -- shell-snapshots"), .npm)
+        // `/bin/shell-snapshots` contains the characters `/bin/sh`; a real npm
+        // argv that mentions that directory and a `-c` flag stays `.npm`.
+        XCTAssertEqual(
+            ScanCore.detectKind("/usr/local/bin/npm run dev /tmp/bin/shell-snapshots -c build"),
+            .npm)
+    }
+
     func testDetectKind_pnpmIsNotNpm() {
         // pnpm contains "npm" as a substring — the token-boundary guard must prevent a match.
         XCTAssertNil(ScanCore.detectKind("pnpm run dev"))

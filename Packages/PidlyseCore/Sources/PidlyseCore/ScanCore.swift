@@ -298,6 +298,11 @@ public enum ScanCore {
     public static func detectKind(_ args: String) -> ProcessKind? {
         let s = args.lowercased()
 
+        // Claude Code session shells (`/bin/zsh -c source …/shell-snapshots/…`)
+        // inline the snapshot's command text. A token match inside that text
+        // (npm, node, …) describes the snapshot, not this process. (PID-072)
+        if isShellSnapshotWrapper(s) { return nil }
+
         if (s.contains("chrome") || s.contains("chromium")),
            s.contains("ms-playwright-mcp") || s.contains("playwright_chromiumdev_profile") {
             return .chromeHelper
@@ -337,6 +342,21 @@ public enum ScanCore {
         if hasTokenBoundary(s, "bun")     { return .bun }
         if hasTokenBoundary(s, "node")    { return .node }
         return nil
+    }
+
+    /// True for a shell `-c` that sources a Claude Code `shell-snapshots` file.
+    /// The wrapper's argv carries the snapshot body, so later token matches
+    /// would classify the shell itself. (PID-072)
+    private static func isShellSnapshotWrapper(_ s: String) -> Bool {
+        guard s.contains("shell-snapshot") else { return false }
+        // `/bin/sh` and `sh -c` stay delimited. `/bin/shell-snapshots` contains
+        // the characters `/bin/sh`, and `crash -c` contains `sh -c`.
+        let isShell = s.contains("/bin/zsh") || s.contains("/bin/bash") || s.contains("/bin/sh ")
+            || s.hasPrefix("zsh ") || s.contains(" zsh ")
+            || s.hasPrefix("bash ") || s.contains(" bash ")
+            || s.hasPrefix("sh ") || s.contains(" sh ")
+        let isDashC = s.contains(" -c ") || s.contains(" -lc ")
+        return isShell && isDashC
     }
 
     /// True when `s` is an explicit `go run …` launcher. Bare `go` is too short
