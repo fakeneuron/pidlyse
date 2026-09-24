@@ -199,7 +199,7 @@ Configurable at runtime (`SettingsView.swift`):
 | Command | Does |
 |---------|------|
 | `pidlyse list [--safe]` | One-shot scan; prints candidates (PID, bucket, kind, age, RAM, project, command). `--safe` filters to the safe bucket; protected rows carry 🔒 |
-| `pidlyse clean` | Kills exactly the app's "Clean all" sweep set — safe bucket minus protected projects; prints each row's verdict and the shared `KillReport` summary line |
+| `pidlyse clean` | Kills exactly the app's "Clean all" sweep set — safe bucket minus protected projects and foreign-owned rows (respawners stay app-only, [[PID-62.3]]); prints each row's verdict and the shared `KillReport` summary line |
 | `pidlyse kill <pid>` | Kills one *scanned candidate* by PID (any bucket, like the app's per-row kill button); refuses PIDs the scan didn't surface |
 | `pidlyse help` | Usage (also the bare-invocation default — never scans or kills) |
 
@@ -207,7 +207,7 @@ Full app parity: settings (threshold, ignores incl. scoped, disabled kinds, cust
 
 ## Integrations (PID-EPIC-58)
 
-External launchers reach Pidlyse's clean/scan actions through one shared engine-side action layer — `ScanEngine.cleanAllSafe` (safe bucket minus protected, clean-log append, rescan) and `ScanEngine.rescan`, the same set the popover "Clean all" and CLI `clean` use. Every trigger is bounded to safe-minus-protected and never touches Needs Review.
+External launchers reach Pidlyse's clean/scan actions through one shared engine-side action layer — `ScanEngine.cleanAllSafe` (the `sweepableSafeItems` set — safe bucket minus protected and minus rows `ScanEngine.isSweepable` rules out ([[PID-62.3]], [[PID-62.5]]) — through `ScanEngine.kill`, clean-log append, rescan) and `ScanEngine.rescan`, the same set the popover "Clean all" and CLI `clean` use. Every trigger is bounded to that sweep set and never touches Needs Review.
 
 | Surface | Entry point | Clean | Scan |
 |---------|-------------|-------|------|

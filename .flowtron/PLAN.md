@@ -8,13 +8,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-- [ ] **PID-EPIC-62** [heavy]🧠 | killability-truth — Make "kill" mean *gone*: kill-verification + session-only respawn detection core (.2), honest unkillable/respawner rows where explanation replaces the kill button (.3), process-tree redundancy collapse into one killable row (.4), verified per-row kill-feedback lifecycle + honest Clean-all summary + stability fixes (.5). Constitution/spec in PID-62.1 deep pre-pass; docker scope untouched ([[PID-063]]).
-  - [x] **PID-62.1** [heavy]🧠 | killability-truth discovery — Completed 2026-08-08.
-  - [x] **PID-62.2** [heavy]🧠 | respawn-detection-core — Completed 2026-08-08.
-  - [x] **PID-62.3** [medium]🧠 | honest-unkillable-ux — Completed 2026-09-23.
-  - [x] **PID-62.4** [medium]🧠 | tree-redundancy-collapse — Completed 2026-09-23.
-  - [x] **PID-62.5** [medium]🧠 | kill-feedback-stability — Completed 2026-09-24.
-  - [ ] **PID-62.N** [heavy]🧠 | audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed now with the reserved terminal `.N` suffix (never renumbers as children are added).
+(none)
 
 ## Medium
 
@@ -34,6 +28,13 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-EPIC-62** [heavy]🧠 | killability-truth — Completed 2026-09-24.
+  - [x] **PID-62.1** [heavy]🧠 | killability-truth discovery — Completed 2026-08-08.
+  - [x] **PID-62.2** [heavy]🧠 | respawn-detection-core — Completed 2026-08-08.
+  - [x] **PID-62.3** [medium]🧠 | honest-unkillable-ux — Completed 2026-09-23.
+  - [x] **PID-62.4** [medium]🧠 | tree-redundancy-collapse — Completed 2026-09-23.
+  - [x] **PID-62.5** [medium]🧠 | kill-feedback-stability — Completed 2026-09-24.
+  - [x] **PID-62.N** [heavy]🧠 | killability-truth audit — Completed 2026-09-24.
 - [x] **PID-65** [light]🔧 | quality-stack-gaps — Completed 2026-09-23.
 - [x] **PID-67** [light]🔧 | typecheck-verb-missing — Completed 2026-09-23.
 - [x] **PID-068** [light] | brand-kit-back-port — Completed 2026-09-23.
