@@ -533,7 +533,10 @@ struct MenuBarView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Text("tty \(item.tty)  ·  ppid \(item.ppid)  ·  age \(ageString(item.elapsed))")
+            // `Text(verbatim:)` (PID-070/PID-073): plain string interpolation here
+            // routes `ppid` through `Text`'s localized-number formatting, which
+            // inserts a thousands separator.
+            Text(verbatim: "tty \(item.tty)  ·  ppid \(item.ppid)  ·  age \(ageString(item.elapsed))")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .monospaced()
