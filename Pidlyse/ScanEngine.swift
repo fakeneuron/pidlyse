@@ -385,8 +385,8 @@ final class ScanEngine: ObservableObject {
     /// The one kill path every trigger rides on — row ✕, ⌘⌫, Clean all, and the
     /// headless sweep (PID-62.5). Marks each row `.killing`, kills through
     /// `KillService` (SIGTERM → 2 s → SIGKILL, verified), logs confirmed deaths and
-    /// arms respawn watches, then rescans and checks each verified death against
-    /// its pre-kill respawn count: back already means `.respawned`, not `.gone`.
+    /// arms respawn watches, then rescans and asks whether each verified death's own
+    /// watch was answered: back already means `.respawned`, not `.gone`.
     /// `completion` gets the honest tally on the main thread once that scan has
     /// published. Must be called on the main thread; never kills without an
     /// explicit trigger.
@@ -401,17 +401,9 @@ final class ScanEngine: ObservableObject {
         // Snapshot the cwds now: a scan during the kill can drop a dead process's
         // entry, which would strip the cwd from its signature and clean-log label.
         let preKillCwds = cwds.filter { pid, _ in targets.contains { $0.pid == pid } }
-        let signatures = Dictionary(uniqueKeysWithValues: targets.map {
-            ($0.pid, signature(for: $0, cwd: preKillCwds[$0.pid]))
-        })
         targets.forEach { setKillPhase(.killing, for: $0, token: token) }
         KillService.kill(targets, containerOwners: containerOwners) { [weak self] outcomes in
             guard let self else { return }
-            // Before arming and before the rescan, so the counts don't yet include
-            // this kill.
-            let baselines = Dictionary(uniqueKeysWithValues: Set(signatures.values).map {
-                ($0, self.respawnHistory.respawnCount(for: $0))
-            })
             self.recordCleaned(targets, outcomes: outcomes, preKillCwds: preKillCwds, killStartedAt: startedAt)
             var phases = outcomes.mapValues(KillPhase.init)
             for item in targets {
@@ -421,15 +413,11 @@ final class ScanEngine: ObservableObject {
             }
             self.scan { [weak self] in
                 guard let self else { return }
-                // Each new respawn is attributed to one killed row: two identical
-                // processes killed together share one watch, so a single comeback
-                // raises the count once and must not mark both rows respawned.
-                var unclaimed = Dictionary(uniqueKeysWithValues: Set(signatures.values).map {
-                    ($0, self.respawnHistory.respawnCount(for: $0) - (baselines[$0] ?? 0))
-                })
+                // Each killed identity has its own watch and one comeback answers
+                // one watch (PID-069), so identical rows — killed together or in
+                // separate clicks — never share a verdict.
                 for item in targets where phases[item.pid] == .gone {
-                    guard let signature = signatures[item.pid], unclaimed[signature, default: 0] > 0 else { continue }
-                    unclaimed[signature, default: 0] -= 1
+                    guard self.respawnHistory.didRespawn(pid: item.pid, startTime: item.startTime) else { continue }
                     phases[item.pid] = .respawned
                     self.setKillPhase(.respawned, for: item, token: token)
                 }

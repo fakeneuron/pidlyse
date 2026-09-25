@@ -4,13 +4,16 @@ import Foundation
 /// coming back under a new PID (PID-62.2) — the signal behind "respawns; kill
 /// won't stick".
 ///
-/// A kill that `KillCore` verified as a real death arms a watch on that process's
-/// **command signature**. If a later scan surfaces the same signature under a
-/// different identity while the watch is open, that's a respawn: something
-/// restarted it (a parent supervisor, launchd, a Docker restart policy), so
-/// killing it again would be a dead end. One armed kill can produce at most one
-/// respawn — the watch is consumed on match — and watches expire after
-/// `detectionWindow` so an unrelated reappearance minutes later isn't misread.
+/// A kill that `KillCore` verified as a real death arms a watch for that killed
+/// identity, carrying its **command signature**. If a later scan surfaces the same
+/// signature under a different identity while the watch is open, that's a respawn:
+/// something restarted it (a parent supervisor, launchd, a Docker restart policy),
+/// so killing it again would be a dead end. Watches are per killed identity
+/// (PID-069): one armed kill can produce at most one respawn — the watch is
+/// consumed on match — and one new process can answer at most one watch, so
+/// same-signature kills made in separate clicks neither overwrite nor share a
+/// verdict. Watches expire after `detectionWindow` so an unrelated reappearance
+/// minutes later isn't misread.
 ///
 /// Value-semantics and side-effect-free, mirroring `ScanHistory`: the app-side
 /// `ScanEngine` owns the single mutable instance, arms it at the kill-completion
@@ -85,10 +88,18 @@ public struct RespawnHistory: Equatable {
         }
     }
 
-    /// An open watch: the identity we verified dead, and when the kill began.
-    private struct Watch: Equatable {
+    /// A process instance: a PID plus its start time, so a recycled PID is a
+    /// different identity.
+    private struct Identity: Hashable {
         let pid: Int32
         let startTime: ProcStartTime?
+    }
+
+    /// An open watch: the identity we verified dead, its signature, and when the
+    /// kill began.
+    private struct Watch: Equatable {
+        let identity: Identity
+        let signature: Signature
         let killedAt: Date
     }
 
@@ -96,18 +107,29 @@ public struct RespawnHistory: Equatable {
 
     /// How long a watch stays open after a verified kill.
     public let detectionWindow: TimeInterval
-    /// Signatures with an open watch, keyed by signature (one watch per signature —
-    /// re-killing the same logical process just re-arms it).
-    private var watches: [Signature: Watch]
+    /// Open watches, one per killed identity (PID-069) — two same-signature kills
+    /// each keep their own.
+    private var watches: [Identity: Watch]
     /// Respawns detected this session, per signature. Grows only on a detected
     /// respawn, so it stays bounded by how many distinct things the user has killed
     /// and watched come back.
     private var counts: [Signature: Int]
+    /// New processes that already answered a watch, with their start time, so a
+    /// later scan can't hand the same comeback to a second kill. Pruned (on a fold
+    /// with a watch open) once the start time falls outside `detectionWindow` — no
+    /// open watch could match it.
+    private var claimed: [Identity: Date]
+    /// Killed identities whose watch was answered, with the kill time — the
+    /// per-kill verdict `ScanEngine.kill` reads after its follow-up scan. Pruned
+    /// with the same window.
+    private var respawnedKills: [Identity: Date]
 
     public init(detectionWindow: TimeInterval = RespawnHistory.defaultDetectionWindow) {
         self.detectionWindow = detectionWindow
         self.watches = [:]
         self.counts = [:]
+        self.claimed = [:]
+        self.respawnedKills = [:]
     }
 
     // MARK: - Recording
@@ -122,36 +144,46 @@ public struct RespawnHistory: Equatable {
                               startTime: ProcStartTime?,
                               at now: Date) -> RespawnHistory {
         var copy = self
-        copy.watches[signature] = Watch(pid: pid, startTime: startTime, killedAt: now)
+        let identity = Identity(pid: pid, startTime: startTime)
+        copy.watches[identity] = Watch(identity: identity, signature: signature, killedAt: now)
         return copy
     }
 
     /// Fold one scan's observations into a new history: every open watch is either
     /// expired (past `detectionWindow`), matched by a same-signature process under a
-    /// *different* identity that started after the kill began — a respawn, counted
-    /// and the watch consumed — or left
-    /// open for the next scan. Pure; observations are only ever read, and with no
-    /// watch open (the common case — nothing killed yet) the value is returned
-    /// unchanged.
+    /// *different* identity that started after the kill began and hasn't answered
+    /// another watch — a respawn, counted and the watch consumed — or left open for
+    /// the next scan. Pure; observations are only ever read, and with no watch open
+    /// (the common case — nothing killed yet) the value is returned unchanged.
     public func recording(_ observations: [Observation], at now: Date) -> RespawnHistory {
         guard !watches.isEmpty else { return self }
         var copy = self
-        for (signature, watch) in watches {
-            guard now.timeIntervalSince(watch.killedAt) <= detectionWindow else {
-                copy.watches[signature] = nil
+        let horizon = now.addingTimeInterval(-detectionWindow)
+        copy.claimed = claimed.filter { $0.value >= horizon }
+        copy.respawnedKills = respawnedKills.filter { $0.value >= horizon }
+        // Newest kill first: a respawn can only answer a kill that began before it
+        // started, so the newest watch has the fewest candidates and must choose
+        // before an older watch takes its only one.
+        for watch in watches.values.sorted(by: { $0.killedAt > $1.killedAt }) {
+            guard watch.killedAt >= horizon else {
+                copy.watches[watch.identity] = nil
                 continue
             }
             // A same-signature process already running at kill time is a sibling
             // (two identical `node server.js` in one repo), not a respawn. One with
             // no start time can't be placed, so it doesn't count either.
-            let respawned = observations.contains {
-                $0.signature == signature
-                    && ($0.pid != watch.pid || $0.startTime != watch.startTime)
+            let respawn = observations.first {
+                let identity = Identity(pid: $0.pid, startTime: $0.startTime)
+                return $0.signature == watch.signature
+                    && identity != watch.identity
+                    && copy.claimed[identity] == nil
                     && $0.startTime.map { Self.date(of: $0) >= watch.killedAt } == true
             }
-            if respawned {
-                copy.counts[signature, default: 0] += 1
-                copy.watches[signature] = nil
+            if let respawn, let startTime = respawn.startTime {
+                copy.claimed[Identity(pid: respawn.pid, startTime: startTime)] = Self.date(of: startTime)
+                copy.respawnedKills[watch.identity] = watch.killedAt
+                copy.counts[watch.signature, default: 0] += 1
+                copy.watches[watch.identity] = nil
             }
         }
         return copy
@@ -163,6 +195,14 @@ public struct RespawnHistory: Equatable {
     }
 
     // MARK: - Queries
+
+    /// Whether the kill of this exact identity (armed via `recordingKill`) has been
+    /// answered by a respawn — the per-kill verdict, so same-signature kills never
+    /// read each other's comeback (PID-069). Valid for `detectionWindow` after the
+    /// kill.
+    public func didRespawn(pid: Int32, startTime: ProcStartTime?) -> Bool {
+        respawnedKills[Identity(pid: pid, startTime: startTime)] != nil
+    }
 
     /// How many times this signature has come back after a verified kill this session.
     public func respawnCount(for signature: Signature) -> Int {

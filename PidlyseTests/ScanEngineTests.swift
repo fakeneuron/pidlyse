@@ -1375,6 +1375,62 @@ final class RespawnHistoryTests: XCTestCase {
         XCTAssertFalse(h.isRespawner(s))
     }
 
+    // MARK: - Per-identity watches (PID-069)
+
+    func testRespawn_laterSameSignatureKill_doesNotOverwriteEarlierWatch() {
+        // Two identical rows killed in separate clicks, both armed before any
+        // follow-up scan. The earlier kill's comeback started before the later kill
+        // began, so only the earlier watch can explain it — it must still be open.
+        let s = sig("node server.js", "~/code/bidviz")
+        let early = ProcStartTime(sec: 1_000_000, usec: 500_000)
+        var h = RespawnHistory()
+        h = h.recordingKill(signature: s, pid: 100, startTime: t1, at: now)
+        h = h.recordingKill(signature: s, pid: 101, startTime: t1, at: now.addingTimeInterval(1))
+        h = h.recording([obs(200, early, s)], at: now.addingTimeInterval(3))
+        XCTAssertTrue(h.didRespawn(pid: 100, startTime: t1))
+        XCTAssertFalse(h.didRespawn(pid: 101, startTime: t1))
+        XCTAssertEqual(h.respawnCount(for: s), 1)
+    }
+
+    func testRespawn_oneComebackAnswersOneKill_acrossSeparateScans() {
+        // Kill A's follow-up scan claims the comeback. Kill B's own follow-up scan
+        // sees the same process again and must not read it as B's respawn too.
+        let s = sig("node server.js", "~/code/bidviz")
+        var h = RespawnHistory()
+        h = h.recordingKill(signature: s, pid: 100, startTime: t1, at: now)
+        h = h.recording([obs(200, t2, s)], at: now.addingTimeInterval(2))
+        h = h.recordingKill(signature: s, pid: 101, startTime: t1, at: now)
+        h = h.recording([obs(200, t2, s)], at: now.addingTimeInterval(3))
+        XCTAssertTrue(h.didRespawn(pid: 100, startTime: t1))
+        XCTAssertFalse(h.didRespawn(pid: 101, startTime: t1))
+        XCTAssertEqual(h.respawnCount(for: s), 1)
+        // A second, distinct comeback still answers B.
+        h = h.recording([obs(200, t2, s), obs(201, t3, s)], at: now.addingTimeInterval(20))
+        XCTAssertTrue(h.didRespawn(pid: 101, startTime: t1))
+        XCTAssertEqual(h.respawnCount(for: s), 2)
+    }
+
+    func testRespawn_twoComebacksInOneScan_answerBothKills() {
+        let s = sig("node server.js", "~/code/bidviz")
+        var h = RespawnHistory()
+        h = h.recordingKill(signature: s, pid: 100, startTime: t1, at: now)
+        h = h.recordingKill(signature: s, pid: 101, startTime: t1, at: now)
+        h = h.recording([obs(200, t2, s), obs(201, t2, s)], at: now.addingTimeInterval(3))
+        XCTAssertTrue(h.didRespawn(pid: 100, startTime: t1))
+        XCTAssertTrue(h.didRespawn(pid: 101, startTime: t1))
+        XCTAssertEqual(h.respawnCount(for: s), 2)
+    }
+
+    func testDidRespawn_isIdentityScoped() {
+        // A recycled PID (different start time) is not the kill that respawned.
+        let s = sig("npm run dev")
+        var h = RespawnHistory()
+        h = h.recordingKill(signature: s, pid: 100, startTime: t1, at: now)
+        h = h.recording([obs(200, t2, s)], at: now.addingTimeInterval(5))
+        XCTAssertTrue(h.didRespawn(pid: 100, startTime: t1))
+        XCTAssertFalse(h.didRespawn(pid: 100, startTime: t3))
+    }
+
     // MARK: - Detection window
 
     func testRespawn_outsideDetectionWindow_isNotCounted() {
