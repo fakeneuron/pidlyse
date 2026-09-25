@@ -277,10 +277,25 @@ struct MenuBarView: View {
                 .buttonStyle(.borderless)
                 .foregroundStyle(.secondary)
                 if !collapsedKinds.contains(kind) {
-                    ForEach(rows) { row($0) }
+                    let ambiguousPIDs = duplicateDescriptorPIDs(rows)
+                    ForEach(rows) { row($0, ambiguousPIDs: ambiguousPIDs) }
                 }
             }
         }
+    }
+
+    /// PIDs within one kind-group whose row descriptor collides with a sibling's —
+    /// e.g. two identical dummy processes in the same project both label as
+    /// `pidlyse/b…` with nothing else to tell them apart. The row appends `ppid`
+    /// for these as a best-effort disambiguator; same-parent siblings (a common
+    /// case) still tie on that too, but the row's own PID — verbatim and
+    /// single-line as of PID-070 — stays the definitive unique identifier
+    /// regardless. Each descriptor is computed once and reused for both the
+    /// count and the membership check.
+    private func duplicateDescriptorPIDs(_ rows: [ProcessItem]) -> Set<Int32> {
+        let descriptors = rows.map { ($0.pid, rowDescriptor($0)) }
+        let counts = Dictionary(descriptors.map { ($0.1, 1) }, uniquingKeysWith: +)
+        return Set(descriptors.filter { (counts[$0.1] ?? 0) > 1 }.map(\.0))
     }
 
     private func riskColor(_ tier: RiskTier) -> Color {
@@ -303,9 +318,14 @@ struct MenuBarView: View {
         return engine.cwds[item.pid]?.label ?? item.displayPath
     }
 
-    private func row(_ item: ProcessItem) -> some View {
+    private func row(_ item: ProcessItem, ambiguousPIDs: Set<Int32> = []) -> some View {
         let isOld = item.elapsed >= engine.elapsedThreshold
         let isExpanded = expandedPIDs.contains(item.pid)
+        // ppid suffix (PID-070) only when a sibling in this kind-group shares the
+        // same descriptor — the common case stays as short as before.
+        let descriptor = ambiguousPIDs.contains(item.pid)
+            ? rowDescriptor(item) + " · ppid \(item.ppid)"
+            : rowDescriptor(item)
         // Protection is only meaningful for Safe rows (only they're bulk-swept), so the
         // 🔒 badge + lock toggle are gated there (PID-54.4).
         let protectable = item.bucket == .safe && engine.cwds[item.pid] != nil
@@ -327,7 +347,11 @@ struct MenuBarView: View {
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 4) {
-                        Text("PID \(item.pid)").font(.caption).monospaced()
+                        // `Text(verbatim:)` (PID-070): a plain string interpolation here
+                        // routes the PID through `Text`'s localized-number formatting,
+                        // which inserts a thousands separator and can wrap.
+                        Text(verbatim: "PID \(item.pid)")
+                            .font(.caption).monospaced().lineLimit(1)
                         // Group row (PID-62.4): how many processes the one kill covers.
                         if !item.members.isEmpty {
                             Text("\u{00D7}\(item.members.count + 1)")
@@ -335,7 +359,7 @@ struct MenuBarView: View {
                                 .help("\(item.members.count + 1) processes that live and die together")
                         }
                     }
-                    Text(rowDescriptor(item))
+                    Text(descriptor)
                         .font(.caption2).foregroundStyle(.secondary)
                         .lineLimit(1).truncationMode(.tail)
                         .help(engine.cwds[item.pid]?.fullPath ?? item.command)
@@ -381,9 +405,17 @@ struct MenuBarView: View {
                 if let killPhase {
                     killPhaseLabel(killPhase)
                 } else if let explanation = killability.explanation {
-                    Image(systemName: killabilityBadge(killability))
-                        .foregroundStyle(.secondary)
-                        .help(explanation)
+                    // A bare Image sat in the same icon-button row as ⓘ/🔒/✕ and read as
+                    // one — the operator clicked expecting an action. Route the click to
+                    // the same inspector toggle ⓘ uses, so it now does one (PID-070).
+                    Button {
+                        expandedPIDs.toggle(item.pid)
+                    } label: {
+                        Image(systemName: killabilityBadge(killability))
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                    .help(explanation)
                 } else {
                     Button {
                         engine.kill([item])

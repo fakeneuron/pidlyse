@@ -17,7 +17,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## Low
 
 - [ ] **PID-069** [medium]🧠 | respawn-per-identity-watches — One `RespawnHistory` watch per killed identity, not per signature, so same-signature rows killed in separate clicks can't share or overwrite one respawn verdict. Parked from [[PID-62.5]].
-- [ ] **PID-070** [light]🔧 | row-layout-legibility — Popover rows at 320 pt: single-line verbatim PID (no wrap, no `81,113` grouping), a descriptor that tells identical commands apart, and killability badges that don't read as buttons. Parked from [[PID-62.5]].
 - [ ] **PID-073** [light] | inspector-ppid-grouping — Expanded-row `Text("tty · ppid \(item.ppid) · age…")` interpolates ppid inside a Text literal, same locale-grouping bug PID-070 fixed for the visible PID. Fix with `Text(verbatim:)`.
 ## Future Opportunities
 
@@ -26,6 +25,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-070** [light]🔧 | row-layout-legibility — Completed 2026-09-25.
 - [x] **PID-064** [light]🔧 | gitleaks-ci-step — Completed 2026-09-24.
 - [x] **PID-66** [light]🔧 | ci-spine-shape — Completed 2026-09-24.
 - [x] **PID-072** [light]🔧 | shell-snapshot-misclassify — Completed 2026-09-24.
