@@ -38,7 +38,7 @@ historical record. Prose in a closed tasknote is documentation of past work,
 never a live credential surface.
 Measured hits: InvisiPaw DEPLOY-004.md, bidviz FE-1.3.md.
 """
-paths = ['''(^|/)\.flowtron/tasknote/archive/.*\.md$''']
+paths = ['''(^|/)\.flaitron/tasknote/archive/.*\.md$''']
 
 [[allowlists]]
 description = """

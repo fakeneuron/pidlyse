@@ -26,7 +26,7 @@ htmlcov/
 playwright-report*/
 test-results/
 .playwright-mcp/
-.flowtron/screenshots/
+.flaitron/screenshots/
 
 # Logs
 *.log

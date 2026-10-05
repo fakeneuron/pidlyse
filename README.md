@@ -92,4 +92,4 @@ See [`SPEC.md`](SPEC.md) for the full technical specification, scan logic, class
 
 ## Task Tracking
 
-See [`.flowtron/PLAN.md`](.flowtron/PLAN.md).
+See [`.flaitron/PLAN.md`](.flaitron/PLAN.md).

@@ -2,7 +2,7 @@
 
 # Run the Pidlyse test suite.
 # CODE_SIGNING_ALLOWED=NO is required for CLI test runs (code-signing limitation
-# in this environment); see .flowtron/tasknote/README.md "Project quick commands".
+# in this environment); see .flaitron/tasknote/README.md "Project quick commands".
 test:
 	xcodebuild test -scheme Pidlyse -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO
 

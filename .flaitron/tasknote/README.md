@@ -2,8 +2,8 @@
 
 This directory holds active tasknotes and archived tasknotes for completed
 work. Tasknote templates are resolved from the flowtron submodule at
-`.flowtron/core/templates/`. The canonical workflow lives in
-`.flowtron/core/SPEC.md`.
+`.flaitron/core/templates/`. The canonical workflow lives in
+`.flaitron/core/SPEC.md`.
 
 ## Layout
 
@@ -11,13 +11,13 @@ work. Tasknote templates are resolved from the flowtron submodule at
 - `archive/<area>/<TASK-ID>.md` — completed tasknotes, one folder per area
 
 Tasknotes are scaffolded automatically by the slash commands from
-`.flowtron/core/templates/`; inspect those files directly for the
+`.flaitron/core/templates/`; inspect those files directly for the
 canonical shapes. Three variants:
 
-- **Standard 4-phase tasknote** — `/ft-task <ID>` scaffolds from `tasknote-template.md`; full schema at `.flowtron/core/SPEC.md` §"Tasknote frontmatter" + §"Tasknote body shape" (model assignment lives on the PLAN.md task line — see §"Task-line format").
-- **Starter tasknote** — `/ft-starter-task <ID>` scaffolds from `tasknote-starter-template.md` for mid-flow context capture; lifecycle at `.flowtron/core/SPEC/starter.md`.
-- **Micro-tasknote** — `/ft-micro-task <ID>` scaffolds from `tasknote-micro-template.md` for tasks above the skip-tasknote threshold but below full 4-phase ceremony; threshold at `.flowtron/core/SPEC/tasknote-selection.md` §"When to use a tasknote (and when not to)".
-- **Epic lifecycle** — for code-sweep or major multi-child feature epics, bracket the implementation children with a **Discovery** subtask (`<AREA>-<N>.1`, plans the children) and an **Audit** subtask (final `.N`, verifies the completed work). See `.flowtron/core/SPEC/epic.md`. Simple implementations don't need it.
+- **Standard 4-phase tasknote** — `/ft-task <ID>` scaffolds from `tasknote-template.md`; full schema at `.flaitron/core/SPEC.md` §"Tasknote frontmatter" + §"Tasknote body shape" (model assignment lives on the PLAN.md task line — see §"Task-line format").
+- **Starter tasknote** — `/ft-starter-task <ID>` scaffolds from `tasknote-starter-template.md` for mid-flow context capture; lifecycle at `.flaitron/core/SPEC/starter.md`.
+- **Micro-tasknote** — `/ft-micro-task <ID>` scaffolds from `tasknote-micro-template.md` for tasks above the skip-tasknote threshold but below full 4-phase ceremony; threshold at `.flaitron/core/SPEC/tasknote-selection.md` §"When to use a tasknote (and when not to)".
+- **Epic lifecycle** — for code-sweep or major multi-child feature epics, bracket the implementation children with a **Discovery** subtask (`<AREA>-<N>.1`, plans the children) and an **Audit** subtask (final `.N`, verifies the completed work). See `.flaitron/core/SPEC/epic.md`. Simple implementations don't need it.
 
 ## Area prefixes
 
@@ -56,8 +56,8 @@ Project-specific prefixes archive under their own subfolder named for the area:
 
 Canonical docs that AI sessions consume as cold-start ground truth — the
 project-declared doc set walked at every Phase 4 closure (per
-`.flowtron/core/SPEC.md` §"🚀 Phase 4: Closure") and at every
-epic-audit subtask (per `.flowtron/core/SPEC/epic.md`). Flat list,
+`.flaitron/core/SPEC.md` §"🚀 Phase 4: Closure") and at every
+epic-audit subtask (per `.flaitron/core/SPEC/epic.md`). Flat list,
 one-line purpose each. Extend as the architecture matures (architecture
 notes, API specs, DB schema docs, ADRs, inventories).
 
@@ -65,7 +65,7 @@ notes, API specs, DB schema docs, ADRs, inventories).
 - `AGENTS.md` — assistant-facing project guide; includes the flowtron paste-block (read by Claude Code, Codex, Cursor, Amp, Aider, Grok)
 - `CLAUDE.md` — optional Claude-specific directives that don't belong in `AGENTS.md` (delete entry if not used)
 - `SPEC.md` — canonical technical specification: project structure, scan engine patterns, classification tiers, kill flow, settings, and shipped feature surface
-- `.flowtron/PLAN.md` — roadmap and active task queue
+- `.flaitron/PLAN.md` — roadmap and active task queue
 
 ## Project quick commands
 
