@@ -1,1 +1,1 @@
-../../.flowtron/core/claude/commands/ft-seed.md
+../../.flaitron/core/claude/commands/ft-seed.md

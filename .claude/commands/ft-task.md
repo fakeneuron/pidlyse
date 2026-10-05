@@ -1,1 +1,1 @@
-../../.flowtron/core/claude/commands/ft-task.md
+../../.flaitron/core/claude/commands/ft-task.md

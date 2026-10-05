@@ -1,1 +1,1 @@
-../../.flowtron/core/claude/commands/ft-close-epic.md
+../../.flaitron/core/claude/commands/ft-close-epic.md

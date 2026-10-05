@@ -1,1 +1,1 @@
-../../.flowtron/core/claude/commands/ft-update.md
+../../.flaitron/core/claude/commands/ft-update.md

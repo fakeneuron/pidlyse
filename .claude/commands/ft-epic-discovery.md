@@ -1,1 +1,1 @@
-../../.flowtron/core/claude/commands/ft-epic-discovery.md
+../../.flaitron/core/claude/commands/ft-epic-discovery.md

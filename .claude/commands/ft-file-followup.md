@@ -1,1 +1,1 @@
-../../.flowtron/core/claude/commands/ft-file-followup.md
+../../.flaitron/core/claude/commands/ft-file-followup.md

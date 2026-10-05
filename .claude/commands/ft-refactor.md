@@ -1,1 +1,1 @@
-../../.flowtron/core/claude/commands/ft-refactor.md
+../../.flaitron/core/claude/commands/ft-refactor.md
