@@ -1,7 +1,7 @@
 # Tasknote Directory
 
 This directory holds active tasknotes and archived tasknotes for completed
-work. Tasknote templates are resolved from the flowtron submodule at
+work. Tasknote templates are resolved from the flaitron submodule at
 `.flaitron/core/templates/`. The canonical workflow lives in
 `.flaitron/core/SPEC.md`.
 
@@ -21,7 +21,7 @@ canonical shapes. Three variants:
 
 ## Area prefixes
 
-Canonical prefixes (defined by flowtron):
+Canonical prefixes (defined by flaitron):
 
 | Prefix | Area |
 |--------|------|
@@ -62,7 +62,7 @@ one-line purpose each. Extend as the architecture matures (architecture
 notes, API specs, DB schema docs, ADRs, inventories).
 
 - `README.md` — project overview, current shipped feature surface
-- `AGENTS.md` — assistant-facing project guide; includes the flowtron paste-block (read by Claude Code, Codex, Cursor, Amp, Aider, Grok)
+- `AGENTS.md` — assistant-facing project guide; includes the flaitron paste-block (read by Claude Code, Codex, Cursor, Amp, Aider, Grok)
 - `CLAUDE.md` — optional Claude-specific directives that don't belong in `AGENTS.md` (delete entry if not used)
 - `SPEC.md` — canonical technical specification: project structure, scan engine patterns, classification tiers, kill flow, settings, and shipped feature surface
 - `.flaitron/PLAN.md` — roadmap and active task queue

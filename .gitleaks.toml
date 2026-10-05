@@ -32,7 +32,7 @@ useDefault = true
 
 [[allowlists]]
 description = """
-Archived flowtron tasknotes. Write-once by policy (SPEC §"Tasknote
+Archived flaitron tasknotes. Write-once by policy (SPEC §"Tasknote
 frontmatter"), so a false positive in one cannot be fixed by editing the
 historical record. Prose in a closed tasknote is documentation of past work,
 never a live credential surface.

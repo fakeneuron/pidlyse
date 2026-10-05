@@ -2,7 +2,7 @@
 #
 # Deliberately a single hook. NAT-060 evaluated the pre-commit framework and
 # returned a NO for lint/format: that surface is already 100% covered by the
-# flowtron Phase 3 checklist (and /ft-quality at the time — retired upstream
+# flaitron Phase 3 checklist (and /ft-quality at the time — retired upstream
 # v5.15.0), so duplicating it here would add
 # a friction cycle with no enforcement benefit in a solo agent-driven workflow.
 # That finding stands. NAT-060's own carve-out is why this file exists at all:
