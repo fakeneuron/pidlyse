@@ -12,6 +12,8 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
+- [ ] **PID-68** [medium] | flaitron rename review — Review 3 live `flowtron` references found after CORE-711.7; rename or document each intentional historical retention. Routed from [[NAT-355]].
+
 (none)
 
 ## Low
