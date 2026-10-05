@@ -16,7 +16,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-(none)
+- [ ] **PID-074** [medium] [unattended] | checkout-action-floor — At af769f3f, .github/workflows/test.yml:16 pins checkout v4.3.1 below the declared v5 floor. Update the action with an immutable SHA pin; retain native macOS runners, Make/SPM tests and existing concurrency.
 
 ## Future Opportunities
 
