@@ -759,7 +759,7 @@ final class ScanEngineTests: XCTestCase {
             8001,   // InvisiPaw backend
             3001,   // siteguy frontend
             4000,   // marscharts frontend
-            5120,   // flowtron/viz
+            5120,   // flaitron/viz
             5899,   // stockshock frontend
             8005,   // bidviz backend
             3002,   // fakeneuron

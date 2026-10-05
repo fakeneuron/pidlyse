@@ -12,8 +12,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-- [ ] **PID-68** [medium] | flaitron rename review — Review 3 live `flowtron` references found after CORE-711.7; rename or document each intentional historical retention. Routed from [[NAT-355]].
-
 (none)
 
 ## Low
@@ -27,6 +25,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-68** [medium] | flaitron rename review — Completed 2026-10-05.
 - [x] **PID-073** [light] | inspector-ppid-grouping — Completed 2026-09-25.
 - [x] **PID-069** [medium]🧠 | respawn-per-identity-watches — Completed 2026-09-25.
 - [x] **PID-070** [light]🔧 | row-layout-legibility — Completed 2026-09-25.
@@ -207,7 +206,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - [x] **PID-001** [heavy] | scaffold — Completed 2026-06-23.
 
 <!--
-Task-line grammar (see .flowtron/core/SPEC.md §"Task-line format"):
+Task-line grammar (see .flaitron/core/SPEC.md §"Task-line format"):
 
   - [ ] **TASK-ID** [!critical] [model] | shortname — long description
 

@@ -20,7 +20,7 @@ public enum PortRegistry {
         5501,
         // bananapeel
         5173,
-        // flowtron/viz
+        // flaitron/viz
         5120,
         // stockshock
         5899, 8899, 8004,
