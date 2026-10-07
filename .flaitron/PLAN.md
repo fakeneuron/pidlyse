@@ -8,11 +8,24 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-(none)
+- [ ] **PID-EPIC-078** [heavy]🧠 | test-safety-net — Make app-side lifecycle change safe before PID-EPIC-079 touches it. Discovery supplied by audit-repo 2026-10-07. Surfaced by audit-repo 2026-10-07 (Theme: Lifecycle edges are untested)
+  - [ ] **PID-078.2** [medium]🧩 [unattended] | core-test-target — Add a `PidlyseCoreTests` test target to Package.swift; move the core-only XCTest classes out of the 2.5k-line ScanEngineTests.swift (one file per type); add `swift test --package-path Packages/PidlyseCore` to the Makefile and test.yml; keep the total test count ≥ 308.
+  - [ ] **PID-078.3** [heavy]🧠 | engine-lifecycle-tests — Make ScanEngine's scan inputs injectable (enumerate closure + defaults suite) and cover rescan queueing, dismissal re-application, kill-token linger/clear, and the isSweepable fold.
+  - [ ] **PID-078.N** [medium]🧩 | test-safety-net audit
 
 ## Medium
 
-(none)
+- [ ] **PID-EPIC-079** [heavy]🧠 | consumer-seams — Close the app↔CLI and app↔subprocess seams where state is lost or the scan loop can wedge. Discovery supplied by audit-repo 2026-10-07. Surfaced by audit-repo 2026-10-07 (Theme: Two consumers, one truth)
+  - [ ] **PID-079.2** [light]🔧 [unattended] | clean-log-merge-on-write — CleanLogStore.record goes through CleanLogFile.append (re-read, merge, cap, save) and publishes the merged log; reload on popover open so CLI cleans appear without relaunch; test: CLI append then store.record keeps both events.
+  - [ ] **PID-079.3** [medium]🧩 [unattended] | shell-run-timeout — Add a deadline to Shell.run (terminate + ("", false) on expiry) with per-caller budgets for ps/lsof/docker; a timed-out scan still publishes and resets isScanning; test with /bin/sleep.
+  - [ ] **PID-079.4** [light]🔧 [unattended] | scan-on-launch — Scan at the end of applicationDidFinishLaunching; pidlyse://clean and CleanSafeStraysIntent wait for a first completed scan instead of reporting "nothing to clean" on cold launch.
+  - [ ] **PID-079.5** [light]🔧 [unattended] | cli-clean-exit-status — `pidlyse clean` exits 1 when any swept item isn't `gone`; update integrations/raycast scripts and the README CLI line to match.
+  - [ ] **PID-079.6** [heavy]🧠 | shared-scan-pipeline — Lift the scan pipeline, protected/sweep predicate, and CleanEvent(item:cwd:) into PidlyseCore so ScanEngine and PidlyseCLI each make one call; update the AGENTS.md convention lines that say "keep the two pipelines in step".
+  - [ ] **PID-079.N** [heavy]🧠 | consumer-seams audit
+- [ ] **PID-EPIC-080** [light]🔧 | docs-plan-currency — Bring README trust claims and PLAN.md bookkeeping back in line with the code. Discovery supplied by audit-repo 2026-10-07. Surfaced by audit-repo 2026-10-07 (Theme: Docs and plan currency)
+  - [ ] **PID-080.2** [light]🔧 [unattended] | readme-disk-footprint — README Security "Minimal disk footprint" and "Uninstalling" list clean-log.json and the Application Support/Pidlyse folder.
+  - [ ] **PID-080.3** [light]🔧 [unattended] | plan-completed-rotation — Rotate `## Completed` down to the 60-row bound into PLAN-ARCHIVE.md per plan-filing.md; re-ID the colliding PID-68 row.
+  - [ ] **PID-080.N** [light]🔧 | docs-plan-currency audit
 
 ## Low
 
