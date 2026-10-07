@@ -1,36 +1,43 @@
 import Foundation
 
-/// Hardcoded port table mirrored from the global CLAUDE.md localhost port registry.
+/// Hardcoded port table — a compiled snapshot of natabula `docs/PORT-REGISTRY.md`
+/// (the canonical localhost port registry; moved there from the global CLAUDE.md by NAT-281).
 /// Any process whose PID is listening on one of these ports is demoted to Needs Review
 /// regardless of other classification criteria.
 public enum PortRegistry {
 
-    // MARK: - Port table (mirrored from ~/.claude/CLAUDE.md §"Localhost Port Registry")
+    // MARK: - Port table (snapshot of ~/Code/natabula/docs/PORT-REGISTRY.md — project
+    // ports only; Supabase / Docker-infra bands and macOS-reserved ports are excluded)
 
     public static let registeredPorts: Set<Int> = [
         // InvisiPaw
         5182, 8001,
-        5181, 8011,   // Docker canonical ports (5181 also bidviz — included once)
+        8011,         // Docker backend (Docker frontend publishes 5182, above)
+        5189, 8099,   // e2e stack
         // siteguy
         3001, 8003,
+        5197,         // siteguy landing
         // marscharts
         4000, 8000,
         4002,         // marscharts landing (also stockshock IB paper — shared)
         // ADPpro
         5501,
+        5503,         // ADPpro e2e
         // bananapeel
         5173,
         // flaitron/viz
         5120,
+        // natabula
+        5193,
         // stockshock
         5899, 8899, 8004,
         // bidviz
-        8005,   // 5181 already covered above
-        5188,   // bidviz landing splash
-
+        5181, 8005,
+        5188,         // bidviz landing splash
+        4173,         // bidviz e2e
         // fakeneuron
         3002,
-        // spinalcord
+        // sciphoenix
         4321,
         // wandora
         5184, 8006,
@@ -38,8 +45,27 @@ public enum PortRegistry {
         5183,
         // blastimage
         3003,
+        3009,         // blastimage e2e
         // finanal
         5185, 8007,
+        // email-manager
+        5186, 8787,
+        // 3pnf Studio
+        5187, 8009,
+        // invisibrain
+        5190, 8010,
+        5196, 8015,   // e2e stack (8015 reserved)
+        // cloutomaton
+        5191, 8012,
+        5194, 8014,   // e2e stack
+        // neromercato
+        5192,
+        // caobunga
+        5195, 8013,
+        // postiz
+        4007,
+        // judedelparte
+        5198,
     ]
 
     // MARK: - User port overrides (PID-025)
@@ -48,7 +74,7 @@ public enum PortRegistry {
     /// Lives at `~/Library/Application Support/Pidlyse/ports.json`. Extend-only — its
     /// flattened ports are unioned with the compiled `registeredPorts`, so a user can
     /// add ports without recompiling but cannot remove a built-in. Decouples the manual
-    /// CLAUDE.md ↔ `registeredPorts` sync burden for project-specific ports.
+    /// PORT-REGISTRY.md ↔ `registeredPorts` sync burden for project-specific ports.
     static let userPortsFileURL: URL = {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         return base.appendingPathComponent("Pidlyse/ports.json")

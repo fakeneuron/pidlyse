@@ -749,10 +749,10 @@ final class ScanEngineTests: XCTestCase {
     // MARK: - PortRegistry.registeredPorts (anti-drift canary)
 
     /// Tripwire for the manually-synced port table. `registeredPorts` mirrors
-    /// `~/.claude/CLAUDE.md` §"Localhost Port Registry" by hand; if an edit
+    /// `~/Code/natabula/docs/PORT-REGISTRY.md` by hand; if an edit
     /// accidentally drops or corrupts a known port, this assertion fails under
     /// `make test`. Each port is an anchor for an active project — keep this
-    /// canary in sync when the global table changes.
+    /// canary in sync when the registry changes.
     func testRegisteredPorts_canaryKnownPorts() {
         let known: [Int] = [
             5182,   // InvisiPaw frontend
@@ -763,15 +763,30 @@ final class ScanEngineTests: XCTestCase {
             5899,   // stockshock frontend
             8005,   // bidviz backend
             3002,   // fakeneuron
-            4321,   // spinalcord
+            4321,   // sciphoenix
             5184,   // wandora frontend
             5183,   // delparte
             3003,   // blastimage
             5185,   // finanal frontend
+            // PID-075 re-sync additions
+            5189, 8099,   // InvisiPaw e2e
+            5197,         // siteguy landing
+            5503,         // ADPpro e2e
+            5193,         // natabula
+            4173,         // bidviz e2e
+            3009,         // blastimage e2e
+            5186, 8787,   // email-manager
+            5187, 8009,   // 3pnf Studio
+            5190, 8010, 5196, 8015,   // invisibrain (+ e2e)
+            5191, 8012, 5194, 8014,   // cloutomaton (+ e2e)
+            5192,         // neromercato
+            5195, 8013,   // caobunga
+            4007,         // postiz
+            5198,         // judedelparte
         ]
         for port in known {
             XCTAssertTrue(PortRegistry.registeredPorts.contains(port),
-                          "registeredPorts is missing known port \(port) — manual sync table drifted from ~/.claude/CLAUDE.md")
+                          "registeredPorts is missing known port \(port) — manual sync table drifted from natabula docs/PORT-REGISTRY.md")
         }
     }
 

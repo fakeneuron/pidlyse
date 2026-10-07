@@ -119,7 +119,7 @@ Each candidate carries a descriptive **`kind`** (see the Scan Engine table) and 
 
 Tree collapse ([[PID-039]], [[PID-62.4]]): `ScanCore.collapseTrees` folds every scanned process whose direct parent is also scanned *and belongs with it* (the parent is a launcher, the two share a kind, or the child is a Chrome helper / generic `.node` worker — so a `node`-run agent CLI never swallows the MCP servers it starts) into its topmost linked ancestor, so a chain that lives and dies together (`sh -c npm run dev` → `npm` → `vite`, `uv run` → uvicorn, `next dev` → `next-server`, playwright-mcp → its Chrome brood) is **one row**. The row keeps the root's identity (pid, start-time token, owner — the kill target), labels itself after the first member that isn't a launcher (npm/npx, `sh -c`, `uv run`), takes the **most cautious** `riskTier` of any member, and sums CPU/RAM. The members ride on `ProcessItem.members` and appear as a read-only "group of N" inspector line and a ×N row count. "Clean all", the section counts, the clean log and respawn signatures all see one logical unit. A group is foreign-owned (unkillable) if any member is. Docker processes never group. Disabled kinds filter per process before grouping. Dismissing a group row dismisses the whole group.
 
-Port registry awareness ([[PID-005]]): any process listening on a port in the CLAUDE.md global port table is automatically demoted to "needs review" — never auto-killed.
+Port registry awareness ([[PID-005]]): any process listening on a port in the localhost port registry (natabula `docs/PORT-REGISTRY.md`) is automatically demoted to "needs review" — never auto-killed.
 
 Protected-projects awareness (PID-54.4): a safe process whose working directory sits under a user-protected project tree stays *listed* in the Safe section (badged 🔒) but is excluded from the "Clean all" sweep, the section count, and the reclaimable total — a display/sweep overlay, not a bucket change. Its individual kill button still works.
 
@@ -151,7 +151,7 @@ Each process row's descriptor line shows the **project it runs in** — the encl
 
 ## Port Registry
 
-`PortRegistry.swift` holds the canonical compiled port table (mirrored from CLAUDE.md global table). Loaded at startup.
+`PortRegistry.swift` holds the canonical compiled port table (a snapshot of natabula `docs/PORT-REGISTRY.md` — project ports only, no Supabase / Docker-infra bands or macOS-reserved ports). Loaded at startup.
 
 **User override file ([[PID-025]]):** at startup the app also reads an optional, user-editable JSON file at `~/Library/Application Support/Pidlyse/ports.json`, keyed by project:
 
@@ -159,7 +159,7 @@ Each process row's descriptor line shows the **project it runs in** — the encl
 { "siteguy": [3001, 8003], "bidviz": [5181, 8005] }
 ```
 
-Its port lists are flattened and **unioned** with the compiled defaults (`effectivePorts = registeredPorts ∪ user ports`) — extend-only: a user can add ports without recompiling but cannot remove a built-in. A missing or malformed file falls back silently to the compiled defaults (the file is advisory, never fatal to a scan). This decouples per-project port additions from the manual CLAUDE.md ↔ `registeredPorts` sync.
+Its port lists are flattened and **unioned** with the compiled defaults (`effectivePorts = registeredPorts ∪ user ports`) — extend-only: a user can add ports without recompiling but cannot remove a built-in. A missing or malformed file falls back silently to the compiled defaults (the file is advisory, never fatal to a scan). This decouples per-project port additions from the manual PORT-REGISTRY.md ↔ `registeredPorts` sync.
 
 Any process matched whose port appears in the merged registry is demoted to "needs review" regardless of other criteria.
 
