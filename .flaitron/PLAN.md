@@ -17,6 +17,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## Low
 
 - [ ] **PID-074** [medium] [unattended] | checkout-action-floor — At af769f3f, .github/workflows/test.yml:16 pins checkout v4.3.1 below the declared v5 floor. Update the action with an immutable SHA pin; retain native macOS runners, Make/SPM tests and existing concurrency.
+- [ ] **PID-076** [light] [unattended] | ci-build-cli — At b00fb3f, .github/workflows/test.yml:24-25 runs only `make test`; the shipped pidlyse CLI target (Makefile:27-28 `make build-cli`) is never compiled in CI, so a CLI compile break goes uncaught. Add a build-cli step. Verify a green run.
 
 ## Future Opportunities
 
