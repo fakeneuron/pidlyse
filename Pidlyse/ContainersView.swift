@@ -1,17 +1,16 @@
 import SwiftUI
 import PidlyseCore
 
-/// The Containers tab of the popover: a list of running Docker containers
-/// (name / image / status / ports, plus a one-shot CPU/memory sample) with
-/// per-row stop and remove buttons.
+/// The Containers tab of the popover: a read-only list of running Docker
+/// containers (name / image / status / ports, plus a one-shot CPU/memory
+/// sample). Metrics only — container actions live in Docker Desktop (PID-063).
 /// State is local `@State` — there's no timer/persistence lifecycle to own, so
 /// the list loads off-main on appear (and on the shared header's `↻`, via
-/// `refreshToken`) and re-renders from the refreshed `[Container]` that every
-/// `DockerService` call delivers on the main queue. Stats arrive from a
+/// `refreshToken`) and re-renders from the `[Container]` that
+/// `DockerService.list` delivers on the main queue. Stats arrive from a
 /// separate `docker stats --no-stream` shell-out (~1-2 s) and fill in when
 /// ready, joined onto rows by container ID. All `docker` access stays
-/// in `DockerService`; this view never shells out. Never auto-acts — stop and
-/// remove only run on an explicit button click (per AGENTS.md).
+/// in `DockerService`; this view never shells out.
 struct ContainersView: View {
     /// Bumped by `MenuBarView`'s shared header refresh while this tab is active;
     /// each change triggers a reload so the one `↻` serves both tabs.
@@ -110,37 +109,6 @@ struct ContainersView: View {
                         .lineLimit(1)
                 }
             }
-            Button {
-                DockerService.restart(container.id) {
-                    containers = $0
-                    reloadStats()
-                }
-            } label: {
-                Image(systemName: "arrow.clockwise.circle")
-            }
-            .buttonStyle(.borderless)
-            .help("Restart \(container.name)")
-            Button {
-                DockerService.stop(container.id) {
-                    containers = $0
-                    reloadStats()
-                }
-            } label: {
-                Image(systemName: "stop.circle")
-            }
-            .buttonStyle(.borderless)
-            .help("Stop \(container.name)")
-            Button {
-                DockerService.remove(container.id) {
-                    containers = $0
-                    reloadStats()
-                }
-            } label: {
-                Image(systemName: "trash")
-            }
-            .buttonStyle(.borderless)
-            .foregroundStyle(.red)
-            .help("Stop and remove \(container.name)")
         }
     }
 
@@ -152,12 +120,6 @@ struct ContainersView: View {
             containers = $0
             loading = false
         }
-        reloadStats()
-    }
-
-    /// One-shot stats refetch — on load/refresh alongside `docker ps`, and
-    /// after stop/remove so surviving rows don't keep a stale sample.
-    private func reloadStats() {
         DockerService.stats { stats = $0 }
     }
 }

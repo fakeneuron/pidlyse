@@ -30,43 +30,4 @@ extension DockerService {
             DispatchQueue.main.async { onComplete(stats) }
         }
     }
-
-    // MARK: - Container actions (explicit-click only, per AGENTS.md)
-
-    /// Restart a running container via `docker restart` (SIGTERM + 10 s grace,
-    /// same semantic as `docker stop` but the container comes back up). Runs off
-    /// the main queue; `onComplete` delivers the refreshed list on the main queue.
-    /// Explicit-click only, per AGENTS.md.
-    static func restart(_ id: String, onComplete: @escaping ([Container]) -> Void = { _ in }) {
-        performThenRefresh([["restart", id]], onComplete: onComplete)
-    }
-
-    /// Stop a running container via `docker stop` (Docker's own graceful
-    /// SIGTERM → 10 s → SIGKILL). Runs off the main queue; `onComplete`
-    /// delivers the refreshed running-container list on the main queue so the
-    /// caller can re-render. Only ever invoked from an explicit user action —
-    /// there is no auto-action path.
-    static func stop(_ id: String, onComplete: @escaping ([Container]) -> Void = { _ in }) {
-        performThenRefresh([["stop", id]], onComplete: onComplete)
-    }
-
-    /// Remove a container via `docker stop` then `docker rm`. The panel lists
-    /// running containers only, so removal stops the container gracefully first
-    /// (honoring the grace period — no force `-f`) before deleting it. Runs off
-    /// the main queue; `onComplete` delivers the refreshed list on the main
-    /// queue. Explicit-click only, per AGENTS.md.
-    static func remove(_ id: String, onComplete: @escaping ([Container]) -> Void = { _ in }) {
-        performThenRefresh([["stop", id], ["rm", id]], onComplete: onComplete)
-    }
-
-    /// Run each docker invocation in sequence on a background queue, then
-    /// re-list running containers and deliver the result on the main queue.
-    private static func performThenRefresh(_ commands: [[String]],
-                                           onComplete: @escaping ([Container]) -> Void) {
-        DispatchQueue.global().async {
-            for args in commands { run(args) }
-            let containers = listContainers()
-            DispatchQueue.main.async { onComplete(containers) }
-        }
-    }
 }

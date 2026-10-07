@@ -50,7 +50,7 @@ Pidlyse/
     PidlyseApp.swift          # @main; required (inert) Settings scene + NSApplicationDelegateAdaptor
     AppDelegate.swift         # NSStatusItem bridge: icon, popover, right-click Quit, self-managed Settings window
     MenuBarView.swift         # popover UI — Processes/Containers toggle + process list
-    ContainersView.swift      # popover UI — running-container list (one-shot CPU/mem sample, compose-project grouping) with restart / stop / stop+remove
+    ContainersView.swift      # popover UI — read-only running-container list (one-shot CPU/mem sample, compose-project grouping)
     CleanedView.swift         # popover UI — "Cleaned" tab: kill-history stats (count, RAM reclaimed, top kinds)
     ScanEngine.swift          # app-side scan lifecycle: timer, persistence, notifications (drives ScanCore)
     CleanLogStore.swift       # app-side @Published binding for kill history; wired from ScanEngine, disk I/O delegated to core CleanLogFile
@@ -221,7 +221,7 @@ The URL scheme and AppIntents run in-app against the live scan (the menu-bar app
 
 ## Non-Goals (v1)
 
-- ~~Docker / container management~~ — **delivered post-v1** (PID-EPIC-28): a Processes / Containers segmented toggle whose Containers tab lists running containers with per-row restart / stop / stop+remove, compose containers grouped under per-project section headers (non-compose ungrouped). All `docker` access stays in `DockerService` (in `PidlyseCore` since PID-57.2); pure parsing in `PidlyseCore.DockerCore`.
+- ~~Docker / container management~~ — **delivered post-v1** (PID-EPIC-28): a Processes / Containers segmented toggle whose Containers tab lists running containers, compose containers grouped under per-project section headers (non-compose ungrouped). Trimmed to metrics-only by [[PID-063]]: the per-row restart / stop / stop+remove buttons are gone (container actions belong in Docker Desktop); the Docker process kind, its container-owner hint, and `docker stop` kill routing are unchanged. All `docker` access stays in `DockerService` (in `PidlyseCore` since PID-57.2); pure parsing in `PidlyseCore.DockerCore`.
 - Full Supabase stack awareness
 - ~~Auto-start on login~~ — **delivered post-v1** (PID-010): a "Launch at login" toggle in Settings registers a login item via `SMAppService`.
 - Animated menu bar icon beyond simple badge (partially delivered post-v1: a one-shot stray-found pulse, PID-026; continuous animation / scanning spinner remain out)

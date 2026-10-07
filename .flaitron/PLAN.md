@@ -21,10 +21,10 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## Future Opportunities
 
 - **PID-030** [medium]🧠 | notarize-and-sign — Replace ad-hoc signing with Developer ID + Apple notarization + stapling (and the Hardened Runtime entitlement notarization requires). Removes the Gatekeeper "Apple could not verify…" warning on the public download. **Deferred 2026-06-28** — gated on $99/yr Apple Developer Program enrollment (operator opted to defer). Until then the public-trust story rests on the public source + SHA-256 checksum (shipped via `make dmg` + release.yml) + the honest right-click→Open install note in the README "Security" section. (Confirmed home for the no-sandbox / Hardened-Runtime posture by the [[PID-EPIC-35]] security sweep — F3/F4 folded here, no duplicate child filed.)
-- [ ] **PID-063** [medium]🧠 | docker-scope-trim — Explore trimming docker/container surfaces to metrics-only (or dropping them): operator kills containers via Docker Desktop, not Pidlyse; weigh value for other users. Parked from [[PID-62.1]].
 
 ## Completed
 
+- [x] **PID-063** [medium]🧠 | docker-scope-trim — Completed 2026-10-07.
 - [x] **PID-076** [light] [unattended] | ci-build-cli — Completed 2026-10-07.
 - [x] **PID-074** [medium] [unattended] | checkout-action-floor — Completed 2026-10-07.
 - [x] **PID-075** [medium] | port-registry-sync — Completed 2026-10-07.

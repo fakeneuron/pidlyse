@@ -5,9 +5,8 @@ import Foundation
 /// impure `docker` invocations so the kill path (`KillCore`), the Containers
 /// panel, and the cli-companion binary (PID-EPIC-57) share one code path; the
 /// pure parsing lives in `DockerCore` (mirrors the `ScanEngine` / `ScanCore`
-/// split). The SwiftUI-facing async wrappers (list / stats / restart / stop /
-/// remove) stay app-side in `DockerService+Async.swift` so the core remains
-/// run-loop-free.
+/// split). The SwiftUI-facing async wrappers (list / stats) stay app-side in
+/// `DockerService+Async.swift` so the core remains run-loop-free.
 public enum DockerService {
     /// Path to the Docker CLI, or `nil` if not installed. A candidate is only
     /// accepted when its resolved binary passes the trust check below, so a trojan
