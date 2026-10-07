@@ -16,7 +16,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- [ ] **PID-076** [light] [unattended] | ci-build-cli — At b00fb3f, .github/workflows/test.yml:24-25 runs only `make test`; the shipped pidlyse CLI target (Makefile:27-28 `make build-cli`) is never compiled in CI, so a CLI compile break goes uncaught. Add a build-cli step. Verify a green run.
+(none)
 
 ## Future Opportunities
 
@@ -25,6 +25,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-076** [light] [unattended] | ci-build-cli — Completed 2026-10-07.
 - [x] **PID-074** [medium] [unattended] | checkout-action-floor — Completed 2026-10-07.
 - [x] **PID-075** [medium] | port-registry-sync — Completed 2026-10-07.
 - [x] **PID-077** [light] | docs-layering — Completed 2026-10-07.

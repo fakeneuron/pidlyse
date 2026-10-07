@@ -23,3 +23,5 @@ jobs:
           "$RUNNER_TEMP/gitleaks" dir . --config .gitleaks.toml --no-banner --redact
       - name: Run test suite
         run: make test
+      - name: Build CLI
+        run: make build-cli
