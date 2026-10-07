@@ -13,7 +13,7 @@ import Foundation
 /// cli-companion binary, PID-EPIC-57) can use it directly. The app's
 /// `KillService` wraps it in queue hops for the SwiftUI side.
 ///
-/// Per CLAUDE.md: the grace period is never skipped, and a kill only ever runs
+/// Per AGENTS.md: the grace period is never skipped, and a kill only ever runs
 /// from an explicit user action.
 public enum KillCore {
     /// Grace period between SIGTERM and the SIGKILL fallback.

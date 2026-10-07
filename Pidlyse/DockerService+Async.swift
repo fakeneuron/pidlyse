@@ -6,7 +6,7 @@ import PidlyseCore
 /// blocking docker shell-out off the main queue and delivers on the main queue
 /// so the Containers panel can load/refresh without freezing the popover.
 /// Keeps the shell-out inside `DockerService` (the view never touches `docker`
-/// or `DispatchQueue`), per CLAUDE.md.
+/// or `DispatchQueue`), per AGENTS.md.
 extension DockerService {
     /// Async wrapper over `listContainers()`.
     static func list(onComplete: @escaping ([Container]) -> Void) {
@@ -31,12 +31,12 @@ extension DockerService {
         }
     }
 
-    // MARK: - Container actions (explicit-click only, per CLAUDE.md)
+    // MARK: - Container actions (explicit-click only, per AGENTS.md)
 
     /// Restart a running container via `docker restart` (SIGTERM + 10 s grace,
     /// same semantic as `docker stop` but the container comes back up). Runs off
     /// the main queue; `onComplete` delivers the refreshed list on the main queue.
-    /// Explicit-click only, per CLAUDE.md.
+    /// Explicit-click only, per AGENTS.md.
     static func restart(_ id: String, onComplete: @escaping ([Container]) -> Void = { _ in }) {
         performThenRefresh([["restart", id]], onComplete: onComplete)
     }
@@ -54,7 +54,7 @@ extension DockerService {
     /// running containers only, so removal stops the container gracefully first
     /// (honoring the grace period — no force `-f`) before deleting it. Runs off
     /// the main queue; `onComplete` delivers the refreshed list on the main
-    /// queue. Explicit-click only, per CLAUDE.md.
+    /// queue. Explicit-click only, per AGENTS.md.
     static func remove(_ id: String, onComplete: @escaping ([Container]) -> Void = { _ in }) {
         performThenRefresh([["stop", id], ["rm", id]], onComplete: onComplete)
     }

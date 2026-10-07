@@ -62,8 +62,8 @@ one-line purpose each. Extend as the architecture matures (architecture
 notes, API specs, DB schema docs, ADRs, inventories).
 
 - `README.md` — project overview, current shipped feature surface
-- `AGENTS.md` — assistant-facing project guide; includes the flaitron paste-block (read by Claude Code, Codex, Cursor, Amp, Aider, Grok)
-- `CLAUDE.md` — optional Claude-specific directives that don't belong in `AGENTS.md` (delete entry if not used)
+- `AGENTS.md` — assistant-facing project guide: tech stack, build, binding conventions, plus the flaitron paste-block (read by Claude Code, Codex, Cursor, Amp, Aider, Grok)
+- `CLAUDE.md` — thin `@AGENTS.md` import + Claude-only notes
 - `SPEC.md` — canonical technical specification: project structure, scan engine patterns, classification tiers, kill flow, settings, and shipped feature surface
 - `.flaitron/PLAN.md` — roadmap and active task queue
 

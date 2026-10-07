@@ -11,7 +11,7 @@ import PidlyseCore
 /// separate `docker stats --no-stream` shell-out (~1-2 s) and fill in when
 /// ready, joined onto rows by container ID. All `docker` access stays
 /// in `DockerService`; this view never shells out. Never auto-acts — stop and
-/// remove only run on an explicit button click (per CLAUDE.md).
+/// remove only run on an explicit button click (per AGENTS.md).
 struct ContainersView: View {
     /// Bumped by `MenuBarView`'s shared header refresh while this tab is active;
     /// each change triggers a reload so the one `↻` serves both tabs.

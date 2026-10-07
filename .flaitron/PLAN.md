@@ -8,7 +8,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-- [ ] **PID-075** [medium] | port-registry-sync — At b00fb3f, Packages/PidlyseCore/Sources/PidlyseCore/PortRegistry.swift:8-41 mirrors the retired global port table and lacks 5189, 5192, 5193, 5195, 8013 and 8099, so those dev servers can land in Clean all. Re-sync from natabula docs/PORT-REGISTRY.md (NAT-281); repoint CLAUDE.md:24 and SPEC.md:122,154 there and add the CLAUDE.md→AGENTS.md pointer. Verify classifier tests.
+- [ ] **PID-075** [medium] | port-registry-sync — At b00fb3f, Packages/PidlyseCore/Sources/PidlyseCore/PortRegistry.swift:8-41 mirrors the retired global port table and lacks 5189, 5192, 5193, 5195, 8013 and 8099, so those dev servers can land in Clean all. Re-sync from natabula docs/PORT-REGISTRY.md (NAT-281); repoint the AGENTS.md port-registry convention (moved from CLAUDE.md:24 by PID-077) and SPEC.md:122,154 there. Verify classifier tests.
 
 ## Medium
 
@@ -18,7 +18,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 - [ ] **PID-074** [medium] [unattended] | checkout-action-floor — At af769f3f, .github/workflows/test.yml:16 pins checkout v4.3.1 below the declared v5 floor. Update the action with an immutable SHA pin; retain native macOS runners, Make/SPM tests and existing concurrency.
 - [ ] **PID-076** [light] [unattended] | ci-build-cli — At b00fb3f, .github/workflows/test.yml:24-25 runs only `make test`; the shipped pidlyse CLI target (Makefile:27-28 `make build-cli`) is never compiled in CI, so a CLI compile break goes uncaught. Add a build-cli step. Verify a green run.
-- [ ] **PID-077** [light] | docs-layering — At bb706d2, AGENTS.md:1-22 is only the Flaitron Workflow block; tech stack, build and the binding Conventions (CLAUDE.md:5-27 — PidlyseCore ownership, Shell.run primitive, SIGTERM-then-SIGKILL, two classification buckets) live only in CLAUDE.md, so Codex/Grok/Cursor sessions never see them. Move agent-neutral sections into AGENTS.md outside the Workflow block and keep CLAUDE.md thin with a pointer (natabula docs/MIGRATION.md §3). Found by natabula fleet audit 2026-10-07.
 
 ## Future Opportunities
 
@@ -27,6 +26,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-077** [light] | docs-layering — Completed 2026-10-07.
 - [x] **PID-68** [medium] | flaitron rename review — Completed 2026-10-05.
 - [x] **PID-073** [light] | inspector-ppid-grouping — Completed 2026-09-25.
 - [x] **PID-069** [medium]🧠 | respawn-per-identity-watches — Completed 2026-09-25.

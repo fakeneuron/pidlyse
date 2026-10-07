@@ -6,7 +6,7 @@ import PidlyseCore
 /// "Clean all safe" click; every row also carries an individual kill button.
 /// Kills route through `ScanEngine.kill` (SIGTERM → 2 s → SIGKILL, verified, then a
 /// rescan), and each killed row shows its phase in place of the button (PID-62.5).
-/// Never auto-kills — every kill is an explicit click (per CLAUDE.md).
+/// Never auto-kills — every kill is an explicit click (per AGENTS.md).
 struct MenuBarView: View {
     /// The popover tabs, switched via the segmented control below the header.
     private enum Tab { case processes, containers, cleaned }

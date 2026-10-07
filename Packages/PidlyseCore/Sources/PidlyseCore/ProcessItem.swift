@@ -66,7 +66,7 @@ public enum RiskTier: Comparable {
 }
 
 /// The two kill-action buckets — the only classification the kill flow acts on.
-/// Per CLAUDE.md: never auto-kill; `safe` items still require an explicit click.
+/// Per AGENTS.md: never auto-kill; `safe` items still require an explicit click.
 public enum Bucket {
     case safe
     case needsReview
