@@ -8,7 +8,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-(none)
+- [ ] **PID-075** [medium] | port-registry-sync — At b00fb3f, Packages/PidlyseCore/Sources/PidlyseCore/PortRegistry.swift:8-41 mirrors the retired global port table and lacks 5189, 5192, 5193, 5195, 8013 and 8099, so those dev servers can land in Clean all. Re-sync from natabula docs/PORT-REGISTRY.md (NAT-281); repoint CLAUDE.md:24 and SPEC.md:122,154 there and add the CLAUDE.md→AGENTS.md pointer. Verify classifier tests.
 
 ## Medium
 
