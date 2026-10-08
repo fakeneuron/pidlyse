@@ -23,7 +23,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [ ] **PID-079.6** [heavy]🧠 | shared-scan-pipeline — Lift the scan pipeline, protected/sweep predicate, and CleanEvent(item:cwd:) into PidlyseCore so ScanEngine and PidlyseCLI each make one call; update the AGENTS.md convention lines that say "keep the two pipelines in step".
   - [ ] **PID-079.N** [heavy]🧠 | consumer-seams audit
 - [ ] **PID-EPIC-080** [light]🔧 | docs-plan-currency — Bring README trust claims and PLAN.md bookkeeping back in line with the code. Discovery supplied by audit-repo 2026-10-07. Surfaced by audit-repo 2026-10-07 (Theme: Docs and plan currency)
-  - [ ] **PID-080.2** [light]🔧 [unattended] | readme-disk-footprint — README Security "Minimal disk footprint" and "Uninstalling" list clean-log.json and the Application Support/Pidlyse folder.
+  - [x] **PID-080.2** [light]🔧 [unattended] | readme-disk-footprint — Completed 2026-10-08.
   - [ ] **PID-080.3** [light]🔧 [unattended] | plan-completed-rotation — Rotate `## Completed` down to the 60-row bound into PLAN-ARCHIVE.md per plan-filing.md; re-ID the colliding PID-68 row.
   - [ ] **PID-080.N** [light]🔧 | docs-plan-currency audit
 
