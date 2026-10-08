@@ -16,7 +16,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## Medium
 
 - [ ] **PID-EPIC-079** [heavy]🧠 | consumer-seams — Close the app↔CLI and app↔subprocess seams where state is lost or the scan loop can wedge. Discovery supplied by audit-repo 2026-10-07. Surfaced by audit-repo 2026-10-07 (Theme: Two consumers, one truth)
-  - [ ] **PID-079.2** [light]🔧 [unattended] | clean-log-merge-on-write — CleanLogStore.record goes through CleanLogFile.append (re-read, merge, cap, save) and publishes the merged log; reload on popover open so CLI cleans appear without relaunch; test: CLI append then store.record keeps both events.
+  - [x] **PID-079.2** [light]🔧 | clean-log-merge-on-write — Completed 2026-10-08.
   - [ ] **PID-079.3** [medium]🧩 [unattended] | shell-run-timeout — Add a deadline to Shell.run (terminate + ("", false) on expiry) with per-caller budgets for ps/lsof/docker; a timed-out scan still publishes and resets isScanning; test with /bin/sleep.
   - [ ] **PID-079.4** [light]🔧 [unattended] | scan-on-launch — Scan at the end of applicationDidFinishLaunching; pidlyse://clean and CleanSafeStraysIntent wait for a first completed scan instead of reporting "nothing to clean" on cold launch.
   - [ ] **PID-079.5** [light]🔧 [unattended] | cli-clean-exit-status — `pidlyse clean` exits 1 when any swept item isn't `gone`; update integrations/raycast scripts and the README CLI line to match.

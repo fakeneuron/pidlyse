@@ -169,6 +169,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if popover.isShown {
             popover.performClose(nil)
         } else {
+            // The hosting controller is created once at launch, so the popover's
+            // `onAppear` does not run on later opens. Re-read the shared clean log
+            // here so a CLI append is visible without relaunching (PID-079.2).
+            engine.cleanLog.reload()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             // An `NSStatusItem` click doesn't activate the app, so the popover window
             // never becomes key on open — keyboard events (Esc to dismiss, ⌘⌫ to kill

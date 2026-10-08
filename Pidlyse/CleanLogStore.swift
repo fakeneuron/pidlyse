@@ -26,10 +26,17 @@ final class CleanLogStore: ObservableObject {
         events = CleanLogFile.load(from: fileURL, cap: cap)
     }
 
-    /// Append one confirmed clean, apply count-cap retention, and persist. Called on
-    /// the main thread from the kill-completion hook (`ScanEngine.recordCleaned`).
+    /// Append one confirmed clean by re-reading the shared file, merging, capping,
+    /// and saving (`CleanLogFile.append`). A CLI write that landed after this
+    /// store loaded stays in the published log. Called on the main thread from
+    /// the kill-completion hook (`ScanEngine.recordCleaned`).
     func record(_ event: CleanEvent) {
-        events = CleanLog.capped(events + [event], cap: cap)
-        CleanLogFile.save(events, to: fileURL)
+        events = CleanLogFile.append([event], at: fileURL, cap: cap)
+    }
+
+    /// Replace the published log with whatever is on disk. Called when the
+    /// menu-bar popover opens so a CLI clean shows up without relaunching.
+    func reload() {
+        events = CleanLogFile.load(from: fileURL, cap: cap)
     }
 }

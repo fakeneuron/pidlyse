@@ -20,6 +20,7 @@
 		AAAA0000000000000000B132 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B133 /* AppDelegate.swift */; };
 		AAAA0000000000000000B142 /* PidlyseCore in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA0000000000000000B141 /* PidlyseCore */; };
 		AAAA0000000000000000B144 /* PidlyseCore in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA0000000000000000B143 /* PidlyseCore */; };
+		AAAA0000000000000000B164 /* CleanLogStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B165 /* CleanLogStoreTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,6 +48,7 @@
 		AAAA0000000000000000B163 /* CleanedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanedView.swift; sourceTree = "<group>"; };
 		AAAA0000000000000000B130 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		AAAA0000000000000000B133 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		AAAA0000000000000000B165 /* CleanLogStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanLogStoreTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -109,6 +111,7 @@
 		AAAA0000000000000000B11D /* PidlyseTests */ = {
 			isa = PBXGroup;
 			children = (
+				AAAA0000000000000000B165 /* CleanLogStoreTests.swift */,
 			);
 			path = PidlyseTests;
 			sourceTree = "<group>";
@@ -238,6 +241,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AAAA0000000000000000B164 /* CleanLogStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
