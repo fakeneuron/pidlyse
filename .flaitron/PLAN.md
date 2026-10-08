@@ -26,6 +26,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [ ] **PID-080.2** [light]🔧 [unattended] | readme-disk-footprint — README Security "Minimal disk footprint" and "Uninstalling" list clean-log.json and the Application Support/Pidlyse folder.
   - [ ] **PID-080.3** [light]🔧 [unattended] | plan-completed-rotation — Rotate `## Completed` down to the 60-row bound into PLAN-ARCHIVE.md per plan-filing.md; re-ID the colliding PID-68 row.
   - [ ] **PID-080.N** [light]🔧 | docs-plan-currency audit
+- [ ] **PID-081** [light]🔧 | readme-disk-write-claim — `README.md:76` says the settings plist is the app's "only disk write" and `README.md:87` calls it the "only residue", but `Packages/PidlyseCore/Sources/PidlyseCore/CleanLogFile.swift:20,41` writes `~/Library/Application Support/Pidlyse/clean-log.json`, which `SPEC.md:44,206` and AGENTS.md document. Correct the README privacy/uninstall claims to name both files. Surfaced by natabula-fleet-audit 2026-10-08 (Finding D4, Medium) at `29e47e1`.
 
 ## Low
 
