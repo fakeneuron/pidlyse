@@ -2,8 +2,8 @@ import Foundation
 
 /// Pure command grammar + output formatting for the `pidlyse` cli-companion
 /// binary (PID-57.3). Lives in `PidlyseCore` — not the executable target — so
-/// `PidlyseTests` can cover it via `make test` (the single-suite decision from
-/// PID-57.2); the executable's `main.swift` owns the impure side (defaults
+/// `PidlyseCoreTests` covers it via `swift test` (and `make test`); the executable's
+/// `main.swift` owns the impure side (defaults
 /// read, scan pipeline, signals, printing, exit codes). Mirrors the
 /// `ScanEngine` ↔ `ScanCore` split.
 public enum CLICore {

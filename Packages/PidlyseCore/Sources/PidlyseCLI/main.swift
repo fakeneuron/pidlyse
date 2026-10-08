@@ -10,7 +10,7 @@ import PidlyseCore
 // append to the same clean-log the app's "Cleaned" tab reads.
 //
 // The pure command grammar + table formatting live in PidlyseCore.CLICore
-// (tested from PidlyseTests); only orchestration and I/O live here.
+// (tested from PidlyseCoreTests); only orchestration and I/O live here.
 
 /// The app's preferences domain (its bundle identifier) — the CLI reads the
 /// same settings the app's Settings window writes, so the two surfaces can

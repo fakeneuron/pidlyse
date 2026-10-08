@@ -1,9 +1,14 @@
-.PHONY: test coverage build-release install dmg build-cli install-cli
+.PHONY: test test-app coverage build-release install dmg build-cli install-cli
 
-# Run the Pidlyse test suite.
+# Run the Pidlyse test suite: the app scheme, then the PidlyseCore package tests.
 # CODE_SIGNING_ALLOWED=NO is required for CLI test runs (code-signing limitation
 # in this environment); see .flaitron/tasknote/README.md "Project quick commands".
-test:
+# `test-app` is the xcodebuild half alone so CI can name the package command
+# itself without running that suite twice.
+test: test-app
+	swift test --package-path Packages/PidlyseCore
+
+test-app:
 	xcodebuild test -scheme Pidlyse -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO
 
 # Run the test suite with code coverage enabled and print a per-file report.

@@ -21,7 +21,9 @@ jobs:
           curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_darwin_arm64.tar.gz" \
             | tar -xz -C "$RUNNER_TEMP" gitleaks
           "$RUNNER_TEMP/gitleaks" dir . --config .gitleaks.toml --no-banner --redact
-      - name: Run test suite
-        run: make test
+      - name: Run app test suite
+        run: make test-app
+      - name: Run PidlyseCore tests
+        run: swift test --package-path Packages/PidlyseCore
       - name: Build CLI
         run: make build-cli

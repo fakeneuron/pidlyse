@@ -9,7 +9,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## High
 
 - [ ] **PID-EPIC-078** [heavy]🧠 | test-safety-net — Make app-side lifecycle change safe before PID-EPIC-079 touches it. Discovery supplied by audit-repo 2026-10-07. Surfaced by audit-repo 2026-10-07 (Theme: Lifecycle edges are untested)
-  - [ ] **PID-078.2** [medium]🧩 [unattended] | core-test-target — Add a `PidlyseCoreTests` test target to Package.swift; move the core-only XCTest classes out of the 2.5k-line ScanEngineTests.swift (one file per type); add `swift test --package-path Packages/PidlyseCore` to the Makefile and test.yml; keep the total test count ≥ 308.
+  - [x] **PID-078.2** [medium]🧩 [unattended] | core-test-target — Completed 2026-10-08.
   - [ ] **PID-078.3** [heavy]🧠 | engine-lifecycle-tests — Make ScanEngine's scan inputs injectable (enumerate closure + defaults suite) and cover rescan queueing, dismissal re-application, kill-token linger/clear, and the isSweepable fold.
   - [ ] **PID-078.N** [medium]🧩 | test-safety-net audit
 

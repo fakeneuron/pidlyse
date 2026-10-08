@@ -1,8 +1,8 @@
 import Foundation
 
 /// Pure grammar for the `pidlyse://` URL scheme (PID-58.2). Lives in
-/// `PidlyseCore` — not the app target — so `PidlyseTests` can cover the parse
-/// via `make test`, mirroring the `CLICore` (cli-companion) precedent. The
+/// `PidlyseCore` — not the app target — so `PidlyseCoreTests` can cover the parse
+/// via `swift test`, mirroring the `CLICore` (cli-companion) precedent. The
 /// app's `AppDelegate.application(_:open:)` owns the impure side (routing a
 /// parsed verb to `ScanEngine.cleanAllSafe` / `rescan`).
 ///

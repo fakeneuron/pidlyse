@@ -17,6 +17,7 @@ let package = Package(
     ],
     targets: [
         .target(name: "PidlyseCore"),
-        .executableTarget(name: "PidlyseCLI", dependencies: ["PidlyseCore"])
+        .executableTarget(name: "PidlyseCLI", dependencies: ["PidlyseCore"]),
+        .testTarget(name: "PidlyseCoreTests", dependencies: ["PidlyseCore"])
     ]
 )

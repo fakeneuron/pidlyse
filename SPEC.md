@@ -46,6 +46,7 @@ Pidlyse/
         Shell.swift               # shared subprocess primitive (Process/Pipe drain) — all shell-out sites delegate
       Sources/PidlyseCLI/
         main.swift                # `pidlyse` executable: defaults-domain settings read, ScanEngine-parity scan pipeline, command dispatch
+      Tests/PidlyseCoreTests/     # one XCTest file per core type; `swift test --package-path Packages/PidlyseCore`
   Pidlyse/
     PidlyseApp.swift          # @main; required (inert) Settings scene + NSApplicationDelegateAdaptor
     AppDelegate.swift         # NSStatusItem bridge: icon, popover, right-click Quit, self-managed Settings window
@@ -57,8 +58,7 @@ Pidlyse/
     DockerService+Async.swift # SwiftUI-facing async wrappers over the core DockerService (main-queue delivery)
     KillService.swift         # thin async wrapper over KillCore (background-queue kill, main-queue callbacks)
     SettingsView.swift        # scan interval, thresholds, ignored substrings (+ per-project scoping), custom rules, protected projects, launch-at-login, notifications
-  PidlyseTests/
-    ScanEngineTests.swift     # unit tests for the PidlyseCore pipeline
+  PidlyseTests/                 # Xcode unit-test target for app-lifecycle tests; core suite lives in PidlyseCoreTests
   logo.png                    # master brand/icon source (532×543 RGBA); wired into AppIcon.appiconset as 7 PNG sizes (16–1024px)
   brand/                       # public identity kit (BRAND.md blurb, logo.svg/favicon.svg hand-redrawn from logo.png, PROMPTS.md provenance) — natabula fleet-brand standard
 ```
