@@ -29,7 +29,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-(none)
+- [ ] **PID-081** [light]🔧 | coverage-follows-core-tests — Point `make coverage` at the PidlyseCore package tests as well as the app scheme, so the report still includes the 308 tests moved out of PidlyseTests.
 
 ## Future Opportunities
 
