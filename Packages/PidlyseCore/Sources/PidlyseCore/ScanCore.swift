@@ -425,6 +425,6 @@ public enum ScanCore {
     // MARK: - Process enumeration
 
     public static func runPS() -> String {
-        Shell.run("/bin/ps", ["-axww", "-o", "pid=,ppid=,etime=,tty=,pcpu=,rss=,args="]).output
+        Shell.run("/bin/ps", ["-axww", "-o", "pid=,ppid=,etime=,tty=,pcpu=,rss=,args="], timeout: Shell.Budget.ps).output
     }
 }

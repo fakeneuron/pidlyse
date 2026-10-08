@@ -167,8 +167,8 @@ final class ScanEngine: ObservableObject {
 
     private var timer: Timer?
 
-    init() {
-        let ud = UserDefaults.standard
+    init(defaults: UserDefaults = .standard) {
+        let ud = defaults
         let savedThreshold = ud.double(forKey: "elapsedThreshold")
         let savedInterval = ud.double(forKey: "scanInterval")
         let savedIgnoredNames = ud.stringArray(forKey: "ignoredNames") ?? []

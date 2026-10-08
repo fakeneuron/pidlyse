@@ -88,6 +88,6 @@ public enum AncestryResolver {
     /// `-axo pid=,ppid=,comm=` emits the whole process table (headerless) as
     /// `pid ppid comm` — enough to walk any process's ancestry to launchd.
     static func runPS() -> String {
-        Shell.run("/bin/ps", ["-axo", "pid=,ppid=,comm="]).output
+        Shell.run("/bin/ps", ["-axo", "pid=,ppid=,comm="], timeout: Shell.Budget.ps).output
     }
 }

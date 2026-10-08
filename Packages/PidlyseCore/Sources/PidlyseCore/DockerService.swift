@@ -56,7 +56,7 @@ public enum DockerService {
     @discardableResult
     public static func run(_ args: [String]) -> (output: String, ok: Bool) {
         guard let docker = cliPath() else { return ("", false) }
-        return Shell.run(docker, args)
+        return Shell.run(docker, args, timeout: Shell.Budget.docker)
     }
 
     /// List running containers via `docker ps`. Returns an empty array when

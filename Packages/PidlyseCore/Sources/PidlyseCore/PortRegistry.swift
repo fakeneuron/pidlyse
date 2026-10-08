@@ -156,6 +156,6 @@ public enum PortRegistry {
     // MARK: - lsof shell-out
 
     static func runLSOF() -> String {
-        Shell.run("/usr/sbin/lsof", ["-nPi", "-sTCP:LISTEN"]).output
+        Shell.run("/usr/sbin/lsof", ["-nPi", "-sTCP:LISTEN"], timeout: Shell.Budget.lsof).output
     }
 }

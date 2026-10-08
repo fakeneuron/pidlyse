@@ -43,7 +43,7 @@ Pidlyse/
         KillCore.swift            # synchronous kill path: SIGTERM → 2 s grace → SIGKILL → death check; PID-reuse identity guards; docker-stop routing
         CleanLogFile.swift        # shared clean-log disk I/O (load / append-capped / atomic save) — one format for both writers
         CLICore.swift             # pure cli-companion command grammar (list/clean/kill/help) + table formatting
-        Shell.swift               # shared subprocess primitive (Process/Pipe drain) — all shell-out sites delegate
+        Shell.swift               # shared subprocess primitive (Process/Pipe drain, per-caller deadline) — all shell-out sites delegate
       Sources/PidlyseCLI/
         main.swift                # `pidlyse` executable: defaults-domain settings read, ScanEngine-parity scan pipeline, command dispatch
       Tests/PidlyseCoreTests/     # one XCTest file per core type; `swift test --package-path Packages/PidlyseCore`

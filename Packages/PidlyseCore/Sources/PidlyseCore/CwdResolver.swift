@@ -131,6 +131,6 @@ public enum CwdResolver {
     /// `-Fpn` emits machine-parseable `p<pid>` / `n<path>` field lines.
     static func runLSOF(_ pids: [Int32]) -> String {
         let list = pids.map(String.init).joined(separator: ",")
-        return Shell.run("/usr/sbin/lsof", ["-a", "-p", list, "-d", "cwd", "-Fpn"]).output
+        return Shell.run("/usr/sbin/lsof", ["-a", "-p", list, "-d", "cwd", "-Fpn"], timeout: Shell.Budget.lsof).output
     }
 }

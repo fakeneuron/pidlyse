@@ -112,6 +112,6 @@ public enum OpenFilesResolver {
     /// `f<fd>` / `t<type>` / `n<name>` field lines. On-demand (per expanded row),
     /// never per-scan.
     static func runLSOF(_ pid: Int32) -> String {
-        Shell.run("/usr/sbin/lsof", ["-p", String(pid), "-Fftn"]).output
+        Shell.run("/usr/sbin/lsof", ["-p", String(pid), "-Fftn"], timeout: Shell.Budget.lsof).output
     }
 }
