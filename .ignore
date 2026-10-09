@@ -1,0 +1,4 @@
+# Ripgrep fence for flaitron's own tasknote archive.
+# The path is tracked inside the submodule, so .gitignore cannot exclude it.
+# /natabula-init appends the pattern line when this file already exists.
+.flaitron/core/.flaitron/
