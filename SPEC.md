@@ -215,7 +215,7 @@ External launchers reach Pidlyse's clean/scan actions through one shared engine-
 | Shortcuts / Spotlight | `AppShortcutsProvider` + two `AppIntent`s in `PidlyseApp.swift` (PID-58.3) | "Clean Safe Strays" → dialog summary | "Scan Now" → rescan |
 | Raycast | `integrations/raycast/*.sh` wrapping the installed CLI (PID-58.3) | `pidlyse clean` | `pidlyse list --safe` (view-only) |
 
-The URL scheme and AppIntents run in-app against the live scan (the menu-bar app is normally already running with fresh `items`); the Raycast scripts shell out to the CLI, which scans fresh per invocation. AppIntents return a dialog as their feedback channel, so — unlike `pidlyse://clean`, which has no return path — they post no notification. AppleScript is deliberately unsupported (`osascript` users have `do shell script "pidlyse clean"`), keeping the PID-35.1 "no NSAppleScript" security baseline intact.
+The URL scheme and AppIntents run in-app against the live scan. On a cold launch, `pidlyse://clean` and "Clean Safe Strays" wait for the launch scan to publish before consuming `items`; the Raycast scripts shell out to the CLI, which scans fresh per invocation. AppIntents return a dialog as their feedback channel, so — unlike `pidlyse://clean`, which has no return path — they post no notification. AppleScript is deliberately unsupported (`osascript` users have `do shell script "pidlyse clean"`), keeping the PID-35.1 "no NSAppleScript" security baseline intact.
 
 ---
 

@@ -18,7 +18,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - [ ] **PID-EPIC-079** [heavy]🧠 | consumer-seams — Close the app↔CLI and app↔subprocess seams where state is lost or the scan loop can wedge. Discovery supplied by audit-repo 2026-10-07. Surfaced by audit-repo 2026-10-07 (Theme: Two consumers, one truth)
   - [x] **PID-079.2** [light]🔧 | clean-log-merge-on-write — Completed 2026-10-08.
   - [x] **PID-079.3** [medium]🧩 [unattended] | shell-run-timeout — Completed 2026-10-08.
-  - [ ] **PID-079.4** [light]🔧 [unattended] | scan-on-launch — Scan at the end of applicationDidFinishLaunching; pidlyse://clean and CleanSafeStraysIntent wait for a first completed scan instead of reporting "nothing to clean" on cold launch.
+  - [x] **PID-079.4** [light]🔧 [unattended] | scan-on-launch — Completed 2026-10-10.
   - [ ] **PID-079.5** [light]🔧 [unattended] | cli-clean-exit-status — `pidlyse clean` exits 1 when any swept item isn't `gone`; update integrations/raycast scripts and the README CLI line to match.
   - [ ] **PID-079.6** [heavy]🧠 | shared-scan-pipeline — Lift the scan pipeline, protected/sweep predicate, and CleanEvent(item:cwd:) into PidlyseCore so ScanEngine and PidlyseCLI each make one call; update the AGENTS.md convention lines that say "keep the two pipelines in step".
   - [ ] **PID-079.N** [heavy]🧠 | consumer-seams audit

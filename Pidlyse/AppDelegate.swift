@@ -56,6 +56,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         cancellable = engine.objectWillChange
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.updateIcon() }
+
+        // Populate the shared engine before an external clean action can inspect
+        // its otherwise-empty cold-launch snapshot.
+        engine.scan()
     }
 
     /// Route `pidlyse://` URL opens to engine actions (PID-58.2). The `pidlyse`
@@ -71,8 +75,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for url in urls {
             switch URLScheme.parse(url) {
             case .clean:
-                engine.cleanAllSafe { [weak self] report in
-                    self?.engine.fireCleanResultNotification(report)
+                engine.afterInitialScan { [weak self] in
+                    self?.engine.cleanAllSafe { report in
+                        self?.engine.fireCleanResultNotification(report)
+                    }
                 }
             case .scan:
                 engine.rescan()

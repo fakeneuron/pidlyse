@@ -43,4 +43,27 @@ final class ScanEngineTimeoutTests: XCTestCase {
         XCTAssertTrue(engine.processTable.isEmpty)
         XCTAssertTrue(engine.items.isEmpty)
     }
+
+    func testAfterInitialScanWaitsForPublishedSnapshot() {
+        let name = "pidlyse-initial-scan-\(UUID().uuidString)"
+        suiteName = name
+        let defaults = UserDefaults(suiteName: name)!
+        defaults.removePersistentDomain(forName: name)
+        Shell.deadlineOverride = 0
+
+        let engine = ScanEngine(defaults: defaults)
+        let published = expectation(description: "initial scan published")
+        engine.afterInitialScan {
+            XCTAssertFalse(engine.isScanning)
+            published.fulfill()
+        }
+
+        engine.scan()
+        XCTAssertTrue(engine.isScanning)
+        wait(for: [published], timeout: 30)
+
+        let immediate = expectation(description: "completed initial scan is immediate")
+        engine.afterInitialScan { immediate.fulfill() }
+        wait(for: [immediate], timeout: 0)
+    }
 }

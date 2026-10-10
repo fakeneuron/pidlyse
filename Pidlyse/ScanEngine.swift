@@ -165,6 +165,11 @@ final class ScanEngine: ObservableObject {
     /// Completions waiting on the next scan to *start* (see `scan(then:)`).
     private var completionsForNextScan: [() -> Void] = []
 
+    /// Completions waiting for the launch scan to publish. External launchers use
+    /// this rather than treating the empty pre-scan `items` array as a clean result.
+    private var completionsForInitialScan: [() -> Void] = []
+    private var hasCompletedInitialScan = false
+
     private var timer: Timer?
 
     init(defaults: UserDefaults = .standard) {
@@ -266,6 +271,12 @@ final class ScanEngine: ObservableObject {
                 // After `cwds` is published — signatures are built from it.
                 self.recordRespawnHistory(visible)
                 self.isScanning = false
+                if !self.hasCompletedInitialScan {
+                    self.hasCompletedInitialScan = true
+                    let initialCompletions = self.completionsForInitialScan
+                    self.completionsForInitialScan = []
+                    initialCompletions.forEach { $0() }
+                }
                 self.fireNotificationIfNeeded(newItems: visible, previousPIDs: oldPIDs)
                 completions.forEach { $0() }
                 if self.rescanQueued {
@@ -273,6 +284,17 @@ final class ScanEngine: ObservableObject {
                     self.scan()
                 }
             }
+        }
+    }
+
+    /// Run `completion` after the app's first scan has published. This bridges
+    /// cold-launch external actions to the launch scan without requesting another
+    /// scan once the engine already has a current snapshot.
+    func afterInitialScan(_ completion: @escaping () -> Void) {
+        if hasCompletedInitialScan {
+            completion()
+        } else {
+            completionsForInitialScan.append(completion)
         }
     }
 

@@ -37,10 +37,9 @@ private func sharedEngine() -> ScanEngine? {
 /// "Clean safe strays" — the Shortcuts/Spotlight parallel of the popover's "Clean
 /// all" and `pidlyse://clean` (PID-58.2). Rides the engine's `cleanAllSafe` action
 /// (safe bucket minus protected projects, clean-log append, rescan), so it can never
-/// touch Needs Review or protected work. Acts on the engine's current scan — parity
-/// with `pidlyse://clean`; the menu-bar app is normally already running with fresh
-/// items (a cold launch triggered by the intent may report "nothing to clean" before
-/// its first scan lands). The returned dialog is the intent's feedback channel, so —
+/// touch Needs Review or protected work. It waits for the launch scan when invoked
+/// on a cold app, so it never treats the initial empty snapshot as a clean result.
+/// The returned dialog is the intent's feedback channel, so —
 /// unlike `pidlyse://clean`, which has no return path — it posts no notification.
 struct CleanSafeStraysIntent: AppIntent {
     static var title: LocalizedStringResource = "Clean Safe Strays"
@@ -57,7 +56,9 @@ struct CleanSafeStraysIntent: AppIntent {
                     continuation.resume(returning: KillReport(items: [], phases: [:]))
                     return
                 }
-                engine.cleanAllSafe { continuation.resume(returning: $0) }
+                engine.afterInitialScan {
+                    engine.cleanAllSafe { continuation.resume(returning: $0) }
+                }
             }
         }
         let dialog: IntentDialog = report.requested == 0
