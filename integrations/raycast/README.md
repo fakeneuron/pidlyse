@@ -7,7 +7,7 @@ fresh on every invocation.
 
 | Script | Wraps | Does |
 |--------|-------|------|
-| `clean-safe-strays.sh` | `pidlyse clean` | Kills the safe-to-clean set (safe bucket minus protected projects) — the same sweep as the popover's "Clean all". |
+| `clean-safe-strays.sh` | `pidlyse clean` | Kills the safe-to-clean set (safe bucket minus protected projects) — the same sweep as the popover's "Clean all". Returns exit status 1 if any swept item is not verified gone. |
 | `list-strays.sh` | `pidlyse list --safe` | Lists the safe-to-clean candidates without killing anything. |
 
 ## Prerequisite

@@ -158,8 +158,9 @@ private func commandClean() -> Int32 {
         let mark = (phase == .gone ? "✓ " : "✗ ") + (phase?.label ?? "?").padding(toLength: 10, withPad: " ", startingAt: 0)
         print("\(mark)  \(item.pid)  \(item.displayLabel)  \(scan.cwds[item.pid]?.label ?? item.displayPath)")
     }
-    print(KillReport(items: sweepable, phases: phases).summaryLine)
-    return 0
+    let report = KillReport(items: sweepable, phases: phases)
+    print(report.summaryLine)
+    return CLICore.cleanExitStatus(report: report)
 }
 
 private func commandKill(pid: Int32) -> Int32 {

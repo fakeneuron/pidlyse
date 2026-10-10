@@ -43,6 +43,17 @@ final class CLICoreTests: XCTestCase {
         XCTAssertEqual(CLICore.parse(["scan"]), .failure(.unknownCommand("scan")))
     }
 
+    // MARK: - Clean exit status (PID-079.5)
+
+    func testCleanExitStatus_requiresEverySweptItemToBeGone() {
+        let gone = item(pid: 100, kind: .pytest, tier: .easy)
+        let survived = item(pid: 200, kind: .node, tier: .easy)
+
+        XCTAssertEqual(CLICore.cleanExitStatus(report: KillReport(items: [gone], phases: [100: .gone])), 0)
+        XCTAssertEqual(CLICore.cleanExitStatus(report: KillReport(items: [gone, survived], phases: [100: .gone, 200: .survived])), 1)
+        XCTAssertEqual(CLICore.cleanExitStatus(report: KillReport(items: [], phases: [:])), 0)
+    }
+
     // MARK: - Formatting
 
     func testFormatElapsed() {

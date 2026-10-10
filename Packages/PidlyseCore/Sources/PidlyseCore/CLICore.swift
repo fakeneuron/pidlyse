@@ -79,6 +79,13 @@ public enum CLICore {
         killed without an explicit clean/kill invocation.
         """
 
+    /// Shell status for `clean`: every swept item must be verified gone for a
+    /// successful command. An empty sweep is successful because it has no
+    /// failed item.
+    public static func cleanExitStatus(report: KillReport) -> Int32 {
+        report.gone == report.requested ? 0 : 1
+    }
+
     // MARK: - Output formatting
 
     /// Compact elapsed-time display: `12s`, `45m`, `2h 13m`, `3d 4h`.
