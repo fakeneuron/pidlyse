@@ -1,1 +1,0 @@
-../../.flaitron/core/claude/commands/ft-epic-discovery.md
