@@ -41,7 +41,7 @@ Pidlyse/
         Container.swift           # models: Container (id, name, image, status, ports, composeProject) + ContainerStats (cpu, memory)
         DockerService.swift       # impure docker CLI access: trusted-path resolution, shell-out, container listing/owners
         KillCore.swift            # synchronous kill path: SIGTERM → 2 s grace → SIGKILL → death check; PID-reuse identity guards; docker-stop routing
-        CleanLogFile.swift        # shared clean-log disk I/O (load / append-capped / atomic save) — one format for both writers
+        CleanLogFile.swift        # shared clean-log disk I/O (load / append-capped / atomic save; append flocks clean-log.json.lock) — one format for both writers
         CLICore.swift             # pure cli-companion command grammar (list/clean/kill/help) + table formatting
         Shell.swift               # shared subprocess primitive (Process/Pipe drain, per-caller deadline) — all shell-out sites delegate
       Sources/PidlyseCLI/

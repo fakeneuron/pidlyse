@@ -29,7 +29,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- [ ] **PID-082** [medium]🧩 [unattended] | clean-log-append-lock — Serialize CleanLogFile.append so an overlapping app write and CLI write cannot drop an event. The load-merge-save path is still not atomic. Surfaced by the PID-079.2 review.
 - [ ] **PID-084** [medium]🧩 | clean-log-lock-hygiene — CleanLogFile.append blocks the caller on flock, and the app calls it on the main thread from the kill callback, so a peer stuck in the lock stalls the UI. Open the lock fd with O_CLOEXEC so a Shell.run during the critical section cannot inherit it. Surfaced by the PID-082 review.
 
 ## Future Opportunities
@@ -38,6 +37,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-082** [medium]🧩 [unattended] | clean-log-append-lock — Completed 2026-10-12.
 - [x] **PID-081** [light]🔧 [unattended] | coverage-follows-core-tests — Completed 2026-10-12.
 - [x] **PID-063** [medium]🧠 | docker-scope-trim — Completed 2026-10-07.
 - [x] **PID-076** [light] [unattended] | ci-build-cli — Completed 2026-10-07.
