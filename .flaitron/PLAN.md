@@ -30,6 +30,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## Low
 
 - [ ] **PID-084** [medium]🧩 [unattended] | clean-log-lock-hygiene — CleanLogFile.append blocks the caller on flock, and the app calls it on the main thread from the kill callback, so a peer stuck in the lock stalls the UI. Open the lock fd with O_CLOEXEC so a Shell.run during the critical section cannot inherit it. Surfaced by the PID-082 review.
+- [ ] **PID-085** [medium]🧩 | clean-log-main-thread — CleanLogFile.append still blocks on flock, and the kill callback calls it on the main thread. PID-084's O_CLOEXEC stops a spawn from inheriting the lock fd. It does not keep a peer's hold from stalling the UI. Move that wait off the main thread.
 
 ## Future Opportunities
 
