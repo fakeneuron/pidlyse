@@ -11,7 +11,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - [ ] **PID-EPIC-078** [heavy]🧠 | test-safety-net — Make app-side lifecycle change safe before PID-EPIC-079 touches it. Discovery supplied by audit-repo 2026-10-07. Surfaced by audit-repo 2026-10-07 (Theme: Lifecycle edges are untested)
   - [x] **PID-078.2** [medium]🧩 [unattended] | core-test-target — Completed 2026-10-08.
   - [ ] **PID-078.3** [heavy]🧠 | engine-lifecycle-tests — Make ScanEngine's scan inputs injectable (enumerate closure + defaults suite) and cover rescan queueing, dismissal re-application, kill-token linger/clear, and the isSweepable fold.
-  - [ ] **PID-078.N** [medium]🧩 | test-safety-net audit
+  - [ ] **PID-078.N** [medium]🧩 [unattended] | test-safety-net audit
 
 ## Medium
 
@@ -29,8 +29,8 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- [ ] **PID-081** [light]🔧 | coverage-follows-core-tests — Point `make coverage` at the PidlyseCore package tests as well as the app scheme, so the report still includes the 308 tests moved out of PidlyseTests.
-- [ ] **PID-082** [medium]🧩 | clean-log-append-lock — Serialize CleanLogFile.append so an overlapping app write and CLI write cannot drop an event. The load-merge-save path is still not atomic. Surfaced by the PID-079.2 review.
+- [ ] **PID-081** [light]🔧 [unattended] | coverage-follows-core-tests — Point `make coverage` at the PidlyseCore package tests as well as the app scheme, so the report still includes the 308 tests moved out of PidlyseTests.
+- [ ] **PID-082** [medium]🧩 [unattended] | clean-log-append-lock — Serialize CleanLogFile.append so an overlapping app write and CLI write cannot drop an event. The load-merge-save path is still not atomic. Surfaced by the PID-079.2 review.
 
 ## Future Opportunities
 
