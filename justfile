@@ -31,7 +31,7 @@ typecheck: lint
 test:
     make test
 
-# run the test suite with code coverage enabled, print a per-file report
+# run both test suites with code coverage enabled, print one per-file report
 coverage:
     make coverage
 

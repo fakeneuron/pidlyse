@@ -11,12 +11,22 @@ test: test-app
 test-app:
 	xcodebuild test -scheme Pidlyse -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO
 
-# Run the test suite with code coverage enabled and print a per-file report.
-# Output: build/coverage.xcresult (open in Xcode for the line-by-line view).
+# Run both test suites with code coverage and print one per-file report.
+# The app scheme (PidlyseTests) and the SwiftPM scheme PidlyseCore-Package are
+# separate xcodebuild invocations so `make test` and CI still execute the
+# package suite once, via `swift test`. PidlyseCore-Package is invoked from
+# the package directory: the app project's PidlyseCore scheme is the library
+# product and has no test action. The two xcresults merge into
+# build/coverage.xcresult (open in Xcode for the line-by-line view).
 coverage:
-	rm -rf build/coverage.xcresult
+	rm -rf build/coverage.xcresult build/coverage-app.xcresult build/coverage-core.xcresult
 	xcodebuild test -scheme Pidlyse -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO \
-		-enableCodeCoverage YES -resultBundlePath build/coverage.xcresult
+		-enableCodeCoverage YES -resultBundlePath build/coverage-app.xcresult
+	cd Packages/PidlyseCore && xcodebuild test -scheme PidlyseCore-Package -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO \
+		-enableCodeCoverage YES -resultBundlePath $(CURDIR)/build/coverage-core.xcresult
+	xcrun xcresulttool merge --output-path build/coverage.xcresult \
+		build/coverage-app.xcresult build/coverage-core.xcresult
+	rm -rf build/coverage-app.xcresult build/coverage-core.xcresult
 	xcrun xccov view --report build/coverage.xcresult
 
 # Ad-hoc signed Release build. Output: build/Release/Pidlyse.app

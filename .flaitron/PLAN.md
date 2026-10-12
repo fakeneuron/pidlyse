@@ -29,7 +29,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- [ ] **PID-081** [light]🔧 [unattended] | coverage-follows-core-tests — Point `make coverage` at the PidlyseCore package tests as well as the app scheme, so the report still includes the 308 tests moved out of PidlyseTests.
 - [ ] **PID-082** [medium]🧩 [unattended] | clean-log-append-lock — Serialize CleanLogFile.append so an overlapping app write and CLI write cannot drop an event. The load-merge-save path is still not atomic. Surfaced by the PID-079.2 review.
 
 ## Future Opportunities
@@ -38,6 +37,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-081** [light]🔧 [unattended] | coverage-follows-core-tests — Completed 2026-10-12.
 - [x] **PID-063** [medium]🧠 | docker-scope-trim — Completed 2026-10-07.
 - [x] **PID-076** [light] [unattended] | ci-build-cli — Completed 2026-10-07.
 - [x] **PID-074** [medium] [unattended] | checkout-action-floor — Completed 2026-10-07.
