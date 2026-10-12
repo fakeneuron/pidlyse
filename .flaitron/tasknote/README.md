@@ -15,7 +15,7 @@ Tasknotes are scaffolded automatically by the slash commands from
 canonical shapes. Three variants:
 
 - **Standard 4-phase tasknote** — `/ft-task <ID>` scaffolds from `tasknote-template.md`; full schema at `.flaitron/core/SPEC.md` §"Tasknote frontmatter" + §"Tasknote body shape" (model assignment lives on the PLAN.md task line — see §"Task-line format").
-- **Starter tasknote** — `/ft-starter-task <ID>` scaffolds from `tasknote-starter-template.md` for mid-flow context capture; lifecycle at `.flaitron/core/SPEC/starter.md`.
+- **Starter tasknote** — `/ft-file-task <ID> --starter` scaffolds from `tasknote-starter-template.md` for mid-flow context capture; lifecycle at `.flaitron/core/SPEC/starter.md`.
 - **Micro-tasknote** — `/ft-task <ID> --micro` scaffolds from `tasknote-micro-template.md` for tasks above the skip-tasknote threshold but below full 4-phase ceremony; threshold at `.flaitron/core/SPEC/tasknote-selection.md` §"When to use a tasknote (and when not to)".
 - **Epic lifecycle** — for code-sweep or major multi-child feature epics, bracket the implementation children with a **Discovery** subtask (`<AREA>-<N>.1`, plans the children) and an **Audit** subtask (final `.N`, verifies the completed work). See `.flaitron/core/SPEC/epic.md`. Simple implementations don't need it.
 
