@@ -21,8 +21,9 @@ public enum CleanLogFile {
         return base.appendingPathComponent("Pidlyse/clean-log.json")
     }()
 
-    /// In-process half of the append lock. `flock` is owned by the process on
-    /// macOS, so a second thread in this process would not block on the file.
+    /// In-process half of the append lock. Two threads queue here before
+    /// `flock`. On current macOS a second thread's `LOCK_NB` already fails
+    /// with `EAGAIN`; `NSLock` does not depend on that.
     private static let appendLock = NSLock()
 
     /// Test-only. When non-zero, `append` sleeps this long after the locked
@@ -77,12 +78,14 @@ public enum CleanLogFile {
     /// Exclusive `flock` on the sibling `<log>.lock` file. Returns `-1` when
     /// the lock cannot be taken; the caller still writes, because the log is
     /// advisory. Creates the parent directory so the lock file has a home
-    /// before `save` runs.
+    /// before `save` runs. `O_CLOEXEC` because the fd stays open across the
+    /// blocking `flock` and the save: a spawn in that window must not inherit
+    /// it. Setting the flag after `open` would race with that spawn.
     private static func acquireAppendLock(for url: URL) -> Int32 {
         let dir = url.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let path = url.appendingPathExtension("lock").path
-        let fd = path.withCString { open($0, O_CREAT | O_RDWR, mode_t(0o644)) }
+        let fd = path.withCString { open($0, O_CREAT | O_RDWR | O_CLOEXEC, mode_t(0o644)) }
         guard fd >= 0 else { return -1 }
         guard flock(fd, LOCK_EX) == 0 else {
             close(fd)

@@ -1,3 +1,4 @@
+import Darwin
 import XCTest
 @testable import PidlyseCore
 
@@ -127,6 +128,95 @@ final class CleanLogFileTests: XCTestCase {
 
         XCTAssertGreaterThanOrEqual(elapsed, 0.25)
         XCTAssertEqual(CleanLogFile.load(from: tempURL).map(\.kind), ["held"])
+    }
+
+    /// The lock fd is open across the blocking `flock` and the save. A spawn in
+    /// that window inherits it unless the open used `O_CLOEXEC`. `Foundation.Process`
+    /// (what `Shell.run` uses) closes stray fds itself, so this spawns with
+    /// `posix_spawn` and no `POSIX_SPAWN_CLOEXEC_DEFAULT` — the path that leaks.
+    func testAppend_spawnDuringAppend_doesNotInheritLockFd() throws {
+        let dir = tempURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let sourceURL = dir.appendingPathComponent("lockfd.c")
+        let binaryURL = dir.appendingPathComponent("lockfd")
+        let source = """
+        #include <dirent.h>
+        #include <fcntl.h>
+        #include <stdio.h>
+        #include <stdlib.h>
+        #include <string.h>
+        int main(int argc, char **argv) {
+            if (argc < 2) return 2;
+            char want[1024];
+            if (realpath(argv[1], want) == NULL) return 2;
+            DIR *d = opendir("/dev/fd");
+            if (d == NULL) return 2;
+            struct dirent *ent;
+            int inherited = 0;
+            while ((ent = readdir(d)) != NULL) {
+                if (ent->d_name[0] < '0' || ent->d_name[0] > '9') continue;
+                char got[1024];
+                if (fcntl(atoi(ent->d_name), F_GETPATH, got) != 0) continue;
+                if (strcmp(got, want) == 0) inherited = 1;
+            }
+            closedir(d);
+            return inherited ? 1 : 0;
+        }
+        """
+        try source.write(to: sourceURL, atomically: true, encoding: .utf8)
+        let compile = Process()
+        compile.executableURL = URL(fileURLWithPath: "/usr/bin/cc")
+        compile.arguments = ["-O0", "-o", binaryURL.path, sourceURL.path]
+        try compile.run()
+        compile.waitUntilExit()
+        XCTAssertEqual(compile.terminationStatus, 0)
+
+        CleanLogFile.overlapDelayForTests = 0.8
+        let group = DispatchGroup()
+        group.enter()
+        DispatchQueue.global().async {
+            CleanLogFile.append([self.event("spawn", at: 0)], at: self.tempURL)
+            group.leave()
+        }
+
+        let lockPath = tempURL.appendingPathExtension("lock").path
+        let deadline = Date().addingTimeInterval(2)
+        var held = false
+        while Date() < deadline {
+            let fd = open(lockPath, O_RDWR)
+            if fd >= 0 {
+                let rc = flock(fd, LOCK_EX | LOCK_NB)
+                if rc != 0 {
+                    held = true
+                    close(fd)
+                    break
+                }
+                flock(fd, LOCK_UN)
+                close(fd)
+            }
+            Thread.sleep(forTimeInterval: 0.01)
+        }
+        XCTAssertTrue(held, "append did not take the lock before the spawn window closed")
+
+        var pid: pid_t = 0
+        let arguments = [binaryURL.path, lockPath]
+        let spawned: [UnsafeMutablePointer<CChar>?] = arguments.map { strdup($0) } + [nil]
+        defer { spawned.forEach { free($0) } }
+        let rc = spawned.withUnsafeBufferPointer { buf in
+            binaryURL.path.withCString { cPath in
+                posix_spawn(&pid, cPath, nil, nil, buf.baseAddress, environ)
+            }
+        }
+        XCTAssertEqual(rc, 0)
+        guard rc == 0 else {
+            _ = group.wait(timeout: .now() + 5)
+            return
+        }
+        var status: Int32 = 0
+        waitpid(pid, &status, 0)
+        XCTAssertEqual(group.wait(timeout: .now() + 5), .success)
+        XCTAssertTrue((status & 0x7f) == 0, "checker did not exit, status \(status)")
+        XCTAssertEqual((status >> 8) & 0xff, 0, "child inherited the lock fd")
     }
 
     /// The format contract both writers share: ISO-8601 dates, so a log written
