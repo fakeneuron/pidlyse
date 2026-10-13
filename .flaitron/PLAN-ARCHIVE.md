@@ -2,6 +2,33 @@
 
 Closed rows rotated out of `PLAN.md` `## Completed` (append-only; contract: `.flaitron/core/SPEC/plan-filing.md` §"`## Completed` rotation").
 
+## Completed 2026-07
+
+- [x] **PID-EPIC-56** [medium]🧠 | docker-enhance — Completed 2026-07-02.
+  - [x] **PID-56.1** [medium]🧠 | discovery — Completed 2026-07-02.
+  - [x] **PID-56.2** [medium]🧠 | container-stats — Completed 2026-07-02.
+  - [x] **PID-56.3** [medium]🧠 | compose-grouping — Completed 2026-07-02.
+  - [x] **PID-56.4** [light]🔧 | restart-action — Completed 2026-07-02.
+  - [x] **PID-56.5** [medium]🧠 | audit — Completed 2026-07-02.
+- [x] **PID-061** [light]🔧 | spec-doc-refresh — Completed 2026-07-02.
+- [x] **PID-059** [light]🔧 | app-icon-wiring — Completed 2026-07-02.
+- [x] **PID-EPIC-55** [medium]🧠 | idle-stray-signals — Completed 2026-07-02.
+  - [x] **PID-55.1** [medium]🧠 | discovery — Completed 2026-07-02.
+  - [x] **PID-55.2** [medium]🧠 | scan-history-cache — Completed 2026-07-02.
+  - [x] **PID-55.3** [medium]🧠 | idle-dev-signal — Completed 2026-07-02.
+  - [x] **PID-55.4** [medium]🧠 | audit — Completed 2026-07-02.
+- [x] **PID-EPIC-54** [medium]🧠 | detection-rules — Completed 2026-07-01.
+  - [x] **PID-54.1** [medium]🧠 | discovery — Completed 2026-07-01.
+  - [x] **PID-54.2** [medium]🧠 | expand-builtin-kinds — Completed 2026-07-01.
+  - [x] **PID-54.3** [medium]🧠 | custom-rules — Completed 2026-07-01.
+  - [x] **PID-54.4** [medium]🧠 | protect-and-scope — Completed 2026-07-01.
+  - [x] **PID-54.5** [medium]🧠 | audit — Completed 2026-07-01.
+- [x] **PID-EPIC-53** [medium]🧠 | clean-history-stats — Completed 2026-07-01.
+  - [x] **PID-53.1** [medium]🧠 | discovery — Completed 2026-06-30.
+  - [x] **PID-53.2** [medium]🧠 | clean-log-store — Completed 2026-07-01.
+  - [x] **PID-53.3** [medium]🧠 | cleaned-tab-stats — Completed 2026-07-01.
+  - [x] **PID-53.4** [medium]🧠 | audit — Completed 2026-07-01.
+
 ## Completed 2026-06
 
 - [x] **PID-EPIC-52** [medium]🧠 | process-inspector — Completed 2026-06-30.
