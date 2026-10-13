@@ -17,6 +17,9 @@ final class CleanLogStore: ObservableObject {
 
     private let fileURL: URL
     private let cap: Int
+    /// Serial so two kill-hook records append in order. `CleanLogFile.append`
+    /// blocks in `flock` on this queue, never on the main thread (PID-085).
+    private let appendQueue = DispatchQueue(label: "com.fakeneuron.pidlyse.clean-log")
 
     /// `fileURL` and `cap` are injectable so the store can be unit-tested against a
     /// temp file without touching the real Application Support log.
@@ -27,11 +30,26 @@ final class CleanLogStore: ObservableObject {
     }
 
     /// Append one confirmed clean by re-reading the shared file, merging, capping,
-    /// and saving (`CleanLogFile.append`). A CLI write that landed after this
-    /// store loaded stays in the published log. Called on the main thread from
-    /// the kill-completion hook (`ScanEngine.recordCleaned`).
+    /// and saving (`CleanLogFile.append`). Returns immediately. The blocking
+    /// `flock` runs on `appendQueue`. The published log is replaced on the main
+    /// queue with a fresh load, so a `reload()` that already observed a newer
+    /// disk snapshot is not overwritten by this append's older return value.
+    /// A CLI write that landed before that load stays in the published log.
+    /// Called on the main thread from the kill-completion hook
+    /// (`ScanEngine.recordCleaned`).
     func record(_ event: CleanEvent) {
-        events = CleanLogFile.append([event], at: fileURL, cap: cap)
+        let fileURL = fileURL
+        let cap = cap
+        appendQueue.async { [weak self] in
+            let merged = CleanLogFile.append([event], at: fileURL, cap: cap)
+            DispatchQueue.main.async {
+                guard let self else { return }
+                let loaded = CleanLogFile.load(from: fileURL, cap: cap)
+                // `load` collapses a missing or unreadable file to []. That is
+                // not a reason to blank a log this append just wrote.
+                self.events = (loaded.isEmpty && !merged.isEmpty) ? merged : loaded
+            }
+        }
     }
 
     /// Replace the published log with whatever is on disk. Called when the

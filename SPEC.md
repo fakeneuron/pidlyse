@@ -54,7 +54,7 @@ Pidlyse/
     ContainersView.swift      # popover UI — read-only running-container list (one-shot CPU/mem sample, compose-project grouping)
     CleanedView.swift         # popover UI — "Cleaned" tab: kill-history stats (count, RAM reclaimed, top kinds)
     ScanEngine.swift          # app-side scan lifecycle: timer, persistence, notifications (drives ScanCore)
-    CleanLogStore.swift       # app-side @Published binding for kill history; wired from ScanEngine, disk I/O delegated to core CleanLogFile
+    CleanLogStore.swift       # app-side @Published binding for kill history; record's flock wait is off the main thread, disk I/O delegated to core CleanLogFile
     DockerService+Async.swift # SwiftUI-facing async wrappers over the core DockerService (main-queue delivery)
     KillService.swift         # thin async wrapper over KillCore (background-queue kill, main-queue callbacks)
     SettingsView.swift        # scan interval, thresholds, ignored substrings (+ per-project scoping), custom rules, protected projects, launch-at-login, notifications
