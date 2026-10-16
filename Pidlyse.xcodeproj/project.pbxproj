@@ -22,6 +22,7 @@
 		AAAA0000000000000000B144 /* PidlyseCore in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA0000000000000000B143 /* PidlyseCore */; };
 		AAAA0000000000000000B164 /* CleanLogStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B165 /* CleanLogStoreTests.swift */; };
 		AAAA0000000000000000B166 /* ScanEngineTimeoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B167 /* ScanEngineTimeoutTests.swift */; };
+		AAAA0000000000000000B168 /* ScanEngineLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA0000000000000000B169 /* ScanEngineLifecycleTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,6 +52,7 @@
 		AAAA0000000000000000B133 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		AAAA0000000000000000B165 /* CleanLogStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanLogStoreTests.swift; sourceTree = "<group>"; };
 		AAAA0000000000000000B167 /* ScanEngineTimeoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanEngineTimeoutTests.swift; sourceTree = "<group>"; };
+		AAAA0000000000000000B169 /* ScanEngineLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanEngineLifecycleTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -115,6 +117,7 @@
 			children = (
 				AAAA0000000000000000B165 /* CleanLogStoreTests.swift */,
 				AAAA0000000000000000B167 /* ScanEngineTimeoutTests.swift */,
+				AAAA0000000000000000B169 /* ScanEngineLifecycleTests.swift */,
 			);
 			path = PidlyseTests;
 			sourceTree = "<group>";
@@ -246,6 +249,7 @@
 			files = (
 				AAAA0000000000000000B164 /* CleanLogStoreTests.swift in Sources */,
 				AAAA0000000000000000B166 /* ScanEngineTimeoutTests.swift in Sources */,
+				AAAA0000000000000000B168 /* ScanEngineLifecycleTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
