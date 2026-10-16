@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "project_id": "2db1d492-4613-40c0-b639-e6e9ad6900fa",
+  "display_name": "pidlyse",
+  "copy_source": "brand/BRAND.md",
+  "assets": [],
+  "public_metadata": {
+    "disclosure": {
+      "value": "listed",
+      "evidence_paths": []
+    },
+    "release_stage": {
+      "value": "beta",
+      "evidence_paths": []
+    },
+    "public_availability": {
+      "value": "available",
+      "evidence_paths": []
+    },
+    "source_visibility": {
+      "value": "public",
+      "evidence_paths": []
+    }
+  }
+}
