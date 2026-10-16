@@ -8,7 +8,9 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-(none)
+- [ ] **PID-EPIC-086** [heavy]🧠 | stray-utility-ux — Rethink the popover from a user-experience view so it identifies genuinely stray processes instead of listing every running dev tool; rows lead with a descriptive process name, PID subordinate, nothing truncated (filed via /ft-open-epic; refined at .1 closure).
+  - [ ] **PID-086.1** [frontier]💎 | stray-utility-ux discovery — Scope shared design and file children .2..4 per SPEC/epic.md.
+  - [ ] **PID-086.N** [heavy]🧠 | stray-utility-ux audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed now with the reserved terminal `.N` suffix (never renumbers as children are added).
 
 ## Medium
 
