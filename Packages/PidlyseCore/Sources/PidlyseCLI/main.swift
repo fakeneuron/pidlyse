@@ -26,15 +26,8 @@ private struct Settings {
     let protectedProjects: [String]
 
     static func load() -> Settings {
-        let ud = UserDefaults(suiteName: defaultsDomain)
-        let savedThreshold = ud?.double(forKey: "elapsedThreshold") ?? 0
-        return Settings(
-            request: ScanRequest(
-                elapsedThreshold: savedThreshold > 0 ? savedThreshold : ScanCore.defaultElapsedThreshold,
-                ignoreRules: (ud?.stringArray(forKey: "ignoredNames") ?? []).compactMap(IgnoreRule.parse),
-                disabledKinds: Set((ud?.stringArray(forKey: "disabledKinds") ?? []).compactMap(ProcessKind.init(rawValue:))),
-                customRules: (ud?.stringArray(forKey: "customRules") ?? []).compactMap(CustomRule.parse)),
-            protectedProjects: ud?.stringArray(forKey: "protectedProjects") ?? [])
+        let saved = UserDefaults(suiteName: defaultsDomain).map(ScanSettings.load(from:)) ?? ScanSettings()
+        return Settings(request: saved.request, protectedProjects: saved.protectedProjects)
     }
 }
 

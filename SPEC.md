@@ -25,6 +25,7 @@ Pidlyse/
       Sources/PidlyseCore/
         ScanCore.swift            # ps parse + stray detection + risk-tier classification
         ScanPipeline.swift        # the one scan pipeline app + CLI call (ScanRequest → ScanSnapshot) + shared protected/sweep predicates
+        ScanSettings.swift        # the five scan-relevant `UserDefaults` keys (`SettingsKey`) + the one load of them (`ScanSettings.load(from:)` → raw saved values, `.request`) the app and CLI both read through
         ProcessItem.swift         # model: pid, ppid, command, elapsed, tty, kind, riskTier, cpu%, rss, owning uid; derived bucket
         PortRegistry.swift        # compiled port table + user-override merge + lsof listener parse
         CwdResolver.swift         # lsof cwd parse + git-root project label & root path (row descriptor + protect scope)
@@ -204,7 +205,7 @@ Configurable at runtime (`SettingsView.swift`):
 | `pidlyse kill <pid>` | Kills one *scanned candidate* by PID (any bucket, like the app's per-row kill button); refuses PIDs the scan didn't surface |
 | `pidlyse help` | Usage (also the bare-invocation default — never scans or kills) |
 
-Full app parity: settings (threshold, ignores incl. scoped, disabled kinds, custom rules, protected projects) are read from the app's defaults domain (`com.fakeneuron.pidlyse`) and scanned through the same core `ScanPipeline.run` call the app makes; kills route through the same `KillCore` path (SIGTERM → 2 s grace → SIGKILL, PID-reuse guards, docker-stop routing); confirmed kills append to the shared clean-log (`CleanLogFile`), so CLI cleans show up in the app's "Cleaned" tab. One-shot by design — nothing is ever killed without an explicit `clean` / `kill` invocation.
+Full app parity: settings (threshold, ignores incl. scoped, disabled kinds, custom rules, protected projects) are read from the app's defaults domain (`com.fakeneuron.pidlyse`) through the same core `ScanSettings.load(from:)` the app's `ScanEngine` uses, and scanned through the same core `ScanPipeline.run` call the app makes; kills route through the same `KillCore` path (SIGTERM → 2 s grace → SIGKILL, PID-reuse guards, docker-stop routing); confirmed kills append to the shared clean-log (`CleanLogFile`), so CLI cleans show up in the app's "Cleaned" tab. One-shot by design — nothing is ever killed without an explicit `clean` / `kill` invocation.
 
 ## Integrations (PID-EPIC-58)
 

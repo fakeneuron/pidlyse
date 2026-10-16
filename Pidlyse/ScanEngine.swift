@@ -72,7 +72,7 @@ final class ScanEngine: ObservableObject {
     /// Elapsed-time threshold above which a process counts as "old". Persisted to UserDefaults.
     @Published var elapsedThreshold: TimeInterval = 30 * 60 {
         didSet {
-            defaults.set(elapsedThreshold, forKey: "elapsedThreshold")
+            defaults.set(elapsedThreshold, forKey: SettingsKey.elapsedThreshold)
         }
     }
 
@@ -82,7 +82,7 @@ final class ScanEngine: ObservableObject {
     /// string array; parsed into `IgnoreRule`s at scan time.
     @Published var ignoredNames: [String] = [] {
         didSet {
-            defaults.set(ignoredNames, forKey: "ignoredNames")
+            defaults.set(ignoredNames, forKey: SettingsKey.ignoredNames)
         }
     }
 
@@ -95,7 +95,7 @@ final class ScanEngine: ObservableObject {
     /// instant (no rescan). Empty = nothing protected (the default).
     @Published var protectedProjects: [String] = [] {
         didSet {
-            defaults.set(protectedProjects, forKey: "protectedProjects")
+            defaults.set(protectedProjects, forKey: SettingsKey.protectedProjects)
         }
     }
 
@@ -105,7 +105,7 @@ final class ScanEngine: ObservableObject {
     /// everything (the default).
     @Published var disabledKinds: Set<ProcessKind> = [] {
         didSet {
-            defaults.set(disabledKinds.map { $0.rawValue }, forKey: "disabledKinds")
+            defaults.set(disabledKinds.map { $0.rawValue }, forKey: SettingsKey.disabledKinds)
         }
     }
 
@@ -116,7 +116,7 @@ final class ScanEngine: ObservableObject {
     /// of `substring = label` lines. Empty = built-in detection only (the default).
     @Published var customRules: [CustomRule] = [] {
         didSet {
-            defaults.set(customRules.map(CustomRule.serialize), forKey: "customRules")
+            defaults.set(customRules.map(CustomRule.serialize), forKey: SettingsKey.customRules)
         }
     }
 
@@ -201,20 +201,15 @@ final class ScanEngine: ObservableObject {
         self.killer = killer
         self.cleanLog = cleanLog
         self.killFeedbackLinger = killFeedbackLinger
-        let ud = defaults
-        let savedThreshold = ud.double(forKey: "elapsedThreshold")
-        let savedInterval = ud.double(forKey: "scanInterval")
-        let savedIgnoredNames = ud.stringArray(forKey: "ignoredNames") ?? []
-        let savedDisabledKinds = Set((ud.stringArray(forKey: "disabledKinds") ?? []).compactMap(ProcessKind.init(rawValue:)))
-        let savedCustomRules = (ud.stringArray(forKey: "customRules") ?? []).compactMap(CustomRule.parse)
-        let savedProtectedProjects = ud.stringArray(forKey: "protectedProjects") ?? []
-        let savedNotifications = ud.bool(forKey: "notificationsEnabled")
+        let saved = ScanSettings.load(from: defaults)
+        let savedInterval = defaults.double(forKey: "scanInterval")
+        let savedNotifications = defaults.bool(forKey: "notificationsEnabled")
 
-        if savedThreshold > 0 { _elapsedThreshold = Published(wrappedValue: savedThreshold) }
-        _ignoredNames = Published(wrappedValue: savedIgnoredNames)
-        _disabledKinds = Published(wrappedValue: savedDisabledKinds)
-        _customRules = Published(wrappedValue: savedCustomRules)
-        _protectedProjects = Published(wrappedValue: savedProtectedProjects)
+        if let savedThreshold = saved.elapsedThreshold { _elapsedThreshold = Published(wrappedValue: savedThreshold) }
+        _ignoredNames = Published(wrappedValue: saved.ignoredNames)
+        _disabledKinds = Published(wrappedValue: saved.disabledKinds)
+        _customRules = Published(wrappedValue: saved.customRules)
+        _protectedProjects = Published(wrappedValue: saved.protectedProjects)
         if savedInterval > 0 { _scanInterval = Published(wrappedValue: savedInterval) }
         if savedNotifications { _notificationsEnabled = Published(wrappedValue: true) }
         startTimer()
