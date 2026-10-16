@@ -1,0 +1,84 @@
+import XCTest
+@testable import PidlyseCore
+
+// MARK: - Shared scan pipeline (PID-079.6)
+
+/// The pure halves of the pipeline both consumers share: the request's ignore split
+/// and the protected / sweep predicates. `ScanPipeline.run` itself only sequences
+/// already-tested core calls against the live system; `ScanEngineTimeoutTests`
+/// drives it through the app's default scan source.
+final class ScanPipelineTests: XCTestCase {
+
+    private func item(_ pid: Int32) -> ProcessItem {
+        ProcessItem(pid: pid, ppid: 1, command: "node x", elapsed: 0, tty: "??", kind: .node,
+                    riskTier: .easy, cpuPercent: 0, rssKB: 0)
+    }
+
+    // MARK: - Request
+
+    func testGlobalIgnores_areTheUnscopedSubstrings() {
+        let request = ScanRequest(ignoreRules: [IgnoreRule(substring: "vite"),
+                                                IgnoreRule(substring: "worker", pathPrefix: "~/code/proj"),
+                                                IgnoreRule(substring: "jest")])
+        XCTAssertEqual(request.globalIgnores, ["vite", "jest"])
+    }
+
+    func testRequestDefaults_matchTheCoreThreshold() {
+        let request = ScanRequest()
+        XCTAssertEqual(request.elapsedThreshold, ScanCore.defaultElapsedThreshold)
+        XCTAssertTrue(request.globalIgnores.isEmpty)
+        XCTAssertTrue(request.dismissedPIDs.isEmpty)
+    }
+
+    // MARK: - Pipeline tail
+
+    func testFinish_appliesTheRequestsScopedRulesOnly() {
+        // Two identical commands in different trees, plus one the *global* rule names:
+        // global rules already ran inside `enumerate`, so the tail must not re-apply them.
+        let worker = ProcessItem(pid: 10, ppid: 1, command: "node worker.js", elapsed: 0, tty: "??",
+                                 kind: .node, riskTier: .easy, cpuPercent: 0, rssKB: 0)
+        let elsewhere = ProcessItem(pid: 11, ppid: 1, command: "node worker.js", elapsed: 0, tty: "??",
+                                    kind: .node, riskTier: .easy, cpuPercent: 0, rssKB: 0)
+        let vite = ProcessItem(pid: 12, ppid: 1, command: "node vite", elapsed: 0, tty: "??",
+                               kind: .node, riskTier: .easy, cpuPercent: 0, rssKB: 0)
+        let cwds: [Int32: ProcessCwd] = [
+            10: ProcessCwd(label: "proj", fullPath: "~/code/proj/app"),
+            11: ProcessCwd(label: "other", fullPath: "~/code/other"),
+            12: ProcessCwd(label: "proj", fullPath: "~/code/proj"),
+        ]
+        let request = ScanRequest(ignoreRules: [IgnoreRule(substring: "vite"),
+                                                IgnoreRule(substring: "worker", pathPrefix: "~/code/proj")])
+        XCTAssertEqual(ScanPipeline.finish([worker, elsewhere, vite], cwds: cwds, request: request).map(\.pid),
+                       [11, 12])
+    }
+
+    // MARK: - Protected
+
+    func testIsProtected_cwdUnderAProtectedTree() {
+        let cwds: [Int32: ProcessCwd] = [10: ProcessCwd(label: "proj", fullPath: "~/code/proj/app")]
+        XCTAssertTrue(ScanPipeline.isProtected(item(10), cwds: cwds, protectedProjects: ["~/code/proj"]))
+    }
+
+    func testIsProtected_siblingPrefixIsNotProtected() {
+        let cwds: [Int32: ProcessCwd] = [10: ProcessCwd(label: "proj2", fullPath: "~/code/proj2")]
+        XCTAssertFalse(ScanPipeline.isProtected(item(10), cwds: cwds, protectedProjects: ["~/code/proj"]))
+    }
+
+    func testIsProtected_unresolvedCwdIsNotProtected() {
+        XCTAssertFalse(ScanPipeline.isProtected(item(10), cwds: [:], protectedProjects: ["~"]))
+    }
+
+    func testIsProtected_noProtectedProjects() {
+        let cwds: [Int32: ProcessCwd] = [10: ProcessCwd(label: "proj", fullPath: "~/code/proj")]
+        XCTAssertFalse(ScanPipeline.isProtected(item(10), cwds: cwds, protectedProjects: []))
+    }
+
+    // MARK: - Sweep
+
+    func testIsSweepable_onlyUnprotectedAndKillable() {
+        XCTAssertTrue(ScanPipeline.isSweepable(isProtected: false, killability: .killable))
+        XCTAssertFalse(ScanPipeline.isSweepable(isProtected: true, killability: .killable))
+        XCTAssertFalse(ScanPipeline.isSweepable(isProtected: false, killability: .unkillable(owner: "root")))
+        XCTAssertFalse(ScanPipeline.isSweepable(isProtected: false, killability: .respawner(manager: nil)))
+    }
+}

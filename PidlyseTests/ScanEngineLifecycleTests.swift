@@ -13,17 +13,17 @@ final class ScanEngineLifecycleTests: XCTestCase {
     /// flight on purpose. Read from the scan queue and the test thread, so locked.
     private final class FakeSource: @unchecked Sendable {
         private let lock = NSLock()
-        private var snapshots: [ScanEngine.ScanSnapshot]
+        private var snapshots: [ScanSnapshot]
         private var gate: DispatchSemaphore?
-        private var seen: [ScanEngine.ScanRequest] = []
+        private var seen: [ScanRequest] = []
         /// Signalled each time a scan reaches the source.
         let started = DispatchSemaphore(value: 0)
 
-        init(_ snapshots: ScanEngine.ScanSnapshot...) {
+        init(_ snapshots: ScanSnapshot...) {
             self.snapshots = snapshots
         }
 
-        var requests: [ScanEngine.ScanRequest] { lock.withLock { seen } }
+        var requests: [ScanRequest] { lock.withLock { seen } }
 
         func hold() { lock.withLock { gate = DispatchSemaphore(value: 0) } }
 
@@ -35,8 +35,8 @@ final class ScanEngineLifecycleTests: XCTestCase {
             held?.signal()
         }
 
-        func scan(_ request: ScanEngine.ScanRequest) -> ScanEngine.ScanSnapshot {
-            let (held, snapshot) = lock.withLock { () -> (DispatchSemaphore?, ScanEngine.ScanSnapshot) in
+        func scan(_ request: ScanRequest) -> ScanSnapshot {
+            let (held, snapshot) = lock.withLock { () -> (DispatchSemaphore?, ScanSnapshot) in
                 seen.append(request)
                 return (gate, snapshots.count > 1 ? snapshots.removeFirst() : snapshots[0])
             }
@@ -90,8 +90,8 @@ final class ScanEngineLifecycleTests: XCTestCase {
                     startTime: ProcStartTime(sec: start, usec: 0), uid: uid)
     }
 
-    private func snapshot(_ items: [ProcessItem], cwds: [Int32: ProcessCwd] = [:]) -> ScanEngine.ScanSnapshot {
-        ScanEngine.ScanSnapshot(items: items, cwds: cwds)
+    private func snapshot(_ items: [ProcessItem], cwds: [Int32: ProcessCwd] = [:]) -> ScanSnapshot {
+        ScanSnapshot(items: items, cwds: cwds)
     }
 
     private func scanAndWait(_ engine: ScanEngine) {
@@ -139,22 +139,19 @@ final class ScanEngineLifecycleTests: XCTestCase {
         XCTAssertEqual(reloaded.elapsedThreshold, 600)
     }
 
-    /// Global ignores ride the request into `enumerate`; scoped ones need the cwd
-    /// map, so the engine applies them to the snapshot itself.
-    func testScanSplitsGlobalAndScopedIgnores() {
-        let scoped = item(10, command: "node worker.js")
-        let elsewhere = item(11, command: "node worker.js")
-        let source = FakeSource(snapshot([scoped, elsewhere], cwds: [
-            10: ProcessCwd(label: "proj", fullPath: "~/code/proj/app"),
-            11: ProcessCwd(label: "other", fullPath: "~/code/other"),
-        ]))
+    /// Every ignore line rides the request — global and cwd-scoped alike — and the
+    /// shared core pipeline applies both (PID-079.6); the engine publishes the
+    /// snapshot's items as they come back, minus only its own dismissals.
+    func testScanRequestCarriesEveryIgnoreRule() {
+        let source = FakeSource(snapshot([item(10), item(11)]))
         let engine = makeEngine(source)
         engine.ignoredNames = ["vite", "worker @ ~/code/proj"]
 
         scanAndWait(engine)
 
-        XCTAssertEqual(source.requests.first?.globalIgnores, ["vite"])
-        XCTAssertEqual(engine.items.map(\.pid), [11])
+        XCTAssertEqual(source.requests.first?.ignoreRules,
+                       [IgnoreRule(substring: "vite"), IgnoreRule(substring: "worker", pathPrefix: "~/code/proj")])
+        XCTAssertEqual(engine.items.map(\.pid), [10, 11])
     }
 
     // MARK: - Rescan queueing

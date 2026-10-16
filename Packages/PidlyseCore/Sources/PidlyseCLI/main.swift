@@ -3,7 +3,7 @@ import PidlyseCore
 
 // pidlyse — terminal companion to the Pidlyse menu bar app (PID-EPIC-57).
 // A thin impure shell over PidlyseCore: reads the app's defaults domain for
-// full rule parity, replicates ScanEngine's scan pipeline, and routes kills
+// full rule parity, runs the same core ScanPipeline as the app, and routes kills
 // through the same KillCore path (SIGTERM → 2 s grace → SIGKILL, identity
 // guards, docker-stop routing) the app uses. One-shot by design — it never
 // kills without an explicit `clean` / `kill` invocation, and confirmed kills
@@ -22,34 +22,26 @@ private let defaultsDomain = "com.fakeneuron.pidlyse"
 /// CLI meaning; the app's `dismissedPIDs` are session-only (never persisted),
 /// so a one-shot CLI correctly has no dismissed set.
 private struct Settings {
-    let elapsedThreshold: TimeInterval
-    let globalIgnores: [String]
-    let scopedIgnores: [IgnoreRule]
-    let disabledKinds: Set<ProcessKind>
-    let customRules: [CustomRule]
+    let request: ScanRequest
     let protectedProjects: [String]
 
     static func load() -> Settings {
         let ud = UserDefaults(suiteName: defaultsDomain)
         let savedThreshold = ud?.double(forKey: "elapsedThreshold") ?? 0
-        // Same split as ScanEngine.scan(): global substrings filter inside
-        // `enumerate`; scoped `substring @ prefix` rules need the cwd map and
-        // apply as a post-filter (PID-54.4).
-        let ignoreRules = (ud?.stringArray(forKey: "ignoredNames") ?? []).compactMap(IgnoreRule.parse)
         return Settings(
-            elapsedThreshold: savedThreshold > 0 ? savedThreshold : ScanCore.defaultElapsedThreshold,
-            globalIgnores: ignoreRules.filter { $0.pathPrefix == nil }.map { $0.substring },
-            scopedIgnores: ignoreRules.filter { $0.pathPrefix != nil },
-            disabledKinds: Set((ud?.stringArray(forKey: "disabledKinds") ?? []).compactMap(ProcessKind.init(rawValue:))),
-            customRules: (ud?.stringArray(forKey: "customRules") ?? []).compactMap(CustomRule.parse),
+            request: ScanRequest(
+                elapsedThreshold: savedThreshold > 0 ? savedThreshold : ScanCore.defaultElapsedThreshold,
+                ignoreRules: (ud?.stringArray(forKey: "ignoredNames") ?? []).compactMap(IgnoreRule.parse),
+                disabledKinds: Set((ud?.stringArray(forKey: "disabledKinds") ?? []).compactMap(ProcessKind.init(rawValue:))),
+                customRules: (ud?.stringArray(forKey: "customRules") ?? []).compactMap(CustomRule.parse)),
             protectedProjects: ud?.stringArray(forKey: "protectedProjects") ?? [])
     }
 }
 
-/// One completed scan, in ScanEngine.scan()'s pipeline order: port listeners →
-/// container owners → enumerate (with the PID-35.3 start-time token) → cwd
-/// resolution → scoped ignores. `protectedPIDs` is the view-side protected
-/// overlay resolved eagerly (the CLI has no reactive layer to defer it to).
+/// One completed scan through the shared core `ScanPipeline` (PID-079.6) — the
+/// same call the app's `ScanEngine` makes, minus the process table only the app's
+/// inspector reads. `protectedPIDs` is the protected overlay resolved eagerly (the
+/// CLI has no reactive layer to defer it to).
 private struct ScanResult {
     let items: [ProcessItem]
     let cwds: [Int32: ProcessCwd]
@@ -58,22 +50,12 @@ private struct ScanResult {
 }
 
 private func runScan(_ settings: Settings) -> ScanResult {
-    let portMap = PortRegistry.listeningPorts()
-    let owners = DockerService.containerOwners()
-    let result = ScanCore.enumerate(elapsedThreshold: settings.elapsedThreshold,
-                                    registeredPIDs: Set(portMap.keys),
-                                    ignoredNames: settings.globalIgnores,
-                                    disabledKinds: settings.disabledKinds,
-                                    customRules: settings.customRules,
-                                    startTimeProvider: KillCore.startTime,
-                                    uidProvider: KillCore.ownerUID)
-    let cwdMap = CwdResolver.processCwds(forPIDs: result.map { $0.pid })
-    let filtered = ScanCore.applyScopedIgnores(result, cwds: cwdMap, rules: settings.scopedIgnores)
-    let protectedPIDs = Set(filtered.filter { item in
-        guard let cwd = cwdMap[item.pid]?.fullPath else { return false }
-        return settings.protectedProjects.contains { CwdResolver.isUnderPrefix(cwd, $0) }
+    let snapshot = ScanPipeline.run(settings.request, includeProcessTable: false)
+    let protectedPIDs = Set(snapshot.items.filter {
+        ScanPipeline.isProtected($0, cwds: snapshot.cwds, protectedProjects: settings.protectedProjects)
     }.map { $0.pid })
-    return ScanResult(items: filtered, cwds: cwdMap, containerOwners: owners, protectedPIDs: protectedPIDs)
+    return ScanResult(items: snapshot.items, cwds: snapshot.cwds,
+                      containerOwners: snapshot.containerOwners, protectedPIDs: protectedPIDs)
 }
 
 /// Kill `items` concurrently and block until every grace period resolves —
@@ -97,18 +79,14 @@ private func killAll(_ items: [ProcessItem], containerOwners: [Int32: String]) -
     return outcomes
 }
 
-/// Append confirmed kills to the shared clean-log — same rules as
-/// `ScanEngine.recordCleaned`: only `.confirmed` outcomes are logged
-/// (PID-53.2), a custom-rule match persists its friendly label as the kind,
-/// and the project label falls back to the executable `displayPath`.
+/// Append confirmed kills to the shared clean-log — same rule as
+/// `ScanEngine.recordCleaned`: only `.confirmed` outcomes are logged (PID-53.2),
+/// each built by the shared `CleanEvent(item:cwd:)` (PID-079.6).
 private func recordCleaned(_ items: [ProcessItem],
                            outcomes: [Int32: KillCore.KillOutcome],
                            cwds: [Int32: ProcessCwd]) {
     let events = items.filter { outcomes[$0.pid] == .confirmed }.map { item in
-        CleanEvent(kind: item.kind == .custom ? item.displayLabel : item.kind.rawValue,
-                   projectLabel: cwds[item.pid]?.label ?? item.displayPath,
-                   rssKB: item.rssKB,
-                   timestamp: Date())
+        CleanEvent(item: item, cwd: cwds[item.pid])
     }
     CleanLogFile.append(events)
 }
@@ -135,14 +113,16 @@ private func commandClean() -> Int32 {
     // The app's "Clean all" sweep set: safe bucket, minus protected (PID-54.4), minus
     // foreign-owned processes no signal of ours can reach (PID-62.3). The app also
     // excludes known respawners, which a one-shot CLI has no session memory of — the
-    // respawn half of the overlay stays app-only (PID-62.1 clarification #4).
+    // respawn half of the overlay stays app-only (PID-62.1 clarification #4). The
+    // predicate itself is the app's, shared through core (PID-079.6).
     let currentUID = getuid()
     let sweepable = scan.items.filter {
         $0.bucket == .safe
-            && !scan.protectedPIDs.contains($0.pid)
-            && (KillCore.routesViaDockerStop($0, containerOwners: scan.containerOwners)
-                || !Killability.isForeignOwned(ownerUID: Killability.groupOwnerUID($0, currentUID: currentUID),
-                                              currentUID: currentUID))
+            && ScanPipeline.isSweepable(
+                isProtected: scan.protectedPIDs.contains($0.pid),
+                killability: Killability.derive(for: $0, containerOwners: scan.containerOwners,
+                                                currentUID: currentUID,
+                                                killDenied: false, isRespawner: false, manager: nil))
     }
     guard !sweepable.isEmpty else {
         print("Nothing to clean — no unprotected, killable safe-bucket processes.")

@@ -24,6 +24,7 @@ Pidlyse/
     PidlyseCore/                  # pure, injectable, unit-tested core (SPM package)
       Sources/PidlyseCore/
         ScanCore.swift            # ps parse + stray detection + risk-tier classification
+        ScanPipeline.swift        # the one scan pipeline app + CLI call (ScanRequest → ScanSnapshot) + shared protected/sweep predicates
         ProcessItem.swift         # model: pid, ppid, command, elapsed, tty, kind, riskTier, cpu%, rss, owning uid; derived bucket
         PortRegistry.swift        # compiled port table + user-override merge + lsof listener parse
         CwdResolver.swift         # lsof cwd parse + git-root project label & root path (row descriptor + protect scope)
@@ -45,7 +46,7 @@ Pidlyse/
         CLICore.swift             # pure cli-companion command grammar (list/clean/kill/help) + table formatting
         Shell.swift               # shared subprocess primitive (Process/Pipe drain, per-caller deadline) — all shell-out sites delegate
       Sources/PidlyseCLI/
-        main.swift                # `pidlyse` executable: defaults-domain settings read, ScanEngine-parity scan pipeline, command dispatch
+        main.swift                # `pidlyse` executable: defaults-domain settings read, one shared `ScanPipeline.run` call, command dispatch
       Tests/PidlyseCoreTests/     # one XCTest file per core type; `swift test --package-path Packages/PidlyseCore`
   Pidlyse/
     PidlyseApp.swift          # @main; required (inert) Settings scene + NSApplicationDelegateAdaptor
@@ -123,7 +124,7 @@ Port registry awareness ([[PID-005]]): any process listening on a port in the lo
 
 Protected-projects awareness (PID-54.4): a safe process whose working directory sits under a user-protected project tree stays *listed* in the Safe section (badged 🔒) but is excluded from the "Clean all" sweep, the section count, and the reclaimable total — a display/sweep overlay, not a bucket change. Its individual kill button still works.
 
-Killability awareness ([[PID-62.3]]): a row Pidlyse cannot honestly kill carries a killability state (`Killability`) — **unkillable** when the process belongs to another user (owning uid read at scan time from the same `kinfo_proc` `KillCore` uses, with an observed `EPERM` outcome as the backstop; Pidlyse never escalates) or **respawner** when [[PID-62.2]]'s respawn detection saw it come back after a verified kill (attributed to its owning container, else its nearest ancestor). The row stays *listed* in its section, but a badge (🚫 unkillable / ↻ respawner) replaces the ✕ button, its tooltip and a ⓘ inspector line carry the one explanation sentence, and it is excluded from "Clean all", ⌘⌫, the section count, and the reclaimable total through the engine-side `ScanEngine.isSweepable(_:)` predicate the popover shares. Same overlay shape as 🔒 — `riskTier` and `bucket` are untouched. Unkillable outranks respawner; an unresolved uid degrades to killable. The CLI's `clean` excludes foreign-owned rows too; the respawn half stays app-only (a one-shot CLI has no session memory).
+Killability awareness ([[PID-62.3]]): a row Pidlyse cannot honestly kill carries a killability state (`Killability`) — **unkillable** when the process belongs to another user (owning uid read at scan time from the same `kinfo_proc` `KillCore` uses, with an observed `EPERM` outcome as the backstop; Pidlyse never escalates) or **respawner** when [[PID-62.2]]'s respawn detection saw it come back after a verified kill (attributed to its owning container, else its nearest ancestor). The row stays *listed* in its section, but a badge (🚫 unkillable / ↻ respawner) replaces the ✕ button, its tooltip and a ⓘ inspector line carry the one explanation sentence, and it is excluded from "Clean all", ⌘⌫, the section count, and the reclaimable total through the engine-side `ScanEngine.isSweepable(_:)` predicate the popover shares (built on core `ScanPipeline.isSweepable`, which the CLI calls too). Same overlay shape as 🔒 — `riskTier` and `bucket` are untouched. Unkillable outranks respawner; an unresolved uid degrades to killable. The CLI's `clean` excludes foreign-owned rows too; the respawn half stays app-only (a one-shot CLI has no session memory).
 
 ---
 
@@ -203,7 +204,7 @@ Configurable at runtime (`SettingsView.swift`):
 | `pidlyse kill <pid>` | Kills one *scanned candidate* by PID (any bucket, like the app's per-row kill button); refuses PIDs the scan didn't surface |
 | `pidlyse help` | Usage (also the bare-invocation default — never scans or kills) |
 
-Full app parity: settings (threshold, ignores incl. scoped, disabled kinds, custom rules, protected projects) are read from the app's defaults domain (`com.fakeneuron.pidlyse`); kills route through the same `KillCore` path (SIGTERM → 2 s grace → SIGKILL, PID-reuse guards, docker-stop routing); confirmed kills append to the shared clean-log (`CleanLogFile`), so CLI cleans show up in the app's "Cleaned" tab. One-shot by design — nothing is ever killed without an explicit `clean` / `kill` invocation.
+Full app parity: settings (threshold, ignores incl. scoped, disabled kinds, custom rules, protected projects) are read from the app's defaults domain (`com.fakeneuron.pidlyse`) and scanned through the same core `ScanPipeline.run` call the app makes; kills route through the same `KillCore` path (SIGTERM → 2 s grace → SIGKILL, PID-reuse guards, docker-stop routing); confirmed kills append to the shared clean-log (`CleanLogFile`), so CLI cleans show up in the app's "Cleaned" tab. One-shot by design — nothing is ever killed without an explicit `clean` / `kill` invocation.
 
 ## Integrations (PID-EPIC-58)
 

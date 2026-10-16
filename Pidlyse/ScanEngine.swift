@@ -10,28 +10,11 @@ import PidlyseCore
 final class ScanEngine: ObservableObject {
     static let defaultScanInterval: TimeInterval = 120
 
-    /// The settings one scan runs with, captured on the main thread before the scan
-    /// leaves it (PID-078.3).
-    struct ScanRequest {
-        let elapsedThreshold: TimeInterval
-        let globalIgnores: [String]
-        let dismissedPIDs: Set<Int32>
-        let disabledKinds: Set<ProcessKind>
-        let customRules: [CustomRule]
-    }
-
-    /// Everything one scan reads from the system (PID-078.3). `items` is the
-    /// enumerated set before cwd-scoped ignores, which `scan()` applies itself.
-    struct ScanSnapshot {
-        var items: [ProcessItem]
-        var listeningPorts: [Int32: Set<Int>] = [:]
-        var containerOwners: [Int32: String] = [:]
-        var cwds: [Int32: ProcessCwd] = [:]
-        var processTable: [Int32: ProcessNode] = [:]
-    }
-
-    /// Reads one scan's snapshot. Called on a background queue. Injected so tests
-    /// can drive the lifecycle without `ps` / `lsof` / `docker` (PID-078.3).
+    /// Reads one scan's snapshot (`PidlyseCore.ScanRequest` → `ScanSnapshot`, the
+    /// types the CLI shares). Called on a background queue with the request captured
+    /// on the main thread. Injected so tests can drive the lifecycle without `ps` /
+    /// `lsof` / `docker` (PID-078.3); the default is the shared core pipeline
+    /// (PID-079.6).
     typealias ScanSource = (ScanRequest) -> ScanSnapshot
 
     /// Kills rows and reports every outcome once, on the main queue. Injected so
@@ -209,7 +192,7 @@ final class ScanEngine: ObservableObject {
     /// Every parameter defaults to the live system; tests inject an isolated suite,
     /// canned snapshots, a fake kill, a temp clean log, and a short linger (PID-078.3).
     init(defaults: UserDefaults = .standard,
-         scanSource: @escaping ScanSource = ScanEngine.systemScan,
+         scanSource: @escaping ScanSource = { ScanPipeline.run($0) },
          killer: @escaping Killer = { KillService.kill($0, containerOwners: $1, onComplete: $2) },
          cleanLog: CleanLogStore = CleanLogStore(),
          killFeedbackLinger: TimeInterval = ScanEngine.defaultKillFeedbackLinger) {
@@ -259,29 +242,19 @@ final class ScanEngine: ObservableObject {
         isScanning = true
         let completions = completionsForNextScan
         completionsForNextScan = []
-        let threshold = elapsedThreshold
-        // Split the ignore editor lines: global substrings hide inside `enumerate`
-        // (unchanged path); scoped `substring @ prefix` rules need the cwd map and are
-        // applied as a post-filter below (PID-54.4).
-        let ignoreRules = ignoredNames.compactMap(IgnoreRule.parse)
-        let globalIgnores = ignoreRules.filter { $0.pathPrefix == nil }.map { $0.substring }
-        let scopedIgnores = ignoreRules.filter { $0.pathPrefix != nil }
-        let request = ScanRequest(elapsedThreshold: threshold,
-                                  globalIgnores: globalIgnores,
+        let request = ScanRequest(elapsedThreshold: elapsedThreshold,
+                                  ignoreRules: ignoredNames.compactMap(IgnoreRule.parse),
                                   dismissedPIDs: dismissedPIDs,
                                   disabledKinds: disabledKinds,
                                   customRules: customRules)
         let source = scanSource
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let snapshot = source(request)
-            // Apply cwd-scoped ignores now that the cwd map exists — they can't run
-            // inside `enumerate` (no cwd there). Global ignores already filtered there.
-            let filtered = ScanCore.applyScopedIgnores(snapshot.items, cwds: snapshot.cwds, rules: scopedIgnores)
             DispatchQueue.main.async {
                 guard let self else { return }
                 // Re-apply dismissals: a row dismissed while this scan ran isn't in
                 // the snapshot it started with, and must not come back (PID-62.5).
-                let visible = filtered.filter { !self.dismissedPIDs.contains($0.pid) }
+                let visible = snapshot.items.filter { !self.dismissedPIDs.contains($0.pid) }
                 let oldPIDs = self.previousPIDs
                 self.previousPIDs = Set(visible.map { $0.pid })
                 self.items = visible
@@ -307,40 +280,6 @@ final class ScanEngine: ObservableObject {
                 }
             }
         }
-    }
-
-    /// The live scan source: one `lsof` for ports, one `docker inspect`, one `ps`
-    /// enumeration, one `lsof` for cwds, and one `ps` for the process table.
-    static func systemScan(_ request: ScanRequest) -> ScanSnapshot {
-        // Resolve the registered-port listeners once: its keys feed the
-        // classifier's port-demotion (passed as registeredPIDs so enumerate
-        // doesn't re-run lsof), and the full map drives the per-row port hint
-        // (PID-036.3).
-        let portMap = PortRegistry.listeningPorts()
-        // Resolve the Docker container-owner map once per scan (single bulk
-        // inspect); the kill path and the row hint read it instead of a
-        // per-click inspect (PID-037.2, retiring F9).
-        let owners = DockerService.containerOwners()
-        // Capture each candidate's start time at scan so the kill path can detect
-        // a PID recycled between this scan and a later kill click (PID-35.3), and
-        // its owning uid so a foreign-owned row can be shown as unkillable before
-        // the user clicks a button that can't work (PID-62.3).
-        let result = ScanCore.enumerate(elapsedThreshold: request.elapsedThreshold,
-                                        registeredPIDs: Set(portMap.keys),
-                                        ignoredNames: request.globalIgnores,
-                                        dismissedPIDs: request.dismissedPIDs,
-                                        disabledKinds: request.disabledKinds,
-                                        customRules: request.customRules,
-                                        startTimeProvider: KillCore.startTime,
-                                        uidProvider: KillCore.ownerUID)
-        // Resolve each candidate's working directory once per scan (single bulk
-        // lsof over the matched PIDs); the row-expansion hint reads it (PID-038).
-        let cwdMap = CwdResolver.processCwds(forPIDs: result.map { $0.pid })
-        // Resolve the full system process table once per scan (single bulk `ps`);
-        // the inspector's parent-chain hint walks it to launchd (PID-52.2).
-        let procTable = AncestryResolver.processTable()
-        return ScanSnapshot(items: result, listeningPorts: portMap, containerOwners: owners,
-                            cwds: cwdMap, processTable: procTable)
     }
 
     /// Run `completion` after the app's first scan has published. This bridges
@@ -409,22 +348,12 @@ final class ScanEngine: ObservableObject {
         switch outcome {
         case .confirmed:
             armRespawnWatch(item, cwd: cwd, killStartedAt: killStartedAt)
-            cleanLog.record(makeCleanEvent(item, cwd: cwd))
+            cleanLog.record(CleanEvent(item: item, cwd: cwd))
         case .unkillable:
             if let startTime = item.startTime { killDeniedIdentities[item.pid] = startTime }
         case .survived, .notKilled:
             break
         }
-    }
-
-    private func makeCleanEvent(_ item: ProcessItem, cwd: ProcessCwd?) -> CleanEvent {
-        // For a custom-rule match, persist the friendly label as the `kind` string:
-        // the Cleaned tab's `ProcessKind(rawValue:)?.label ?? kc.kind` fallback then
-        // shows the user's label (an unknown rawValue falls through to the raw string).
-        CleanEvent(kind: item.kind == .custom ? item.displayLabel : item.kind.rawValue,
-                   projectLabel: cwd?.label ?? item.displayPath,
-                   rssKB: item.rssKB,
-                   timestamp: Date())
     }
 
     // MARK: - Kill lifecycle (PID-62.5)
@@ -524,22 +453,23 @@ final class ScanEngine: ObservableObject {
     // MARK: - Headless clean action (PID-58.2)
 
     /// Whether `item`'s resolved working directory sits under a protected project
-    /// tree (PID-54.4) — the engine-side SSOT for the protected overlay. Both the
-    /// popover ("Clean all") and the headless sweep read it, so the predicate can't
-    /// drift between surfaces. False when the cwd didn't resolve.
+    /// tree (PID-54.4), against the live settings and the last scan's cwds. The
+    /// popover ("Clean all") and the headless sweep both read it; the predicate
+    /// itself is `ScanPipeline.isProtected`, shared with the CLI (PID-079.6).
     func isProtected(_ item: ProcessItem) -> Bool {
-        guard let cwd = cwds[item.pid]?.fullPath else { return false }
-        return protectedProjects.contains { CwdResolver.isUnderPrefix(cwd, $0) }
+        ScanPipeline.isProtected(item, cwds: cwds, protectedProjects: protectedProjects)
     }
 
-    /// Whether `item` belongs in a bulk sweep at all: not protected (PID-54.4), and
-    /// something Pidlyse can honestly kill (PID-62.3). The engine-side SSOT for the
-    /// sweep predicate — `sweepableSafeItems` below and the popover's filtered variant
-    /// both call it, so a row that shows no kill button can't still be swept by
-    /// "Clean all" — nor can a row showing its kill's phase in place of the button.
+    /// Whether `item` belongs in a bulk sweep at all: the shared core predicate
+    /// (`ScanPipeline.isSweepable` — not protected, honestly killable; PID-079.6)
+    /// fed with this session's facts. `sweepableSafeItems` below and the popover's
+    /// filtered variant both call it, so a row that shows no kill button can't still
+    /// be swept by "Clean all" — nor can a row showing its kill's phase in place of
+    /// the button.
     func isSweepable(_ item: ProcessItem) -> Bool {
         // A row already being killed — or just answered — isn't swept again (PID-62.5).
-        !isProtected(item) && killability(item) == .killable && killPhase(for: item) == nil
+        ScanPipeline.isSweepable(isProtected: isProtected(item), killability: killability(item))
+            && killPhase(for: item) == nil
     }
 
     /// The "Clean all safe" sweep set: safe bucket minus protected projects
@@ -687,11 +617,6 @@ final class ScanEngine: ObservableObject {
     /// but never touches the risk tier, the bucket, or the classification.
     func killability(_ item: ProcessItem) -> Killability {
         let respawner = isRespawner(item)
-        // A container root stopped via `docker stop` needs no signal permission, so
-        // its owner uid says nothing about whether the kill will work. A group row
-        // answers for every member it would kill (PID-62.4).
-        let ownerUID = KillCore.routesViaDockerStop(item, containerOwners: containerOwners)
-            ? nil : Killability.groupOwnerUID(item, currentUID: currentUID)
         // Attribution is only needed for the respawner sentence, so the common
         // killable row doesn't pay for an ancestor walk.
         let manager = respawner
@@ -699,7 +624,9 @@ final class ScanEngine: ObservableObject {
                                                                            in: processTable),
                                   containerOwner: containerOwners[item.pid])
             : nil
-        return Killability.derive(ownerUID: ownerUID,
+        // The Docker-aware owner fold is shared with the CLI (PID-079.6).
+        return Killability.derive(for: item,
+                                  containerOwners: containerOwners,
                                   currentUID: currentUID,
                                   killDenied: wasKillDenied(item),
                                   isRespawner: respawner,

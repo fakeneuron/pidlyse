@@ -30,4 +30,16 @@ public struct CleanEvent: Codable, Equatable {
         self.rssKB = rssKB
         self.timestamp = timestamp
     }
+
+    /// The event for a confirmed kill of `item`, the one construction path both
+    /// writers use (PID-079.6). `cwd` is the scan-time working directory. A
+    /// custom-rule match persists its friendly label as `kind`: the Cleaned tab's
+    /// `ProcessKind(rawValue:)?.label ?? kind` fallback then shows the user's label.
+    /// The project label falls back to the executable `displayPath`.
+    public init(item: ProcessItem, cwd: ProcessCwd?, timestamp: Date = Date()) {
+        self.init(kind: item.kind == .custom ? item.displayLabel : item.kind.rawValue,
+                  projectLabel: cwd?.label ?? item.displayPath,
+                  rssKB: item.rssKB,
+                  timestamp: timestamp)
+    }
 }

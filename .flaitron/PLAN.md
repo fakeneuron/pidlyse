@@ -17,7 +17,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-079.3** [medium]🧩 [unattended] | shell-run-timeout — Completed 2026-10-08.
   - [x] **PID-079.4** [light]🔧 [unattended] | scan-on-launch — Completed 2026-10-10.
   - [x] **PID-079.5** [light]🔧 [unattended] | cli-clean-exit-status — Completed 2026-10-10.
-  - [ ] **PID-079.6** [heavy]🧠 | shared-scan-pipeline — Lift the scan pipeline, protected/sweep predicate, and CleanEvent(item:cwd:) into PidlyseCore so ScanEngine and PidlyseCLI each make one call; update the AGENTS.md convention lines that say "keep the two pipelines in step".
+  - [x] **PID-079.6** [heavy]🧠 | shared-scan-pipeline — Completed 2026-10-15.
   - [ ] **PID-079.N** [heavy]🧠 | consumer-seams audit
 - [ ] **PID-EPIC-080** [light]🔧 | docs-plan-currency — Bring README trust claims and PLAN.md bookkeeping back in line with the code. Discovery supplied by audit-repo 2026-10-07. Surfaced by audit-repo 2026-10-07 (Theme: Docs and plan currency)
   - [x] **PID-080.2** [light]🔧 [unattended] | readme-disk-footprint — Completed 2026-10-08.

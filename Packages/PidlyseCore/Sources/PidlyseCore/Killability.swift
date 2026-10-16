@@ -56,6 +56,27 @@ public enum Killability: Equatable {
         return isRespawner ? .respawner(manager: manager) : .killable
     }
 
+    /// Derive a scanned row's killability, folding in the owner the kill would
+    /// actually run into (PID-079.6). A container root stopped via `docker stop`
+    /// needs no signal permission, so its uid says nothing; a group row answers for
+    /// every member it would kill (PID-62.4). The session facts are required so no
+    /// caller drops them by omission: the app supplies its `EPERM` memory and respawn
+    /// signal; the one-shot CLI has none and says so explicitly.
+    public static func derive(for item: ProcessItem,
+                              containerOwners: [Int32: String],
+                              currentUID: uid_t,
+                              killDenied: Bool,
+                              isRespawner: Bool,
+                              manager: String?) -> Killability {
+        let ownerUID = KillCore.routesViaDockerStop(item, containerOwners: containerOwners)
+            ? nil : groupOwnerUID(item, currentUID: currentUID)
+        return derive(ownerUID: ownerUID,
+                      currentUID: currentUID,
+                      killDenied: killDenied,
+                      isRespawner: isRespawner,
+                      manager: manager)
+    }
+
     /// Whether a process belongs to someone other than the user Pidlyse runs as — the
     /// pre-click half of the unkillable signal. An unresolved uid means "unknown", and
     /// the honest response to not knowing is to leave the affordance alone (the same

@@ -178,4 +178,43 @@ final class KillabilityTests: XCTestCase {
         let item = try XCTUnwrap(ScanCore.makeItem(from: line, elapsedThreshold: 60))
         XCTAssertFalse(KillCore.routesViaDockerStop(item, containerOwners: [4711: "redis"]))
     }
+
+    // MARK: - Row derivation (PID-079.6)
+
+    private func row(_ pid: Int32, kind: ProcessKind, uid: uid_t?, members: [ProcessItem] = []) -> ProcessItem {
+        ProcessItem(pid: pid, ppid: 1, command: "x", elapsed: 0, tty: "??", kind: kind,
+                    riskTier: .easy, cpuPercent: 0, rssKB: 0, uid: uid, members: members)
+    }
+
+    /// The CLI's call: a one-shot run has no session facts.
+    private func derive(_ item: ProcessItem, owners: [Int32: String] = [:],
+                        killDenied: Bool = false, isRespawner: Bool = false,
+                        manager: String? = nil) -> Killability {
+        Killability.derive(for: item, containerOwners: owners, currentUID: me,
+                           killDenied: killDenied, isRespawner: isRespawner, manager: manager)
+    }
+
+    func testDeriveForRow_foreignOwned_isUnkillable() {
+        XCTAssertEqual(derive(row(10, kind: .node, uid: 0)), .unkillable(owner: "root"))
+    }
+
+    func testDeriveForRow_dockerStopRoute_ignoresForeignOwner() {
+        // `docker stop` needs no signal permission, so a root-owned container root
+        // stays killable — the CLI sweep and the app's ✕ agree.
+        let item = row(10, kind: .docker, uid: 0)
+        XCTAssertEqual(derive(item, owners: [10: "redis"]), .killable)
+        XCTAssertNotEqual(derive(item), .killable, "no container owner → signals → EPERM")
+    }
+
+    func testDeriveForRow_foreignGroupMember_isUnkillable() {
+        let group = row(10, kind: .node, uid: me, members: [row(11, kind: .node, uid: 502)])
+        XCTAssertNotEqual(derive(group), .killable)
+    }
+
+    func testDeriveForRow_passesSessionFactsThrough() {
+        let item = row(10, kind: .node, uid: me)
+        XCTAssertEqual(derive(item), .killable)
+        XCTAssertEqual(derive(item, isRespawner: true, manager: "launchd"), .respawner(manager: "launchd"))
+        XCTAssertNotEqual(derive(item, killDenied: true), .killable)
+    }
 }
