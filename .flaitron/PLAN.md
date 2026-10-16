@@ -11,7 +11,8 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - [ ] **PID-EPIC-078** [heavy]🧠 | test-safety-net — Make app-side lifecycle change safe before PID-EPIC-079 touches it. Discovery supplied by audit-repo 2026-10-07. Surfaced by audit-repo 2026-10-07 (Theme: Lifecycle edges are untested)
   - [x] **PID-078.2** [medium]🧩 [unattended] | core-test-target — Completed 2026-10-08.
   - [x] **PID-078.3** [heavy]🧠 | engine-lifecycle-tests — Completed 2026-10-15.
-  - [ ] **PID-078.N** [medium]🧩 [unattended] | test-safety-net audit
+  - [ ] **PID-078.4** [light]🔧 | core-tests-per-type — Split the core target's `ScanEngineTests.swift` (97 ScanCore/PortRegistry/CustomRule/IgnoreRule tests, none for ScanEngine) into one file per core type so it stops shadowing the app's `ScanEngine*Tests`; core count unchanged; SPEC.md tree claim holds. Surfaced by PID-078.N audit.
+  - [x] **PID-078.N** [medium]🧩 [unattended] | test-safety-net audit — Completed 2026-10-15.
 
 ## Medium
 
