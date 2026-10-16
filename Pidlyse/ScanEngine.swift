@@ -61,6 +61,11 @@ final class ScanEngine: ObservableObject {
     /// rows the user has inspected.
     @Published private(set) var openFiles: [Int32: OpenFileList] = [:]
 
+    /// PID → this scan's stray verdict (PID-086.2): session ended / duplicate / idle /
+    /// running. Derived once per scan by the pure `PidlyseCore.StrayVerdict` over the
+    /// whole snapshot, with idle fed by `scanHistory`. Read through `verdict(_:)`.
+    @Published private(set) var verdicts: [Int32: StrayVerdict] = [:]
+
     /// How often (seconds) the background timer auto-scans. Persisted to UserDefaults.
     @Published var scanInterval: TimeInterval = 120 {
         didSet {
@@ -258,6 +263,10 @@ final class ScanEngine: ObservableObject {
                 self.cwds = snapshot.cwds
                 self.processTable = snapshot.processTable
                 self.recordScanHistory(visible)
+                // After the history fold — idle reads this scan's sample too.
+                self.verdicts = StrayVerdict.derive(visible, cwds: snapshot.cwds,
+                                                    processTable: snapshot.processTable,
+                                                    isQuiet: self.hasSustainedLowCPU)
                 // After `cwds` is published — signatures are built from it.
                 self.recordRespawnHistory(visible)
                 self.isScanning = false
@@ -455,34 +464,40 @@ final class ScanEngine: ObservableObject {
         ScanPipeline.isProtected(item, cwds: cwds, protectedProjects: protectedProjects)
     }
 
-    /// Whether `item` belongs in a bulk sweep at all: the shared core predicate
-    /// (`ScanPipeline.isSweepable` — not protected, honestly killable; PID-079.6)
-    /// fed with this session's facts. `sweepableSafeItems` below and the popover's
-    /// filtered variant both call it, so a row that shows no kill button can't still
-    /// be swept by "Clean all" — nor can a row showing its kill's phase in place of
-    /// the button.
+    /// This scan's stray verdict for `item` (PID-086.2); `.running` for a row the
+    /// last derivation didn't see (a departed row, or before the first scan).
+    func verdict(_ item: ProcessItem) -> StrayVerdict {
+        verdicts[item.pid] ?? .running
+    }
+
+    /// Whether `item` belongs in a bulk sweep: the shared core predicate
+    /// (`ScanPipeline.isSweepable` — a stray that isn't high-risk, protected, or
+    /// unkillable; PID-079.6, PID-086.2) fed with this session's facts. `sweepableStrays`
+    /// below and the popover's filtered variant both call it, so a row that shows no
+    /// kill button can't still be swept by "Clean all" — nor can a row showing its
+    /// kill's phase in place of the button.
     func isSweepable(_ item: ProcessItem) -> Bool {
         // A row already being killed — or just answered — isn't swept again (PID-62.5).
-        ScanPipeline.isSweepable(isProtected: isProtected(item), killability: killability(item))
+        ScanPipeline.isSweepable(verdict: verdict(item), riskTier: item.riskTier,
+                                 isProtected: isProtected(item), killability: killability(item))
             && killPhase(for: item) == nil
     }
 
-    /// The "Clean all safe" sweep set: safe bucket minus protected projects
-    /// (PID-54.4) and minus rows we can't honestly kill (PID-62.3). Engine-side SSOT
-    /// shared by the popover button (which folds in its quick-filter on top) and every
-    /// external trigger (URL scheme, AppIntents) — the same set the CLI's
-    /// `commandClean()` derives.
-    var sweepableSafeItems: [ProcessItem] {
-        items.filter { $0.bucket == .safe && isSweepable($0) }
+    /// The "Clean all" sweep set: likely strays (PID-086.2) minus high-risk rows,
+    /// protected projects (PID-54.4), and rows we can't honestly kill (PID-62.3).
+    /// Engine-side SSOT shared by every external trigger (URL scheme, AppIntents) —
+    /// the same set the CLI's `commandClean()` derives.
+    var sweepableStrays: [ProcessItem] {
+        items.filter(isSweepable)
     }
 
-    /// Headless "Clean all safe": kill the sweepable set through the one kill path
+    /// Headless "Clean all": kill the sweepable set through the one kill path
     /// and report what actually happened. The shared action layer every external
     /// trigger rides on (PID-58.2) — the same set the CLI's `commandClean()` derives.
     /// Must be called on the main thread; `completion` fires on the main thread once
     /// every kill is verified and the follow-up scan has published.
     func cleanAllSafe(completion: @escaping (KillReport) -> Void = { _ in }) {
-        kill(sweepableSafeItems, completion: completion)
+        kill(sweepableStrays, completion: completion)
     }
 
     /// Post a system notification summarising a headless clean (PID-58.2). Unlike
@@ -495,7 +510,7 @@ final class ScanEngine: ObservableObject {
         let content = UNMutableNotificationContent()
         if report.requested == 0 {
             content.title = "Nothing to clean"
-            content.body = "No unprotected safe-to-clean processes."
+            content.body = "No likely strays to clean."
         } else {
             content.title = report.headline
             content.body = report.details

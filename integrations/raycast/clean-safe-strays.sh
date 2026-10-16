@@ -12,7 +12,7 @@
 # @raycast.packageName Pidlyse
 #
 # Documentation:
-# @raycast.description Kill every safe-to-clean stray process (safe bucket minus protected projects). Exit status 1 means one or more swept items were not verified gone.
+# @raycast.description Kill every likely stray in the "Clean all" sweep set (not high-risk, minus protected projects). Exit status 1 means one or more swept items were not verified gone.
 # @raycast.author fakeneuron
 
 # Resolve the installed CLI (see integrations/raycast/README.md → `make install-cli`).

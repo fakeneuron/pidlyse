@@ -323,6 +323,10 @@ public enum ScanCore {
         if hasTokenBoundary(s, "vite")    { return .vite }
         if hasTokenBoundary(s, "jest")    { return .jest }
         if hasTokenBoundary(s, "uvicorn") { return .uvicorn }
+        // Docker Desktop's own helpers (backend, vmnetd, virtualization, the GUI) are
+        // the app the user manages Docker with, not strays (PID-086.2). The `docker`
+        // CLI and anything else matching the token stay `.docker`.
+        if isDockerDesktopHelper(s)       { return nil }
         if hasTokenBoundary(s, "docker")  { return .docker }
         // Expanded dev-server / build-tool / local-infra kinds (PID-54.2), slotted
         // before the generic node/npm fallbacks so a framework dev server isn't
@@ -357,6 +361,15 @@ public enum ScanCore {
             || s.hasPrefix("sh ") || s.contains(" sh ")
         let isDashC = s.contains(" -c ") || s.contains(" -lc ")
         return isShell && isDashC
+    }
+
+    /// True for Docker Desktop's own processes — the executables in its bundle's
+    /// `Contents/MacOS/` (backend, virtualization, the GUI and its helpers, wherever
+    /// installed) or its privileged helper (`/Library/PrivilegedHelperTools/com.docker.*`).
+    /// CLI tools it ships under `Contents/Resources/` (the `docker` binary, compose
+    /// plugins) stay `.docker`. (PID-086.2)
+    private static func isDockerDesktopHelper(_ s: String) -> Bool {
+        s.contains("docker.app/contents/macos/") || s.contains("/privilegedhelpertools/com.docker.")
     }
 
     /// True when `s` is an explicit `go run …` launcher. Bare `go` is too short

@@ -309,19 +309,24 @@ final class ScanEngineLifecycleTests: XCTestCase {
         XCTAssertEqual(engine.killPhase(for: row), .respawned)
         XCTAssertTrue(engine.isRespawner(comeback))
         XCTAssertFalse(engine.isSweepable(comeback))
-        XCTAssertTrue(engine.sweepableSafeItems.isEmpty)
+        XCTAssertTrue(engine.sweepableStrays.isEmpty)
         waitForLoggedCleans(1)
     }
 
     // MARK: - isSweepable fold
 
-    func testIsSweepableFoldsProtectedOwnerAndKillPhase() {
+    func testIsSweepableFoldsVerdictProtectedOwnerAndKillPhase() {
+        // `item` rows are orphans with no tty → session ended (PID-086.2).
         let plain = item(10)
         let locked = item(11)
         let foreign = item(12, uid: getuid() == 0 ? 1 : 0)
         let busy = item(13)
-        let review = item(14, tier: .high)
-        let source = FakeSource(snapshot([plain, locked, foreign, busy, review], cwds: [
+        let infra = item(14, tier: .high)
+        let attached = ProcessItem(pid: 15, ppid: 500, command: "node server.js", elapsed: 3600,
+                                   tty: "ttys001", kind: .node, riskTier: .moderate,
+                                   cpuPercent: 0, rssKB: 1024, uid: getuid())
+        let review = item(16, tier: .moderate)
+        let source = FakeSource(snapshot([plain, locked, foreign, busy, infra, attached, review], cwds: [
             10: ProcessCwd(label: "free", fullPath: "~/code/free"),
             11: ProcessCwd(label: "proj", fullPath: "~/code/proj/app"),
         ]))
@@ -333,14 +338,18 @@ final class ScanEngineLifecycleTests: XCTestCase {
         scanAndWait(engine)
         engine.kill([busy])
 
+        XCTAssertEqual(engine.verdict(plain), .sessionEnded)
+        XCTAssertEqual(engine.verdict(attached), .running)
         XCTAssertTrue(engine.isSweepable(plain))
         XCTAssertFalse(engine.isSweepable(locked), "protected project")
         XCTAssertFalse(engine.isSweepable(foreign), "owned by another user")
         XCTAssertFalse(engine.isSweepable(busy), "kill in flight")
-        XCTAssertTrue(engine.isSweepable(review), "the bucket is the sweep set's filter, not the predicate's")
-        XCTAssertEqual(engine.sweepableSafeItems.map(\.pid), [10])
+        XCTAssertFalse(engine.isSweepable(infra), "high-risk strays stay a per-row call")
+        XCTAssertFalse(engine.isSweepable(attached), "in use, not a stray")
+        XCTAssertTrue(engine.isSweepable(review), "a needs-review stray is swept — the bucket no longer gates it")
+        XCTAssertEqual(engine.sweepableStrays.map(\.pid), [10, 16])
 
         engine.cleanAllSafe()
-        XCTAssertEqual(killed, [[13], [10]], "Clean all kills exactly the sweepable safe set")
+        XCTAssertEqual(killed, [[13], [10, 16]], "Clean all kills exactly the sweepable stray set")
     }
 }

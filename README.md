@@ -44,14 +44,14 @@ Run the test suite from the command line with `make test`. The same suite runs a
 
 Build a Release `.app` with ad-hoc signing: `make build-release` (output: `build/Release/Pidlyse.app`). Copy it to `/Applications` with `make install`. Package a distributable DMG (drag-install, with `/Applications` symlink): `make dmg` (output: `build/Pidlyse.dmg`). Push a `v*` tag to trigger the release workflow (`.github/workflows/release.yml`), which builds the Release app, packages the DMG, and attaches it to a GitHub Release automatically.
 
-A terminal companion, `pidlyse`, builds from the same core: `make build-cli` (output: `Packages/PidlyseCore/.build/release/pidlyse`), install with `make install-cli`. `pidlyse list [--safe]` prints what the app's popover shows, `pidlyse clean` runs the same "Clean all" sweep (safe bucket minus protected projects and other users' processes) and exits with status 1 if any swept item is not verified gone, and `pidlyse kill <pid>` kills one listed candidate — all with the app's settings and kill safeguards, and CLI cleans land in the app's "Cleaned" tab.
+A terminal companion, `pidlyse`, builds from the same core: `make build-cli` (output: `Packages/PidlyseCore/.build/release/pidlyse`), install with `make install-cli`. `pidlyse list [--safe]` prints what the app's popover shows, `pidlyse clean` runs the same "Clean all" sweep (likely strays that aren't high-risk, minus protected projects and other users' processes) and exits with status 1 if any swept item is not verified gone, and `pidlyse kill <pid>` kills one listed candidate — all with the app's settings and kill safeguards, and CLI cleans land in the app's "Cleaned" tab.
 
 ## Integrations
 
 Pidlyse exposes its clean/scan actions to external launchers (PID-EPIC-58):
 
-- **URL scheme** — `open pidlyse://clean` runs the "Clean all" safe sweep and posts a result notification; `open pidlyse://scan` re-enumerates. Any launcher that opens a URL can drive it.
-- **Shortcuts / Spotlight** — two App Shortcuts, **Clean Safe Strays** and **Scan Now** (AppIntents), invocable from the Shortcuts app, Spotlight, and Raycast's Shortcuts listing. "Clean Safe Strays" is bounded to the same safe-minus-protected set as "Clean all".
+- **URL scheme** — `open pidlyse://clean` sweeps likely strays that aren't high-risk, protected, or another user's, and posts a result notification; `open pidlyse://scan` re-enumerates. Any launcher that opens a URL can drive it.
+- **Shortcuts / Spotlight** — two App Shortcuts, **Clean Safe Strays** and **Scan Now** (AppIntents), invocable from the Shortcuts app, Spotlight, and Raycast's Shortcuts listing. "Clean Safe Strays" is bounded to the same likely-stray set as `pidlyse://clean` and `pidlyse clean`.
 - **Raycast** — sample script commands in [`integrations/raycast/`](integrations/raycast/) wrap the installed `pidlyse` CLI for users who prefer the terminal companion (`make install-cli` first).
 
 AppleScript is intentionally not supported — `osascript` users can `do shell script "pidlyse clean"` via the CLI.

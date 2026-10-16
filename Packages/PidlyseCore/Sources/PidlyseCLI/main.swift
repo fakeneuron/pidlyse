@@ -32,23 +32,30 @@ private struct Settings {
 }
 
 /// One completed scan through the shared core `ScanPipeline` (PID-079.6) — the
-/// same call the app's `ScanEngine` makes, minus the process table only the app's
-/// inspector reads. `protectedPIDs` is the protected overlay resolved eagerly (the
-/// CLI has no reactive layer to defer it to).
+/// same call the app's `ScanEngine` makes. `protectedPIDs` and `verdicts` are the
+/// protected overlay and the stray verdict (PID-086.2) resolved eagerly (the CLI has
+/// no reactive layer to defer them to).
 private struct ScanResult {
     let items: [ProcessItem]
     let cwds: [Int32: ProcessCwd]
     let containerOwners: [Int32: String]
     let protectedPIDs: Set<Int32>
+    let verdicts: [Int32: StrayVerdict]
 }
 
 private func runScan(_ settings: Settings) -> ScanResult {
-    let snapshot = ScanPipeline.run(settings.request, includeProcessTable: false)
+    let snapshot = ScanPipeline.run(settings.request)
     let protectedPIDs = Set(snapshot.items.filter {
         ScanPipeline.isProtected($0, cwds: snapshot.cwds, protectedProjects: settings.protectedProjects)
     }.map { $0.pid })
+    // A one-shot CLI has no scan history, so "quiet" is this scan's single CPU
+    // sample against the app's low-CPU line.
+    let verdicts = StrayVerdict.derive(snapshot.items, cwds: snapshot.cwds,
+                                       processTable: snapshot.processTable,
+                                       isQuiet: { $0.cpuPercent < ScanHistory.defaultLowCPUThreshold })
     return ScanResult(items: snapshot.items, cwds: snapshot.cwds,
-                      containerOwners: snapshot.containerOwners, protectedPIDs: protectedPIDs)
+                      containerOwners: snapshot.containerOwners, protectedPIDs: protectedPIDs,
+                      verdicts: verdicts)
 }
 
 /// Kill `items` concurrently and block until every grace period resolves —
@@ -103,22 +110,24 @@ private func commandList(safeOnly: Bool) -> Int32 {
 
 private func commandClean() -> Int32 {
     let scan = runScan(Settings.load())
-    // The app's "Clean all" sweep set: safe bucket, minus protected (PID-54.4), minus
-    // foreign-owned processes no signal of ours can reach (PID-62.3). The app also
-    // excludes known respawners, which a one-shot CLI has no session memory of — the
-    // respawn half of the overlay stays app-only (PID-62.1 clarification #4). The
-    // predicate itself is the app's, shared through core (PID-079.6).
+    // The app's "Clean all" sweep set: likely strays that aren't high-risk (PID-086.2),
+    // minus protected (PID-54.4), minus foreign-owned processes no signal of ours can
+    // reach (PID-62.3). The app also excludes known respawners, which a one-shot CLI
+    // has no session memory of — the respawn half of the overlay stays app-only
+    // (PID-62.1 clarification #4). The predicate itself is the app's, shared through
+    // core (PID-079.6).
     let currentUID = getuid()
     let sweepable = scan.items.filter {
-        $0.bucket == .safe
-            && ScanPipeline.isSweepable(
-                isProtected: scan.protectedPIDs.contains($0.pid),
-                killability: Killability.derive(for: $0, containerOwners: scan.containerOwners,
-                                                currentUID: currentUID,
-                                                killDenied: false, isRespawner: false, manager: nil))
+        ScanPipeline.isSweepable(
+            verdict: scan.verdicts[$0.pid] ?? .running,
+            riskTier: $0.riskTier,
+            isProtected: scan.protectedPIDs.contains($0.pid),
+            killability: Killability.derive(for: $0, containerOwners: scan.containerOwners,
+                                            currentUID: currentUID,
+                                            killDenied: false, isRespawner: false, manager: nil))
     }
     guard !sweepable.isEmpty else {
-        print("Nothing to clean — no unprotected, killable safe-bucket processes.")
+        print("Nothing to clean — no likely strays that are unprotected and killable.")
         return 0
     }
     let outcomes = killAll(sweepable, containerOwners: scan.containerOwners)

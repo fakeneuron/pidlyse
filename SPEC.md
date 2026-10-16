@@ -29,12 +29,13 @@ Pidlyse/
         ProcessItem.swift         # model: pid, ppid, command, elapsed, tty, kind, riskTier, cpu%, rss, owning uid; derived bucket
         PortRegistry.swift        # compiled port table + user-override merge + lsof listener parse
         CwdResolver.swift         # lsof cwd parse + git-root project label & root path (row descriptor + protect scope)
-        AncestryResolver.swift    # pure `ps -axo pid/ppid/comm` parse; `processTable(psOutput:)` + `ancestorChain(ofPPID:in:)` cycle-guarded walk to launchd
+        AncestryResolver.swift    # pure `ps -axo pid/ppid/tty/comm` parse (tty + app-bundle flag per node); `processTable(psOutput:)` + `ancestorChain(ofPPID:in:)` cycle-guarded walk to launchd
         OpenFilesResolver.swift   # on-demand `lsof -p <pid>` parse; `OpenFile`/`OpenFileList` model + `openFiles(forPID:)` composer; REG+socket filter
         IgnoreRule.swift          # model: command-substring ignore, optionally scoped to a cwd path prefix
         CustomRule.swift          # model: user-defined command-substring rule + friendly label (always Needs Review)
         ScanHistory.swift         # rolling-window per-process CPU cache (PID+startTime keyed) + sustained-low-CPU query
         RespawnHistory.swift      # session-only respawn cache: command-signature normalization + per-identity windowed watches on verified kills
+        StrayVerdict.swift        # pure stray verdict over a whole scan: session ended (no tty/app anchor up to launchd) / duplicate / idle / running
         Killability.swift         # pure killability overlay: killable / unkillable (foreign owner) / respawner derivation + the one explanation sentence
         KillFeedback.swift        # pure kill-feedback vocabulary: KillPhase (per-row lifecycle label) + KillReport (honest Clean-all tally + summary line)
         CleanEvent.swift          # Codable model: kind rawValue, project label, rssKB, timestamp; no command line (privacy-first)
@@ -78,7 +79,7 @@ Runs on a configurable timer (default: every 2 min). Shells out to `ps -axww -o 
 | `@modelcontextprotocol` / `mcp-server-*` | `mcpServer` | Orphaned MCP servers (filesystem/git/etc.) |
 | `pytest`, `vitest`, `jest`, `playwright test` | `pytest` / `vitest` / `jest` / `playwrightTest` | Hung test runners |
 | Chrome processes under `ms-playwright-mcp/` user-data dirs, or Playwright's isolated temp profile (`playwright_chromiumdev_profile`) | `chromeHelper` | Zombie browser helpers |
-| `docker` (daemon + helpers) | `docker` | Real dev infra — never an easy kill |
+| `docker` (CLI and anything else outside Docker Desktop) | `docker` | Real dev infra — never an easy kill. Docker Desktop's own processes (`Docker.app/Contents/…`, `/Library/PrivilegedHelperTools/com.docker.*`) are not candidates ([[PID-086.2]]) |
 | `uvicorn` | `uvicorn` | Backend dev server — never an easy kill |
 | `next` / `next-server` | `nextjs` | Next.js dev server |
 | `astro` | `astro` | Astro dev server |
@@ -118,6 +119,19 @@ Each candidate carries a descriptive **`kind`** (see the Scan Engine table) and 
 | **moderate** (fixed) | **Needs review** | User-defined `custom`-rule matches — always Needs Review regardless of stray signals |
 
 `bucket = (riskTier == .easy) ? .safe : .needsReview`. A process is **never auto-killed**; `safe` items still require an explicit click (per AGENTS.md).
+
+**Stray verdict** ([[PID-086.2]]): on top of the kill-safety tier, every row carries a `StrayVerdict` that says whether it looks forgotten. The verdict drives what the UI leads with and what "Clean all" sweeps. It is derived over the whole scan by the pure `StrayVerdict.derive` in core, and the first matching case names the row:
+
+| Verdict | When |
+|---------|------|
+| **Session ended** | The row has no tty, and its ancestors reach launchd without passing an *anchor*: a process with a controlling terminal, or one inside a `.app/` bundle (Terminal, VS Code, the Claude app). Covers the plain orphan, and an agent's background shell reparented to launchd while the dev server under it keeps a live parent. An ancestor missing from the process table means "unknown", never "ended" |
+| **Duplicate** | Another row runs the exact same command in the exact same cwd and started later; the older copy is the stray. Needs a resolved cwd and no tty of its own (a copy in an open terminal is in use) |
+| **Idle** | No tty of its own, at least 2 h old (`StrayVerdict.idleAge`), and quiet CPU: sustained across recent scans in the app (`ScanHistory`), the single sample in the one-shot CLI |
+| **Running** | Anything else: in use |
+
+Session tooling (`playwrightMCP`, `mcpServer`, `chromeHelper`) is never Idle or Duplicate. It lives exactly as long as its agent session, is quiet by nature, and every session runs its own copy, so only a gone session makes it a stray. The process table behind the session walk (`AncestryResolver`, `pid ppid tty comm`) is read once per scan by both the app and the CLI.
+
+**Sweep set**: "Clean all" (the external launchers and CLI `clean`) takes rows that are a likely stray (`verdict.isStray`) **and** not high-risk **and** not protected **and** killable. That is the core `ScanPipeline.isSweepable(verdict:riskTier:isProtected:killability:)`; the app adds respawners and in-flight kills on top (`ScanEngine.isSweepable` / `sweepableStrays`). The bucket no longer gates the sweep. A session-ended `playwright-mcp` (moderate) is swept, while a session-ended `wrangler dev` (`.node`, always high) is listed but left to a per-row kill. Until [[PID-086.4]] rebuilds the popover, its Safe-section "Clean all" sweeps only that section's rows of the set (an easy-tier row is an orphan with no tty, so always session ended).
 
 Tree collapse ([[PID-039]], [[PID-62.4]]): `ScanCore.collapseTrees` folds every scanned process whose direct parent is also scanned *and belongs with it* (the parent is a launcher, the two share a kind, or the child is a Chrome helper / generic `.node` worker — so a `node`-run agent CLI never swallows the MCP servers it starts) into its topmost linked ancestor, so a chain that lives and dies together (`sh -c npm run dev` → `npm` → `vite`, `uv run` → uvicorn, `next dev` → `next-server`, playwright-mcp → its Chrome brood) is **one row**. The row keeps the root's identity (pid, start-time token, owner — the kill target), labels itself after the first member that isn't a launcher (npm/npx, `sh -c`, `uv run`), takes the **most cautious** `riskTier` of any member, and sums CPU/RAM. The members ride on `ProcessItem.members` and appear as a read-only "group of N" inspector line and a ×N row count. "Clean all", the section counts, the clean log and respawn signatures all see one logical unit. A group is foreign-owned (unkillable) if any member is. Docker processes never group. Disabled kinds filter per process before grouping. Dismissing a group row dismisses the whole group.
 
@@ -201,7 +215,7 @@ Configurable at runtime (`SettingsView.swift`):
 | Command | Does |
 |---------|------|
 | `pidlyse list [--safe]` | One-shot scan; prints candidates (PID, bucket, kind, age, RAM, project, command). `--safe` filters to the safe bucket; protected rows carry 🔒 |
-| `pidlyse clean` | Kills exactly the app's "Clean all" sweep set — safe bucket minus protected projects and foreign-owned rows (respawners stay app-only, [[PID-62.3]]); prints each row's verdict and the shared `KillReport` summary line |
+| `pidlyse clean` | Kills exactly the app's "Clean all" sweep set — likely strays that aren't high-risk, minus protected projects and foreign-owned rows, through the same core predicate and stray verdict ([[PID-086.2]]; idle reads the single CPU sample; respawners stay app-only, [[PID-62.3]]); prints each row's verdict and the shared `KillReport` summary line |
 | `pidlyse kill <pid>` | Kills one *scanned candidate* by PID (any bucket, like the app's per-row kill button); refuses PIDs the scan didn't surface |
 | `pidlyse help` | Usage (also the bare-invocation default — never scans or kills) |
 
@@ -209,7 +223,7 @@ Full app parity: settings (threshold, ignores incl. scoped, disabled kinds, cust
 
 ## Integrations (PID-EPIC-58)
 
-External launchers reach Pidlyse's clean/scan actions through one shared engine-side action layer — `ScanEngine.cleanAllSafe` (the `sweepableSafeItems` set — safe bucket minus protected and minus rows `ScanEngine.isSweepable` rules out ([[PID-62.3]], [[PID-62.5]]) — through `ScanEngine.kill`, clean-log append, rescan) and `ScanEngine.rescan`, the same set the popover "Clean all" and CLI `clean` use. Every trigger is bounded to that sweep set and never touches Needs Review.
+External launchers reach Pidlyse's clean/scan actions through one shared engine-side action layer — `ScanEngine.cleanAllSafe` (the `sweepableStrays` set — every row `ScanEngine.isSweepable` admits: a likely stray that isn't high-risk, protected, unkillable, a respawner, or mid-kill ([[PID-086.2]], [[PID-62.3]], [[PID-62.5]]) — through `ScanEngine.kill`, clean-log append, rescan) and `ScanEngine.rescan`, the same set CLI `clean` uses. Every trigger is bounded to that sweep set: it never touches a running (in-use) or high-risk row.
 
 | Surface | Entry point | Clean | Scan |
 |---------|-------------|-------|------|

@@ -333,7 +333,7 @@ final class ScanCoreTests: XCTestCase {
 
     func testEnumerate_classifiesInjectedOutput() {
         let output = """
-          569     1 12-08:33:38 ??   0.0  4096   /Applications/Docker.app/Contents/MacOS/com.docker.backend
+          569     1 12-08:33:38 ??   0.0  4096   /usr/local/bin/docker compose up
          2172     1    45:00 ??   0.1  8192   npm run dev
          3000  2999    00:30 ttys002  0.0  4096   python -m pytest tests/unit
          4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow
@@ -357,6 +357,26 @@ final class ScanCoreTests: XCTestCase {
         // Recent pytest with a TTY → not a strong stray → needsReview.
         let activePytest = items.first { $0.pid == 3000 }
         XCTAssertEqual(activePytest?.bucket, .needsReview)
+    }
+
+    func testDetectKind_dockerDesktopHelpers_areNotCandidates() {
+        // Docker Desktop's own processes leave the scan (PID-086.2) — the live scan
+        // that filed the epic listed nine of them, wherever the bundle is installed.
+        for helper in [
+            "/Applications/Docker.app/Contents/MacOS/com.docker.backend services",
+            "/Applications/Docker.app/Contents/MacOS/com.docker.virtualization --kernel /x",
+            "/Applications/Docker.app/Contents/MacOS/Docker Desktop.app/Contents/MacOS/Docker Desktop",
+            "/Users/me/Applications/Docker.app/Contents/MacOS/com.docker.build",
+            "/Library/PrivilegedHelperTools/com.docker.vmnetd",
+        ] {
+            XCTAssertNil(ScanCore.detectKind(helper), helper)
+        }
+        // The CLI is still Docker.
+        XCTAssertEqual(ScanCore.detectKind("/usr/local/bin/docker compose up"), .docker)
+        XCTAssertEqual(ScanCore.detectKind("docker run --rm -it alpine"), .docker)
+        XCTAssertEqual(ScanCore.detectKind(
+            "/Applications/Docker.app/Contents/Resources/bin/docker compose up"), .docker,
+                       "CLI tools Docker Desktop ships under Resources/ are not its helpers")
     }
 
     // MARK: - Port registry demotion

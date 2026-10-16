@@ -75,10 +75,20 @@ final class ScanPipelineTests: XCTestCase {
 
     // MARK: - Sweep
 
-    func testIsSweepable_onlyUnprotectedAndKillable() {
-        XCTAssertTrue(ScanPipeline.isSweepable(isProtected: false, killability: .killable))
-        XCTAssertFalse(ScanPipeline.isSweepable(isProtected: true, killability: .killable))
-        XCTAssertFalse(ScanPipeline.isSweepable(isProtected: false, killability: .unkillable(owner: "root")))
-        XCTAssertFalse(ScanPipeline.isSweepable(isProtected: false, killability: .respawner(manager: nil)))
+    func testIsSweepable_strayNotHighRiskUnprotectedAndKillable() {
+        func sweepable(_ verdict: StrayVerdict = .sessionEnded, _ tier: RiskTier = .moderate,
+                       protected: Bool = false, _ killability: Killability = .killable) -> Bool {
+            ScanPipeline.isSweepable(verdict: verdict, riskTier: tier, isProtected: protected,
+                                     killability: killability)
+        }
+        XCTAssertTrue(sweepable())
+        XCTAssertTrue(sweepable(.duplicate, .easy))
+        XCTAssertTrue(sweepable(.idle))
+        XCTAssertFalse(sweepable(.running), "in use")
+        XCTAssertFalse(sweepable(.running, .easy), "the safe bucket alone no longer sweeps")
+        XCTAssertFalse(sweepable(.sessionEnded, .high), "real dev infra stays a per-row call")
+        XCTAssertFalse(sweepable(protected: true))
+        XCTAssertFalse(sweepable(.sessionEnded, .moderate, .unkillable(owner: "root")))
+        XCTAssertFalse(sweepable(.sessionEnded, .moderate, .respawner(manager: nil)))
     }
 }

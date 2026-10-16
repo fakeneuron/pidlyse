@@ -5,40 +5,40 @@ import XCTest
 /// table (incl. non-stray shells / launchd) and walks any process's chain to launchd.
 final class AncestryResolverTests: XCTestCase {
 
-    // MARK: - parseLine (pid ppid comm)
+    // MARK: - parseLine (pid ppid tty comm)
 
     func testParseLine_compactsExecutablePath() {
-        let parsed = AncestryResolver.parseLine("  300   200 /opt/homebrew/bin/node")
+        let parsed = AncestryResolver.parseLine("  300   200 ttys004  /opt/homebrew/bin/node")
         XCTAssertEqual(parsed?.pid, 300)
-        XCTAssertEqual(parsed?.node, ProcessNode(ppid: 200, label: "node"))
+        XCTAssertEqual(parsed?.node, ProcessNode(ppid: 200, label: "node", tty: "ttys004"))
     }
 
     func testParseLine_commWithSpaces_keepsLeafWithSpaces() {
         // App-bundle helpers carry spaces in the executable path; comm is everything
         // after the ppid, and its last path component keeps the space.
-        let parsed = AncestryResolver.parseLine("500 400 /Applications/Visual Studio Code.app/Contents/MacOS/Code Helper")
+        let parsed = AncestryResolver.parseLine("500 400 ?? /Applications/Visual Studio Code.app/Contents/MacOS/Code Helper")
         XCTAssertEqual(parsed?.pid, 500)
-        XCTAssertEqual(parsed?.node, ProcessNode(ppid: 400, label: "Code Helper"))
+        XCTAssertEqual(parsed?.node, ProcessNode(ppid: 400, label: "Code Helper", isApp: true))
     }
 
     func testParseLine_bareName_passesThrough() {
-        XCTAssertEqual(AncestryResolver.parseLine("1 0 launchd")?.node,
+        XCTAssertEqual(AncestryResolver.parseLine("1 0 ?? launchd")?.node,
                        ProcessNode(ppid: 0, label: "launchd"))
     }
 
     func testParseLine_malformed_returnsNil() {
-        XCTAssertNil(AncestryResolver.parseLine("notapid 200 /bin/zsh"))
-        XCTAssertNil(AncestryResolver.parseLine("300 /bin/zsh"))     // missing ppid field
-        XCTAssertNil(AncestryResolver.parseLine("300 200 "))         // empty comm
+        XCTAssertNil(AncestryResolver.parseLine("notapid 200 ?? /bin/zsh"))
+        XCTAssertNil(AncestryResolver.parseLine("300 /bin/zsh"))        // missing ppid + tty fields
+        XCTAssertNil(AncestryResolver.parseLine("300 200 ?? "))         // empty comm
     }
 
     // MARK: - processTable
 
     func testProcessTable_buildsPIDKeyedMap() {
-        let ps = "1 0 /sbin/launchd\n200 1 /bin/zsh\n300 200 /opt/homebrew/bin/node\n"
+        let ps = "1 0 ?? /sbin/launchd\n200 1 ttys001 /bin/zsh\n300 200 ttys001 /opt/homebrew/bin/node\n"
         let table = AncestryResolver.processTable(psOutput: ps)
         XCTAssertEqual(table.count, 3)
-        XCTAssertEqual(table[300], ProcessNode(ppid: 200, label: "node"))
+        XCTAssertEqual(table[300], ProcessNode(ppid: 200, label: "node", tty: "ttys001"))
         XCTAssertEqual(table[1], ProcessNode(ppid: 0, label: "launchd"))
     }
 

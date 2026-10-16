@@ -65,8 +65,9 @@ public enum ScanPipeline {
     /// Run one scan against the live system: one `lsof` for registered-port
     /// listeners, one bulk `docker inspect`, one `ps` enumeration, one `lsof` for
     /// cwds, optionally one `ps` for the process table, then the cwd-scoped ignores.
-    /// Synchronous; callers own the queue. `includeProcessTable` feeds only the app's
-    /// parent-chain hint (PID-52.2), so the CLI skips that `ps`.
+    /// Synchronous; callers own the queue. `includeProcessTable` feeds the stray
+    /// verdict's session walk (PID-086.2) and the app's parent-chain hint (PID-52.2);
+    /// only a caller that derives neither skips that `ps`.
     public static func run(_ request: ScanRequest, includeProcessTable: Bool = true) -> ScanSnapshot {
         // Resolve the registered-port listeners once: its keys feed the classifier's
         // port-demotion (so `enumerate` doesn't re-run lsof), and the full map drives
@@ -114,10 +115,13 @@ public enum ScanPipeline {
         return protectedProjects.contains { CwdResolver.isUnderPrefix(cwd, $0) }
     }
 
-    /// Whether a row belongs in a bulk sweep: not protected (PID-54.4), and something
-    /// Pidlyse can honestly kill (PID-62.3). The bucket is the sweep *set's* filter,
-    /// not this predicate's, so callers apply `bucket == .safe` themselves.
-    public static func isSweepable(isProtected: Bool, killability: Killability) -> Bool {
-        !isProtected && killability == .killable
+    /// Whether a row belongs in a bulk sweep (PID-086.2): a likely stray
+    /// (`StrayVerdict`) that isn't high-risk — real dev infra stays a per-row decision
+    /// even when forgotten — and isn't protected (PID-54.4), and is something Pidlyse
+    /// can honestly kill (PID-62.3). The bucket no longer gates the sweep; it stays
+    /// the kill-safety model inside `riskTier`.
+    public static func isSweepable(verdict: StrayVerdict, riskTier: RiskTier,
+                                   isProtected: Bool, killability: Killability) -> Bool {
+        verdict.isStray && riskTier != .high && !isProtected && killability == .killable
     }
 }
