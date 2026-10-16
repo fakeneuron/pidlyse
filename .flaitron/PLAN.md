@@ -18,11 +18,8 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-079.4** [light]🔧 [unattended] | scan-on-launch — Completed 2026-10-10.
   - [x] **PID-079.5** [light]🔧 [unattended] | cli-clean-exit-status — Completed 2026-10-10.
   - [x] **PID-079.6** [heavy]🧠 | shared-scan-pipeline — Completed 2026-10-15.
-  - [ ] **PID-079.N** [heavy]🧠 | consumer-seams audit
-- [ ] **PID-EPIC-080** [light]🔧 | docs-plan-currency — Bring README trust claims and PLAN.md bookkeeping back in line with the code. Discovery supplied by audit-repo 2026-10-07. Surfaced by audit-repo 2026-10-07 (Theme: Docs and plan currency)
-  - [x] **PID-080.2** [light]🔧 [unattended] | readme-disk-footprint — Completed 2026-10-08.
-  - [x] **PID-080.3** [light]🔧 [unattended] | plan-completed-rotation — Completed 2026-10-08.
-  - [x] **PID-080.N** [light]🔧 | docs-plan-currency audit — Completed 2026-10-08.
+  - [ ] **PID-079.7** [light]🔧 | settings-keys-in-core — The app (`ScanEngine.swift:205-210`) and the CLI (`Settings.load()` in `main.swift`) each hard-code the five scan-relevant defaults keys. Lift the keys, or the whole `ScanRequest` + `protectedProjects` load, into `PidlyseCore` so a renamed key cannot silently break CLI parity. Surfaced by PID-079.N audit 2026-10-15.
+  - [x] **PID-079.N** [heavy]🧠 | consumer-seams audit — Completed 2026-10-15.
 
 ## Low
 
@@ -34,6 +31,10 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-EPIC-080** [light]🔧 | docs-plan-currency — Completed 2026-10-15.
+  - [x] **PID-080.2** [light]🔧 [unattended] | readme-disk-footprint — Completed 2026-10-08.
+  - [x] **PID-080.3** [light]🔧 [unattended] | plan-completed-rotation — Completed 2026-10-08.
+  - [x] **PID-080.N** [light]🔧 | docs-plan-currency audit — Completed 2026-10-08.
 - [x] **PID-EPIC-078** [heavy]🧠 | test-safety-net — Completed 2026-10-15.
   - [x] **PID-078.2** [medium]🧩 [unattended] | core-test-target — Completed 2026-10-08.
   - [x] **PID-078.3** [heavy]🧠 | engine-lifecycle-tests — Completed 2026-10-15.
