@@ -18,12 +18,12 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-- [ ] **PID-088** [light] | port-bound-sweep — Clean all now sweeps session-ended/idle strays on a registered port (demoted only to moderate); decide whether registered-port rows stay out of the sweep. From [[PID-086.4]] review.
+- [ ] **PID-088** [light] [unattended] | port-bound-sweep — Clean all now sweeps session-ended/idle strays on a registered port (demoted only to moderate); decide whether registered-port rows stay out of the sweep. From [[PID-086.4]] review.
 
 ## Low
 
-- [ ] **PID-087** [light] | spaced-path-names — `displayName` misnames commands whose path contains a space (`ps` argv is unquoted); read real argv via `KERN_PROCARGS2` instead. From [[PID-086.3]] review.
-- [ ] **PID-089** [light] | stray-reason-order — Share one stray-reason display order between the popover (`MenuBarView.strayReasons`) and `CLICore.listItems` via a core `StrayVerdict` constant. From [[PID-086.5]] review.
+- [ ] **PID-087** [light] [unattended] | spaced-path-names — `displayName` misnames commands whose path contains a space (`ps` argv is unquoted); read real argv via `KERN_PROCARGS2` instead. From [[PID-086.3]] review.
+- [ ] **PID-089** [light] [unattended] | stray-reason-order — Share one stray-reason display order between the popover (`MenuBarView.strayReasons`) and `CLICore.listItems` via a core `StrayVerdict` constant. From [[PID-086.5]] review.
 
 ## Future Opportunities
 
