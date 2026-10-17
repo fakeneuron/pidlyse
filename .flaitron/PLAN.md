@@ -23,6 +23,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## Low
 
 - [ ] **PID-087** [light] | spaced-path-names — `displayName` misnames commands whose path contains a space (`ps` argv is unquoted); read real argv via `KERN_PROCARGS2` instead. From [[PID-086.3]] review.
+- [ ] **PID-089** [light] | stray-reason-order — Share one stray-reason display order between the popover (`MenuBarView.strayReasons`) and `CLICore.listItems` via a core `StrayVerdict` constant. From [[PID-086.5]] review.
 
 ## Future Opportunities
 
