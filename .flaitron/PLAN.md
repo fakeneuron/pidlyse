@@ -18,7 +18,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-(none)
+- [ ] **PID-088** [light] | port-bound-sweep — Clean all now sweeps session-ended/idle strays on a registered port (demoted only to moderate); decide whether registered-port rows stay out of the sweep. From [[PID-086.4]] review.
 
 ## Low
 
