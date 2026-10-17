@@ -12,7 +12,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
   - [x] **PID-086.1** [frontier]💎 | stray-utility-ux discovery — Completed 2026-10-15.
   - [x] **PID-086.2** [heavy]🧠 | stray-verdict-core — Completed 2026-10-16.
   - [x] **PID-086.3** [medium]🧩 | row-identity — Completed 2026-10-17.
-  - [ ] **PID-086.4** [medium]🧩 | stray-first-popover — Processes tab leads with "Likely strays", sub-headed by reason (Session ended / Idle / Duplicate), with Clean all over the new sweep set; in-use processes fold into one "Running · N in use across M projects" section that expands by project. The menu-bar badge and new-stray notifications count likely strays only.
+  - [x] **PID-086.4** [medium]🧩 | stray-first-popover — Completed 2026-10-17.
   - [ ] **PID-086.5** [light]🔧 | cli-stray-parity — `pidlyse list` leads with a NAME column, adds REASON, and defaults to likely strays (`--all` adds running; `--safe` retired or aliased); `clean` already sweeps the stray set via the core predicate ([[PID-086.2]]). Grammar and table formatting stay in `CLICore` with tests; SPEC CLI table and Raycast scripts follow.
   - [ ] **PID-086.N** [heavy]🧠 | stray-utility-ux audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed now with the reserved terminal `.N` suffix (never renumbers as children are added).
 

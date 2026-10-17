@@ -35,6 +35,17 @@ public enum StrayVerdict: Equatable {
         }
     }
 
+    /// The one sentence saying why the row reads this way — the popover inspector's
+    /// verdict line (PID-086.4).
+    public var explanation: String {
+        switch self {
+        case .sessionEnded: return "No terminal or app holds it any more."
+        case .duplicate:    return "A newer copy runs the same command in the same folder."
+        case .idle:         return "Quiet for \(Int(Self.idleAge / 3600)) h or more, with no terminal of its own."
+        case .running:      return "In use — attached to a live session."
+        }
+    }
+
     /// How old a quiet, terminal-less process must be before it reads as idle.
     public static let idleAge: TimeInterval = 2 * 60 * 60
 

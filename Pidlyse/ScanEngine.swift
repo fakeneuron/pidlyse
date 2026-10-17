@@ -22,6 +22,10 @@ final class ScanEngine: ObservableObject {
     typealias Killer = ([ProcessItem], [Int32: String],
                         @escaping ([Int32: KillService.KillOutcome]) -> Void) -> Void
 
+    /// Posts the new-stray notification (title, body). Injected so tests can see what
+    /// a scan would announce without touching Notification Center (PID-086.4).
+    typealias Notifier = (_ title: String, _ body: String) -> Void
+
     @Published private(set) var items: [ProcessItem] = []
     @Published private(set) var isScanning: Bool = false
 
@@ -125,7 +129,7 @@ final class ScanEngine: ObservableObject {
         }
     }
 
-    /// When true, fires a macOS system notification when a scan surfaces new stray PIDs.
+    /// When true, fires a macOS system notification when a scan surfaces new likely strays.
     /// Persisted to UserDefaults. Permission is requested the first time it is enabled.
     @Published var notificationsEnabled: Bool = false {
         didSet {
@@ -148,8 +152,21 @@ final class ScanEngine: ObservableObject {
     /// PIDs dismissed for this session. Not persisted — cleared on app restart.
     private(set) var dismissedPIDs: Set<Int32> = []
 
-    /// PIDs from the previous completed scan. `nil` = no prior baseline (first scan).
-    private var previousPIDs: Set<Int32>?
+    /// Every process (pid + start time) that has read as a likely stray this session —
+    /// the new-stray baseline (PID-086.4). Remembered, not just last scan's set, so a
+    /// row whose Idle / Duplicate verdict flickers is announced once, not on every flip.
+    /// `nil` = no scan yet.
+    private var announcedStrays: Set<StrayIdentity>?
+
+    private struct StrayIdentity: Hashable {
+        let pid: Int32
+        let startTime: ProcStartTime?
+    }
+
+    /// Bumped each scan that surfaces a likely stray not seen this session (the first
+    /// scan counts when it finds any). The menu-bar icon pulses on a change (PID-026),
+    /// independent of the notifications setting (PID-086.4).
+    @Published private(set) var strayArrivals = 0
 
     /// Rolling-window CPU-sample history across scans (PID-55.2). Fed once per scan
     /// from `filtered`; consulted by `hasSustainedLowCPU(_:)` (the idle-signal query
@@ -193,17 +210,21 @@ final class ScanEngine: ObservableObject {
     private let defaults: UserDefaults
     private let scanSource: ScanSource
     private let killer: Killer
+    private let notifier: Notifier
 
     /// Every parameter defaults to the live system; tests inject an isolated suite,
-    /// canned snapshots, a fake kill, a temp clean log, and a short linger (PID-078.3).
+    /// canned snapshots, a fake kill, a temp clean log, a short linger (PID-078.3),
+    /// and a notification recorder (PID-086.4).
     init(defaults: UserDefaults = .standard,
          scanSource: @escaping ScanSource = { ScanPipeline.run($0) },
          killer: @escaping Killer = { KillService.kill($0, containerOwners: $1, onComplete: $2) },
          cleanLog: CleanLogStore = CleanLogStore(),
-         killFeedbackLinger: TimeInterval = ScanEngine.defaultKillFeedbackLinger) {
+         killFeedbackLinger: TimeInterval = ScanEngine.defaultKillFeedbackLinger,
+         notifier: @escaping Notifier = ScanEngine.postNotification) {
         self.defaults = defaults
         self.scanSource = scanSource
         self.killer = killer
+        self.notifier = notifier
         self.cleanLog = cleanLog
         self.killFeedbackLinger = killFeedbackLinger
         let saved = ScanSettings.load(from: defaults)
@@ -255,8 +276,6 @@ final class ScanEngine: ObservableObject {
                 // Re-apply dismissals: a row dismissed while this scan ran isn't in
                 // the snapshot it started with, and must not come back (PID-62.5).
                 let visible = snapshot.items.filter { !self.dismissedPIDs.contains($0.pid) }
-                let oldPIDs = self.previousPIDs
-                self.previousPIDs = Set(visible.map { $0.pid })
                 self.items = visible
                 self.listeningPorts = snapshot.listeningPorts
                 self.containerOwners = snapshot.containerOwners
@@ -276,7 +295,14 @@ final class ScanEngine: ObservableObject {
                     self.completionsForInitialScan = []
                     initialCompletions.forEach { $0() }
                 }
-                self.fireNotificationIfNeeded(newItems: visible, previousPIDs: oldPIDs)
+                // After the verdicts — only likely strays notify (PID-086.4).
+                let strays = visible.filter { self.verdict($0).isStray }
+                let fresh = self.newStrays(strays)
+                if self.announcedStrays == nil ? !strays.isEmpty : !fresh.isEmpty {
+                    self.strayArrivals += 1
+                }
+                self.announcedStrays = (self.announcedStrays ?? []).union(strays.map(Self.identity))
+                self.fireNotificationIfNeeded(fresh)
                 completions.forEach { $0() }
                 if self.rescanQueued {
                     self.rescanQueued = false
@@ -318,11 +344,10 @@ final class ScanEngine: ObservableObject {
     }
 
     /// Manual rescan: clears all dismissed PIDs before scanning so previously
-    /// hidden items can reappear. Also resets the notification baseline so
-    /// re-emerging dismissed processes don't falsely fire as "new" strays.
+    /// hidden items can reappear. They don't re-announce: the new-stray baseline
+    /// remembers every stray seen this session (`announcedStrays`).
     func rescan() {
         dismissedPIDs = []
-        previousPIDs = nil
         scan()
     }
 
@@ -386,6 +411,11 @@ final class ScanEngine: ObservableObject {
     /// them beside `items`; they're never counted, swept, or logged.
     @Published private(set) var departedItems: [Int32: ProcessItem] = [:]
 
+    /// The verdict each departed row had when its kill started, so it lingers under
+    /// the same popover section instead of dropping to Running once a scan no longer
+    /// sees it (PID-086.4). Same lifecycle as `departedItems`.
+    private var departedVerdicts: [Int32: StrayVerdict] = [:]
+
     private var killToken = 0
 
     /// Where `item`'s kill stands, if it has one on this identity.
@@ -413,6 +443,7 @@ final class ScanEngine: ObservableObject {
         // Snapshot the cwds now: a scan during the kill can drop a dead process's
         // entry, which would strip the cwd from its signature and clean-log label.
         let preKillCwds = cwds.filter { pid, _ in targets.contains { $0.pid == pid } }
+        let preKillVerdicts = Dictionary(targets.map { ($0.pid, verdict($0)) }, uniquingKeysWith: { first, _ in first })
         targets.forEach { setKillPhase(.killing, for: $0, token: token) }
         killer(targets, containerOwners) { [weak self] outcomes in
             guard let self else { return }
@@ -421,7 +452,10 @@ final class ScanEngine: ObservableObject {
             for item in targets {
                 guard let phase = phases[item.pid] else { continue }
                 self.setKillPhase(phase, for: item, token: token)
-                if phase.isDeparted { self.departedItems[item.pid] = item }
+                if phase.isDeparted {
+                    self.departedItems[item.pid] = item
+                    self.departedVerdicts[item.pid] = preKillVerdicts[item.pid]
+                }
             }
             self.scan { [weak self] in
                 guard let self else { return }
@@ -451,6 +485,7 @@ final class ScanEngine: ObservableObject {
         for item in targets where killStatuses[item.pid]?.token == token {
             killStatuses[item.pid] = nil
             departedItems[item.pid] = nil
+            departedVerdicts[item.pid] = nil
         }
     }
 
@@ -464,10 +499,10 @@ final class ScanEngine: ObservableObject {
         ScanPipeline.isProtected(item, cwds: cwds, protectedProjects: protectedProjects)
     }
 
-    /// This scan's stray verdict for `item` (PID-086.2); `.running` for a row the
-    /// last derivation didn't see (a departed row, or before the first scan).
+    /// This scan's stray verdict for `item` (PID-086.2); a departed row keeps the one
+    /// it had when killed (PID-086.4); `.running` for a row no derivation saw.
     func verdict(_ item: ProcessItem) -> StrayVerdict {
-        verdicts[item.pid] ?? .running
+        verdicts[item.pid] ?? departedVerdicts[item.pid] ?? .running
     }
 
     /// Whether `item` belongs in a bulk sweep: the shared core predicate
@@ -545,24 +580,11 @@ final class ScanEngine: ObservableObject {
     }
 
     /// Whether a process has shown sustained low CPU across the scan-history window
-    /// (PID-55.2). The idle-signal query PID-55.3 folds into its "idle dev server"
-    /// verdict; advisory only — never influences the risk tier / bucket / kill bar.
+    /// (PID-55.2) — the quiet-CPU fact the stray verdict's Idle case reads (PID-086.2),
+    /// so through the verdict it shapes the badge and the "Clean all" sweep. Never
+    /// influences the risk tier / bucket.
     func hasSustainedLowCPU(_ item: ProcessItem) -> Bool {
         scanHistory.isSustainedLowCPU(pid: item.pid, startTime: item.startTime)
-    }
-
-    /// Whether a process reads as a confident **idle dev server** (PID-55.3):
-    /// sustained low CPU across the scan-history window AND old (past
-    /// `elapsedThreshold`) AND no controlling terminal AND an explicit dev-mode
-    /// flag in its command (`ScanCore.hasDevModeFlag`). The strict-AND / high-
-    /// precision reading resolved in the PID-55.3 discovery. Advisory only —
-    /// surfaced in the row inspector's "Why is this here?" expansion; never
-    /// influences the risk tier / bucket / kill bar.
-    func isIdleDevServer(_ item: ProcessItem) -> Bool {
-        hasSustainedLowCPU(item)
-            && item.elapsed >= elapsedThreshold
-            && !item.hasTTY
-            && ScanCore.hasDevModeFlag(item.command)
     }
 
     // MARK: - Respawn detection (PID-62.2)
@@ -645,21 +667,35 @@ final class ScanEngine: ObservableObject {
 
     // MARK: - Notifications
 
-    private func fireNotificationIfNeeded(newItems: [ProcessItem], previousPIDs: Set<Int32>?) {
-        guard notificationsEnabled, let prev = previousPIDs else { return }
-        let newStrays = newItems.filter { !prev.contains($0.pid) }
-        guard !newStrays.isEmpty else { return }
+    /// The likely strays in `strays` not seen as strays before this session
+    /// (PID-086.4) — a new process, or a running one whose session just ended. Empty
+    /// on the first scan (no baseline yet).
+    private func newStrays(_ strays: [ProcessItem]) -> [ProcessItem] {
+        guard let announced = announcedStrays else { return [] }
+        return strays.filter { !announced.contains(Self.identity($0)) }
+    }
 
-        let content = UNMutableNotificationContent()
+    private static func identity(_ item: ProcessItem) -> StrayIdentity {
+        StrayIdentity(pid: item.pid, startTime: item.startTime)
+    }
+
+    private func fireNotificationIfNeeded(_ newStrays: [ProcessItem]) {
+        guard notificationsEnabled, !newStrays.isEmpty else { return }
         if newStrays.count == 1 {
-            content.title = "New stray process"
-            content.body = "\(newStrays[0].displayLabel): \(newStrays[0].displayPath)"
+            let stray = newStrays[0]
+            let project = cwds[stray.pid].map { " · \($0.label)" } ?? ""
+            notifier("New likely stray", "\(stray.displayName)\(project) — \(verdict(stray).label)")
         } else {
-            content.title = "\(newStrays.count) new stray processes"
-            content.body = newStrays.map { $0.displayLabel }.joined(separator: ", ")
+            notifier("\(newStrays.count) new likely strays", newStrays.map(\.displayName).joined(separator: ", "))
         }
-        content.sound = .default
+    }
 
+    /// The live `Notifier`: a system notification with the default sound.
+    static func postNotification(title: String, body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
     }

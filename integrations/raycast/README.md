@@ -29,7 +29,7 @@ The scripts resolve the binary via `command -v pidlyse`, falling back to
 
 ## Also available via Shortcuts
 
-Pidlyse also exposes **Clean Safe Strays** and **Scan Now** as native
+Pidlyse also exposes **Clean Likely Strays** and **Scan Now** as native
 [App Shortcuts](https://support.apple.com/guide/shortcuts-mac/welcome/mac) (AppIntents),
 invocable from Shortcuts, Spotlight, and Raycast's Shortcuts listing — no CLI needed.
 Those run in-app against the live scan; these Raycast scripts are the CLI-based

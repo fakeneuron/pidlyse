@@ -75,12 +75,14 @@ final class ScanEngineLifecycleTests: XCTestCase {
     private func makeEngine(_ source: FakeSource,
                             defaults: UserDefaults? = nil,
                             killer: @escaping ScanEngine.Killer = { _, _, _ in XCTFail("unexpected kill") },
-                            linger: TimeInterval = 0.2) -> ScanEngine {
+                            linger: TimeInterval = 0.2,
+                            notifier: @escaping ScanEngine.Notifier = { _, _ in }) -> ScanEngine {
         ScanEngine(defaults: defaults ?? makeSuite(),
                    scanSource: source.scan,
                    killer: killer,
                    cleanLog: CleanLogStore(fileURL: logURL),
-                   killFeedbackLinger: linger)
+                   killFeedbackLinger: linger,
+                   notifier: notifier)
     }
 
     private func item(_ pid: Int32, command: String = "node server.js", tier: RiskTier = .easy,
@@ -351,5 +353,63 @@ final class ScanEngineLifecycleTests: XCTestCase {
 
         engine.cleanAllSafe()
         XCTAssertEqual(killed, [[13], [10, 16]], "Clean all kills exactly the sweepable stray set")
+    }
+
+    // MARK: - Strays-first popover feeds (PID-086.4)
+
+    func testDepartedRowKeepsItsKillTimeVerdict() {
+        // An orphan with no tty → session ended; once killed, no scan sees it again.
+        let gone = item(10)
+        let source = FakeSource(snapshot([gone]), snapshot([]))
+        let engine = makeEngine(source, killer: { _, _, done in
+            DispatchQueue.main.async { done([10: .confirmed]) }
+        })
+        scanAndWait(engine)
+        XCTAssertEqual(engine.verdict(gone), .sessionEnded)
+
+        let reported = expectation(description: "kill reported")
+        engine.kill([gone]) { _ in reported.fulfill() }
+        wait(for: [reported], timeout: 5)
+        XCTAssertTrue(engine.items.isEmpty, "the follow-up scan dropped the dead row")
+        XCTAssertEqual(engine.departedItems.keys.sorted(), [10])
+        XCTAssertEqual(engine.verdict(gone), .sessionEnded, "lingers under Likely strays, not Running")
+
+        drainMain(for: 0.4)
+        XCTAssertEqual(engine.verdict(gone), .running, "forgotten with the departed row")
+    }
+
+    func testNotificationsAnnounceOnlyNewlyStrayRows() {
+        let defaults = makeSuite()
+        defaults.set(true, forKey: "notificationsEnabled")
+        func attached(_ pid: Int32) -> ProcessItem {
+            ProcessItem(pid: pid, ppid: 500, command: "node server.js", elapsed: 3600, tty: "ttys001",
+                        kind: .node, riskTier: .moderate, cpuPercent: 0, rssKB: 1024, uid: getuid())
+        }
+        let source = FakeSource(
+            snapshot([item(10), attached(15)]),
+            // 15's session ended; 20 is a new stray; 21 is new but in use.
+            snapshot([item(10), item(15), item(20, command: "node b.js"), attached(21)]),
+            snapshot([item(10), item(15), item(20, command: "node b.js"), attached(21)]),
+            // 20 flickers back to in use, then stray again.
+            snapshot([item(10), item(15), attached(20), attached(21)]),
+            snapshot([item(10), item(15), item(20, command: "node b.js"), attached(21)])
+        )
+        var posted: [(title: String, body: String)] = []
+        let engine = makeEngine(source, defaults: defaults, notifier: { posted.append(($0, $1)) })
+
+        scanAndWait(engine)
+        XCTAssertTrue(posted.isEmpty, "the first scan sets the baseline")
+        XCTAssertEqual(engine.strayArrivals, 1, "the first scan's strays pulse the icon once")
+
+        scanAndWait(engine)
+        XCTAssertEqual(posted.count, 1)
+        XCTAssertEqual(posted.first?.title, "2 new likely strays", "15 turned stray, 20 is new; 21 is running")
+        XCTAssertEqual(engine.strayArrivals, 2)
+
+        scanAndWait(engine)
+        scanAndWait(engine)
+        scanAndWait(engine)
+        XCTAssertEqual(posted.count, 1, "an unchanged or flickering stray set announces nothing")
+        XCTAssertEqual(engine.strayArrivals, 2, "nor pulses the icon")
     }
 }

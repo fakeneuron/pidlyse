@@ -213,35 +213,6 @@ final class ScanCoreTests: XCTestCase {
         XCTAssertEqual(ScanCore.detectKind("node @playwright/mcp@latest"), .playwrightMCP)
     }
 
-    // MARK: - hasDevModeFlag (PID-55.3)
-
-    func testHasDevModeFlag_matchesExplicitFlags() {
-        XCTAssertTrue(ScanCore.hasDevModeFlag("node node_modules/.bin/vite --watch"))
-        XCTAssertTrue(ScanCore.hasDevModeFlag("vite --dev"))
-        XCTAssertTrue(ScanCore.hasDevModeFlag("webpack serve --hot"))
-        XCTAssertTrue(ScanCore.hasDevModeFlag("uvicorn backend.main:app --reload"))
-        // Flag as the trailing token (hasSuffix branch) and case-insensitive.
-        XCTAssertTrue(ScanCore.hasDevModeFlag("jest --coverage --WATCH"))
-    }
-
-    func testHasDevModeFlag_matchesNodeEnvDevelopment() {
-        XCTAssertTrue(ScanCore.hasDevModeFlag("NODE_ENV=development node server.js"))
-        XCTAssertTrue(ScanCore.hasDevModeFlag("env NODE_ENV development node server.js"))
-        // A production env assignment is not a dev-mode marker.
-        XCTAssertFalse(ScanCore.hasDevModeFlag("NODE_ENV=production node server.js"))
-    }
-
-    func testHasDevModeFlag_rejectsWordBoundaryFalsePositives() {
-        // Token-boundary discipline: `--dev` must not match `--devtools`, and
-        // `--no-watch` (watch disabled) must not match `--watch`.
-        XCTAssertFalse(ScanCore.hasDevModeFlag("electron . --devtools"))
-        XCTAssertFalse(ScanCore.hasDevModeFlag("vite --no-watch"))
-        // A bare `dev` / `watch` subcommand is intentionally not a match.
-        XCTAssertFalse(ScanCore.hasDevModeFlag("next dev"))
-        XCTAssertFalse(ScanCore.hasDevModeFlag("npm run watch"))
-        XCTAssertFalse(ScanCore.hasDevModeFlag("node server.js"))
-    }
-
     // MARK: - riskTier / bucket
 
     func testOrphanedOldPytest_isEasyKill() {

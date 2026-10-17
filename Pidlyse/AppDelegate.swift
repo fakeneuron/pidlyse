@@ -22,10 +22,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// opens reuse the same window instead of spawning duplicates.
     private var settingsWindow: NSWindow?
 
-    /// Last stray count (`safe + review`) the icon rendered. Used to fire a one-shot
-    /// attention pulse only when the count *increases* (a new stray appeared), not on
-    /// every redraw — a continuously animating menu bar icon would be distracting.
-    private var lastStrayCount = 0
+    /// `engine.strayArrivals` as of the last render. Used to fire a one-shot attention
+    /// pulse only when a stray not seen this session appears, not on every redraw or
+    /// verdict flicker — a continuously animating menu bar icon would be distracting.
+    private var lastStrayArrivals = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -89,10 +89,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Native menu bar icon: spinner while scanning, filled cpu + count badge when
-    /// strays exist, outline cpu when clean. Badge is red for safe-to-kill count,
-    /// yellow when only review items exist. The cpu glyph is a template image
+    /// likely strays exist, outline cpu when none do. The badge counts likely strays
+    /// (PID-086.4): red when "Clean all" would sweep some, yellow when every one needs
+    /// a per-row call. The cpu glyph is a template image
     /// (auto-adapts to light/dark menu bar); the count keeps its color. When the
-    /// stray count rises, the icon fires a one-shot pulse (see `pulse(_:)`).
+    /// a likely stray not seen this session appears, the icon fires a one-shot pulse (see `pulse(_:)`).
     private func updateIcon() {
         // Freeze the menu-bar icon while the popover is open. The `.variableLength`
         // status button resizes as the count badge gains/loses digits (and flips to
@@ -103,17 +104,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // reflects removals. `popoverDidClose` resyncs the icon once it closes.
         guard !popover.isShown else { return }
         guard let button = statusItem?.button else { return }
-        let safe = engine.items.filter { $0.bucket == .safe }.count
-        let review = engine.items.filter { $0.bucket == .needsReview }.count
+        // Likely strays only (PID-086.4) — in-use processes never badge.
+        let strayCount = engine.items.filter { engine.verdict($0).isStray }.count
+        let hasSweepable = !engine.sweepableStrays.isEmpty
 
         let symbol: String
         let badge: (count: Int, color: NSColor)?
         if engine.isScanning {
             symbol = "arrow.2.circlepath"; badge = nil
-        } else if safe > 0 {
-            symbol = "cpu.fill"; badge = (safe, .systemRed)
-        } else if review > 0 {
-            symbol = "cpu.fill"; badge = (review, .systemYellow)
+        } else if strayCount > 0 {
+            symbol = "cpu.fill"; badge = (strayCount, hasSweepable ? .systemRed : .systemYellow)
         } else {
             symbol = "cpu"; badge = nil
         }
@@ -136,13 +136,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.attributedTitle = NSAttributedString(string: "")
         }
 
-        // Pulse once when a new stray appears (count rises), drawing the eye to the
+        // Pulse once when a new stray appears (`strayArrivals` moved), drawing the eye to the
         // icon without the distraction of continuous motion. Decreases/no-change stay quiet.
-        let strayCount = safe + review
-        if strayCount > lastStrayCount {
+        if engine.strayArrivals != lastStrayArrivals {
             pulse(button)
         }
-        lastStrayCount = strayCount
+        lastStrayArrivals = engine.strayArrivals
     }
 
     /// One-shot attention pulse: a quick alpha dip-and-restore "breath" on the status

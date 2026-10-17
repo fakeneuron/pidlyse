@@ -1,9 +1,10 @@
 import SwiftUI
 import PidlyseCore
 
-/// The popover content: a live two-section list (Safe / Needs Review) bound to
-/// `ScanEngine`, with rows grouped by `kind`. Safe items can be swept with one
-/// "Clean all safe" click; every row also carries an individual kill button.
+/// The popover content: a strays-first list bound to `ScanEngine` (PID-086.4).
+/// "Likely strays" leads, sub-headed by the stray verdict's reason, with one "Clean
+/// all" over the engine's sweep set; in-use processes fold into one collapsed
+/// "Running" section grouped by project. Every row also carries a kill button.
 /// Kills route through `ScanEngine.kill` (SIGTERM → 2 s → SIGKILL, verified, then a
 /// rescan), and each killed row shows its phase in place of the button (PID-62.5).
 /// Never auto-kills — every kill is an explicit click (per AGENTS.md).
@@ -21,15 +22,14 @@ struct MenuBarView: View {
     /// the one `↻` reloads the locally-stateful `ContainersView`.
     @State private var containerRefreshToken = 0
     @State private var expandedPIDs: Set<Int32> = []
-    /// Kinds that are collapsed. Populated lazily when each kind first appears:
-    /// high-risk groups start collapsed; easy/moderate start expanded.
-    @State private var collapsedKinds: Set<ProcessKind> = []
-    @State private var seenKinds: Set<ProcessKind> = []
+    /// Whether the folded "Running" section is open. Starts collapsed: in-use
+    /// processes aren't what the popover is for (PID-086.4).
+    @State private var isRunningExpanded = false
     /// Live filter for the Processes tab. Session-scoped: the hosting controller is
     /// reused across popover opens (see `AppDelegate`), so `@State` persists — the
     /// `.onDisappear` below clears it so each open starts unfiltered.
     @State private var filterText = ""
-    /// The last popover "Clean all" tally, shown under the Safe header for
+    /// The last popover "Clean all" tally, shown under the strays header for
     /// `cleanReportLinger` (PID-62.5). `cleanReportToken` keeps an older clear
     /// from wiping a newer report.
     @State private var cleanReport: KillReport?
@@ -60,42 +60,26 @@ struct MenuBarView: View {
             }
         }
         .frame(width: 320)
-        .background(soleSafeKillShortcut)
+        .background(soleStrayKillShortcut)
         .onAppear { engine.scan() }
         .onDisappear { filterText = "" }
-        .onChange(of: engine.isScanning) { _, isScanning in
-            guard !isScanning else { return }
-            initCollapsedKinds()
-        }
     }
 
-    /// Invisible ⌘⌫ shortcut (PID-50.7): kills the sole *visible* safe row when
-    /// exactly one is shown. There's no row-selection mechanism (arrow traversal is
-    /// deliberately out of scope), so a single safe row is the only unambiguous
-    /// target — `.disabled` gates the shortcut to `safeItems.count == 1`, making it
+    /// Invisible ⌘⌫ shortcut (PID-50.7): kills the sole *visible* sweepable stray
+    /// when exactly one is shown. There's no row-selection mechanism (arrow traversal
+    /// is deliberately out of scope), so a single sweepable row is the only
+    /// unambiguous target — `.disabled` gates the shortcut to exactly one, making it
     /// inert otherwise. Hosted in `.background` so it contributes no layout (the
     /// popover's fixed width / height-driven sizing stays intact, per PID-040).
-    private var soleSafeKillShortcut: some View {
+    private var soleStrayKillShortcut: some View {
         Button("") {
-            guard let sole = sweepableSafeItems.first else { return }
+            guard let sole = sweepableStrayItems.first else { return }
             engine.kill([sole])
         }
         .keyboardShortcut(.delete, modifiers: .command)
-        .disabled(sweepableSafeItems.count != 1)
+        .disabled(sweepableStrayItems.count != 1)
         .opacity(0)
         .accessibilityHidden(true)
-    }
-
-    // MARK: - Init helpers
-
-    private func initCollapsedKinds() {
-        for (kind, rows) in grouped(engine.items) {
-            guard !seenKinds.contains(kind) else { continue }
-            seenKinds.insert(kind)
-            if rows.contains(where: { $0.riskTier == .high }) {
-                collapsedKinds.insert(kind)
-            }
-        }
     }
 
     // MARK: - Sections
@@ -187,7 +171,7 @@ struct MenuBarView: View {
     }
 
     private var emptyState: some View {
-        Text("No stray processes detected.")
+        Text("No dev processes running.")
             .font(.caption)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity)
@@ -197,14 +181,16 @@ struct MenuBarView: View {
     private var content: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                if safeRows.isEmpty && reviewRows.isEmpty && !filterText.isEmpty {
+                let noMatch = strayRows.isEmpty && runningRows.isEmpty && !filterText.isEmpty
+                if noMatch {
                     Text("No processes match \u{201C}\(filterText)\u{201D}.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                if !safeRows.isEmpty || cleanReport != nil { safeSection }
-                if !reviewRows.isEmpty { reviewSection }
+                // The Clean-all report stays up even when the filter hides every row.
+                if !noMatch || cleanReport != nil { straysSection }
+                if !runningRows.isEmpty { runningSection }
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
@@ -214,73 +200,89 @@ struct MenuBarView: View {
         .frame(height: 360)
     }
 
-    private var safeSection: some View {
+    /// The reasons "Likely strays" is sub-headed by, in display order.
+    private static let strayReasons: [StrayVerdict] = [.sessionEnded, .idle, .duplicate]
+
+    private var straysSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                // Count / reclaimable / sweep all track the *sweepable* set (protected
-                // rows excluded), though the rows below still list every safe item.
-                Text("Safe to clean (\(sweepableSafeItems.count))")
+                Text("Likely strays (\(strayItems.count))")
                     .font(.subheadline).bold()
-                Text("~\(ramString(safeReclaimableKB)) reclaimable")
-                    .font(.caption).foregroundStyle(.secondary)
+                // Reclaimable and the sweep track the *sweepable* strays (not high-risk,
+                // protected, or unkillable), though every stray stays listed below.
+                if !sweepableStrayItems.isEmpty {
+                    Text("~\(ramString(reclaimableKB)) reclaimable")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Spacer()
                 Button("Clean all") {
-                    engine.kill(sweepableSafeItems) { showCleanReport($0) }
+                    engine.kill(sweepableStrayItems) { showCleanReport($0) }
                 }
                 .buttonStyle(.borderless)
                 .foregroundStyle(.red)
-                .disabled(sweepableSafeItems.isEmpty)
+                .disabled(sweepableStrayItems.isEmpty)
             }
             if let cleanReport {
                 Text(cleanReport.summaryLine)
                     .font(.caption).foregroundStyle(.secondary)
             }
-            groups(for: safeRows)
-        }
-    }
-
-    private var reviewSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Needs review (\(reviewItems.count))")
-                .font(.subheadline).bold()
-            groups(for: reviewRows)
-        }
-    }
-
-    /// Render `items` grouped under a collapsible per-kind header. High-risk
-    /// groups start collapsed; easy/moderate start expanded.
-    private func groups(for items: [ProcessItem]) -> some View {
-        ForEach(grouped(items), id: \.0) { kind, rows in
-            VStack(alignment: .leading, spacing: 4) {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.15)) {
-                        collapsedKinds.toggle(kind)
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: collapsedKinds.contains(kind) ? "chevron.right" : "chevron.down")
-                            .font(.caption2)
-                        Text(kind.label)
+            if strayRows.isEmpty {
+                Text("No likely strays.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            ForEach(Self.strayReasons, id: \.self) { reason in
+                let rows = sortedByName(strayRows.filter { engine.verdict($0) == reason })
+                if !rows.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(reason.label)
                             .font(.caption).foregroundStyle(.secondary)
-                        if collapsedKinds.contains(kind) {
-                            let totalCPU = rows.reduce(0.0) { $0 + $1.cpuPercent }
-                            let totalRAM = rows.reduce(0) { $0 + $1.rssKB }
-                            Text("·")
-                                .font(.caption2).foregroundStyle(.tertiary)
-                            Text(String(format: "%.1f%%", totalCPU))
-                                .font(.caption2).foregroundStyle(.secondary)
-                            Text(ramString(totalRAM))
-                                .font(.caption2).foregroundStyle(.secondary)
-                        }
+                        ForEach(rows) { row($0) }
                     }
-                }
-                .buttonStyle(.borderless)
-                .foregroundStyle(.secondary)
-                if !collapsedKinds.contains(kind) {
-                    ForEach(rows) { row($0) }
                 }
             }
         }
+    }
+
+    /// In-use processes folded into one header (PID-086.4); expanding lists them under
+    /// per-repo sub-headers, so the rows show only their subfolder, if any.
+    private var runningSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isRunningExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: isRunningExpanded ? "chevron.down" : "chevron.right")
+                        .font(.caption2)
+                    Text("Running")
+                        .font(.subheadline).bold()
+                    Text(runningSummary)
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(.primary)
+            if isRunningExpanded {
+                ForEach(byProject(runningRows), id: \.0) { project, rows in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(project)
+                            .font(.caption).foregroundStyle(.secondary)
+                        ForEach(rows) { row($0, showsProject: false) }
+                    }
+                }
+            }
+        }
+    }
+
+    /// `· 12 in use across 4 projects` — projects are repos (`bidviz` and
+    /// `bidviz/frontend` are one); rows with no resolved project count toward the
+    /// processes but not the projects.
+    private var runningSummary: String {
+        let projects = Set(runningItems.compactMap(projectName)).count
+        let across = projects == 0 ? "" : " across \(projects) project\(projects == 1 ? "" : "s")"
+        return "\u{00B7} \(runningItems.count) in use\(across)"
     }
 
     private func riskColor(_ tier: RiskTier) -> Color {
@@ -298,16 +300,20 @@ struct MenuBarView: View {
         engine.cwds[item.pid]?.label
     }
 
-    /// Whether the row shows its name: not when it only repeats the kind-group header
-    /// it sits under (`playwright-mcp` under "playwright-mcp"), unless there is no
-    /// project to lead with instead.
-    private func showsName(_ item: ProcessItem) -> Bool {
-        item.displayName.caseInsensitiveCompare(item.kind.label) != .orderedSame
-            || projectLabel(item) == nil
+    /// The repo part of `projectLabel` (`bidviz` for `bidviz/frontend`) — the Running
+    /// section's project grouping key (PID-086.4).
+    private func projectName(_ item: ProcessItem) -> String? {
+        projectLabel(item).map { String($0.prefix { $0 != "/" }) }
     }
 
-    /// Group row (PID-62.4): how many processes the one kill covers. Trails the
-    /// row's leading label — the name, or the project when the name is hidden.
+    /// The subfolder part of `projectLabel` (`frontend` for `bidviz/frontend`); `nil`
+    /// at the repo root.
+    private func subfolder(_ item: ProcessItem) -> String? {
+        guard let label = projectLabel(item), let slash = label.firstIndex(of: "/") else { return nil }
+        return String(label[label.index(after: slash)...])
+    }
+
+    /// Group row (PID-62.4): how many processes the one kill covers. Trails the name.
     @ViewBuilder
     private func groupCount(_ item: ProcessItem) -> some View {
         if !item.members.isEmpty {
@@ -320,12 +326,12 @@ struct MenuBarView: View {
 
     /// One dense line (PID-086.3): risk dot / 🔒, the descriptive name (never
     /// truncated — the project gives way first, and an overlong name wraps), the
-    /// project, the grey PID, then the kill control. Clicking the row toggles the
-    /// inspector, which holds CPU / RAM / age; protect and ignore live in the
-    /// context menu.
-    private func row(_ item: ProcessItem) -> some View {
+    /// project (just its subfolder under a Running repo sub-header), the grey PID, then the
+    /// kill control. Clicking the row toggles the inspector, which holds the verdict,
+    /// CPU / RAM / age; protect and ignore live in the context menu.
+    private func row(_ item: ProcessItem, showsProject: Bool = true) -> some View {
         let isOld = item.elapsed >= engine.elapsedThreshold
-        let protected = item.bucket == .safe && isProtected(item)
+        let protected = isProtectable(item) && isProtected(item)
         let killability = engine.killability(item)
         let killPhase = engine.killPhase(for: item)
         return VStack(alignment: .leading, spacing: 0) {
@@ -341,23 +347,19 @@ struct MenuBarView: View {
                         .fill(riskColor(item.riskTier))
                         .frame(width: 8, height: 8)
                 }
-                if showsName(item) {
-                    Text(item.displayName)
-                        .font(.caption)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .layoutPriority(1)
-                        .help(item.command)
-                    groupCount(item)
-                }
-                if let project = projectLabel(item) {
-                    // Leads the row (primary) when the name is hidden.
+                Text(item.displayName)
+                    .font(.caption)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .layoutPriority(1)
+                    .help(item.command)
+                groupCount(item)
+                if let project = showsProject ? projectLabel(item) : subfolder(item) {
                     Text(project)
-                        .font(showsName(item) ? .caption2 : .caption)
-                        .foregroundStyle(showsName(item) ? .secondary : .primary)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                         .lineLimit(1).truncationMode(.tail)
                         .help(engine.cwds[item.pid]?.fullPath ?? project)
                 }
-                if !showsName(item) { groupCount(item) }
                 Spacer(minLength: 4)
                 // `Text(verbatim:)` (PID-070): a plain string interpolation here
                 // routes the PID through `Text`'s localized-number formatting,
@@ -434,7 +436,7 @@ struct MenuBarView: View {
         }
     }
 
-    /// Show a Clean-all tally under the Safe header for `cleanReportLinger`.
+    /// Show a Clean-all tally under the strays header for `cleanReportLinger`.
     private func showCleanReport(_ report: KillReport) {
         cleanReportToken += 1
         let token = cleanReportToken
@@ -449,9 +451,9 @@ struct MenuBarView: View {
     /// Protect and ignore moved here from the row (PID-086.3).
     @ViewBuilder
     private func rowContextMenu(_ item: ProcessItem) -> some View {
-        // Protection is only meaningful for Safe rows (only they're bulk-swept), so the
-        // toggle is gated there (PID-54.4).
-        if item.bucket == .safe && engine.cwds[item.pid] != nil {
+        // Protection is only meaningful for rows "Clean all" can take, so the toggle is
+        // gated there (PID-54.4, PID-086.4).
+        if isProtectable(item) && engine.cwds[item.pid] != nil {
             Button(isProtected(item) ? "Un-protect this project"
                                      : "Protect this project (keep out of \u{201C}Clean all\u{201D})") {
                 toggleProtected(item)
@@ -498,16 +500,13 @@ struct MenuBarView: View {
                 if item.isOrphan { criterionTag("orphan") }
                 if isOld { criterionTag("old") }
             }
-            // Idle-dev-server verdict (PID-55.3): sustained low CPU + old + no tty +
-            // a dev-mode flag. Advisory reasoning line only — rendered when the signal
-            // fires, absent otherwise (graceful degrade, like the provenance hints);
-            // never touches the risk dot / bucket / kill bar.
-            if engine.isIdleDevServer(item) {
-                Text("idle dev server — sustained low CPU across recent scans")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            // Why the row sits where it does (PID-086.4): the stray verdict's one
+            // sentence, from core (`StrayVerdict.explanation`).
+            let verdict = engine.verdict(item)
+            Text("\(verdict.label) — \(verdict.explanation)")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             // Why this row has no kill button (PID-62.3). Same sentence the row badge
             // carries as its tooltip — `Killability.explanation` is the one source —
             // and the same graceful-degrade shape as the line above: rendered when the
@@ -610,31 +609,37 @@ struct MenuBarView: View {
 
     // MARK: - Derived data
 
-    private var safeItems: [ProcessItem] { engine.items.filter { $0.bucket == .safe && matchesFilter($0) } }
-    private var reviewItems: [ProcessItem] { engine.items.filter { $0.bucket == .needsReview && matchesFilter($0) } }
+    private var strayItems: [ProcessItem] { engine.items.filter { engine.verdict($0).isStray && matchesFilter($0) } }
+    private var runningItems: [ProcessItem] { engine.items.filter { !engine.verdict($0).isStray && matchesFilter($0) } }
 
     /// What each section renders: its live items plus any verified-gone rows still
-    /// lingering to show their verdict (PID-62.5). Counts, the sweep set and the
-    /// reclaimable total stay on the live items alone.
-    private var safeRows: [ProcessItem] { safeItems + departedRows(.safe) }
-    private var reviewRows: [ProcessItem] { reviewItems + departedRows(.needsReview) }
+    /// lingering to show their verdict (PID-62.5), placed by the verdict they had when
+    /// killed. Counts, the sweep set and the reclaimable total stay on the live items.
+    private var strayRows: [ProcessItem] { strayItems + departedRows(stray: true) }
+    private var runningRows: [ProcessItem] { runningItems + departedRows(stray: false) }
 
-    /// Lingering gone rows for one bucket, minus any PID a scan has already re-listed
+    /// Lingering gone rows for one section, minus any PID a scan has already re-listed
     /// (a recycled PID) so row IDs stay unique.
-    private func departedRows(_ bucket: Bucket) -> [ProcessItem] {
+    private func departedRows(stray: Bool) -> [ProcessItem] {
         let live = Set(engine.items.map(\.pid))
         return engine.departedItems.values.filter {
-            $0.bucket == bucket && !live.contains($0.pid) && matchesFilter($0)
+            engine.verdict($0).isStray == stray && !live.contains($0.pid) && matchesFilter($0)
         }
     }
 
-    /// The safe rows that "Clean all" (and the ⌘⌫ shortcut) actually sweep — safe items
-    /// minus any the user has protected (PID-54.4) and minus any Pidlyse can't honestly
-    /// kill (PID-62.3). Both kinds stay *listed* in the Safe section, badged, but are
-    /// excluded from the bulk sweep, the section count, and the reclaimable total.
-    /// Delegates the predicate to `ScanEngine.isSweepable` so the popover and the
-    /// headless sweep can't drift; still reactive (reads `@Published` state).
-    private var sweepableSafeItems: [ProcessItem] { safeItems.filter { engine.isSweepable($0) } }
+    /// The strays that "Clean all" (and the ⌘⌫ shortcut) actually sweep — the visible
+    /// likely strays the engine's `isSweepable` admits (not high-risk, protected
+    /// (PID-54.4), unkillable (PID-62.3), or mid-kill). The rest stay *listed*, badged,
+    /// but are excluded from the sweep and the reclaimable total. Delegating the
+    /// predicate keeps the popover and the headless sweep from drifting; still
+    /// reactive (reads `@Published` state).
+    private var sweepableStrayItems: [ProcessItem] { strayItems.filter { engine.isSweepable($0) } }
+
+    /// Whether protecting `item` would change anything: only rows "Clean all" can take
+    /// — any but high-risk ones (PID-086.2) — are kept out of it by a lock.
+    private func isProtectable(_ item: ProcessItem) -> Bool {
+        item.riskTier != .high
+    }
 
     /// True when `item`'s resolved working directory sits under any protected project
     /// tree. Delegates to the engine-side SSOT (`ScanEngine.isProtected`, PID-58.2) so
@@ -659,8 +664,8 @@ struct MenuBarView: View {
     /// Quick-filter predicate (PID-50.5): an empty query passes everything; otherwise a
     /// case-insensitive substring match against the command line, the row's name
     /// (`displayName`), its project label, or any listening port number.
-    /// Folded into `safeItems` / `reviewItems` so the section counts, "Clean all" scope,
-    /// and the reclaimable-footprint header all track the filtered set.
+    /// Folded into `strayItems` / `runningItems` so the section counts, "Clean all"
+    /// scope, and the reclaimable-footprint header all track the filtered set.
     private func matchesFilter(_ item: ProcessItem) -> Bool {
         let query = filterText.trimmingCharacters(in: .whitespaces)
         guard !query.isEmpty else { return true }
@@ -691,29 +696,36 @@ struct MenuBarView: View {
         return AncestryResolver.compactLabel(first)
     }
 
-    /// Total resident memory the *sweepable* safe processes would free if cleaned —
-    /// protected rows are excluded, matching the "Clean all" scope (PID-54.4).
-    private var safeReclaimableKB: Int { sweepableSafeItems.reduce(0) { $0 + $1.rssKB } }
+    /// Total resident memory the sweepable strays would free if cleaned — matching
+    /// the "Clean all" scope (PID-54.4, PID-086.4).
+    private var reclaimableKB: Int { sweepableStrayItems.reduce(0) { $0 + $1.rssKB } }
 
-    private func grouped(_ items: [ProcessItem]) -> [(ProcessKind, [ProcessItem])] {
-        ProcessKind.allCases.compactMap { kind in
-            let matches = items.filter { $0.kind == kind }
-            // Order each group alphabetically by name, then project, so the list stays
-            // stable across scans instead of leaking `engine.items` scan order
-            // (PID-50.3, PID-086.3). `pid` breaks ties for full determinism.
-            // Keys are computed once per row, not per comparison.
-            let sorted = matches
-                .map { (item: $0, name: $0.displayName, project: projectLabel($0) ?? "") }
-                .sorted {
-                    let byName = $0.name.localizedCaseInsensitiveCompare($1.name)
-                    if byName != .orderedSame { return byName == .orderedAscending }
-                    let byProject = $0.project.localizedCaseInsensitiveCompare($1.project)
-                    if byProject != .orderedSame { return byProject == .orderedAscending }
-                    return $0.item.pid < $1.item.pid
-                }
-                .map(\.item)
-            return sorted.isEmpty ? nil : (kind, sorted)
-        }
+    /// `items` alphabetically by name, then project, so the list stays stable across
+    /// scans instead of leaking `engine.items` scan order (PID-50.3, PID-086.3).
+    /// `pid` breaks ties for full determinism. Keys are computed once per row, not
+    /// per comparison.
+    private func sortedByName(_ items: [ProcessItem]) -> [ProcessItem] {
+        items
+            .map { (item: $0, name: $0.displayName, project: projectLabel($0) ?? "") }
+            .sorted {
+                let byName = $0.name.localizedCaseInsensitiveCompare($1.name)
+                if byName != .orderedSame { return byName == .orderedAscending }
+                let byProject = $0.project.localizedCaseInsensitiveCompare($1.project)
+                if byProject != .orderedSame { return byProject == .orderedAscending }
+                return $0.item.pid < $1.item.pid
+            }
+            .map(\.item)
+    }
+
+    /// The Running section's per-repo groups (PID-086.4): repos alphabetically, rows
+    /// with no resolved project last under "No project".
+    private func byProject(_ items: [ProcessItem]) -> [(String, [ProcessItem])] {
+        let groups = Dictionary(grouping: items) { projectName($0) }
+        let named = groups.keys.compactMap { $0 }
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+            .map { ($0, sortedByName(groups[$0] ?? [])) }
+        guard let unresolved = groups[nil] else { return named }
+        return named + [("No project", sortedByName(unresolved))]
     }
 
     private func ramString(_ kb: Int) -> String {
