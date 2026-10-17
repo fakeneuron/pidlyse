@@ -155,4 +155,40 @@ final class KillCoreTests: XCTestCase {
         XCTAssertLessThan(KillCore.verificationDelay, KillCore.gracePeriod)
         XCTAssertGreaterThan(KillCore.verificationDelay, 0)
     }
+
+    // MARK: - parseProcArgs (PID-087)
+
+    /// A `KERN_PROCARGS2` buffer: native-endian argc, exec path, NUL padding, argv, env.
+    private func procArgsBuffer(argc: Int32, execPath: String, padding: Int = 3,
+                                args: [String], env: [String] = ["PATH=/usr/bin"]) -> [UInt8] {
+        var bytes = withUnsafeBytes(of: argc) { Array($0) }
+        bytes += Array(execPath.utf8) + [0] + [UInt8](repeating: 0, count: padding)
+        for arg in args + env { bytes += Array(arg.utf8) + [0] }
+        return bytes
+    }
+
+    func testParseProcArgs_keepsSpacesInsideAnArgument() {
+        let args = ["node", "/Users/me/My Project/node_modules/.bin/vite", "--port", "5173"]
+        let buffer = procArgsBuffer(argc: 4, execPath: "/usr/local/bin/node", args: args)
+        XCTAssertEqual(KillCore.parseProcArgs(buffer), args)
+    }
+
+    func testParseProcArgs_stopsAtArgc_andIgnoresEnvironment() {
+        let buffer = procArgsBuffer(argc: 1, execPath: "/bin/sh", args: ["sh"], env: ["A=1", "B=2"])
+        XCTAssertEqual(KillCore.parseProcArgs(buffer), ["sh"])
+    }
+
+    func testParseProcArgs_malformed_isNil() {
+        XCTAssertNil(KillCore.parseProcArgs([]))
+        XCTAssertNil(KillCore.parseProcArgs([1, 0, 0]))                       // shorter than the header
+        XCTAssertNil(KillCore.parseProcArgs(procArgsBuffer(argc: 0, execPath: "/x", args: [])))
+        // argc promises two arguments but only one is present.
+        let short = procArgsBuffer(argc: 2, execPath: "/x", args: ["x"], env: [])
+        XCTAssertNil(KillCore.parseProcArgs(short))
+    }
+
+    func testArgv_ownProcess_isReadable() throws {
+        let argv = try XCTUnwrap(KillCore.argv(of: ProcessInfo.processInfo.processIdentifier))
+        XCTAssertFalse(argv.isEmpty)
+    }
 }

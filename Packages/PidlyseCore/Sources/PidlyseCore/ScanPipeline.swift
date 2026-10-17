@@ -77,7 +77,8 @@ public enum ScanPipeline {
         // of a per-click inspect (PID-037.2).
         let owners = DockerService.containerOwners()
         // The start time lets the kill path detect a recycled PID (PID-35.3); the
-        // owner uid lets a foreign-owned row show as unkillable pre-click (PID-62.3).
+        // owner uid lets a foreign-owned row show as unkillable pre-click (PID-62.3);
+        // the real argv keeps a spaced path whole for the row name (PID-087).
         let items = ScanCore.enumerate(elapsedThreshold: request.elapsedThreshold,
                                        registeredPIDs: Set(portMap.keys),
                                        ignoredNames: request.globalIgnores,
@@ -85,7 +86,8 @@ public enum ScanPipeline {
                                        disabledKinds: request.disabledKinds,
                                        customRules: request.customRules,
                                        startTimeProvider: KillCore.startTime,
-                                       uidProvider: KillCore.ownerUID)
+                                       uidProvider: KillCore.ownerUID,
+                                       argvProvider: KillCore.argv)
         // One bulk lsof over the matched PIDs (PID-038).
         let cwdMap = CwdResolver.processCwds(forPIDs: items.map { $0.pid })
         // One bulk `ps` the inspector's parent chain walks to launchd (PID-52.2).

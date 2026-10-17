@@ -95,6 +95,11 @@ public struct ProcessItem: Identifiable {
     public let ppid: Int32
     /// Full command line (`ps` args column).
     public let command: String
+    /// The process's real argv, one element per argument, when it was read at scan
+    /// time and agreed with `command`; `nil` otherwise. `command` is `ps`'s
+    /// space-joined, unquoted string, so only this keeps a path containing a space
+    /// whole — `displayName` tokenises from it when present. (PID-087)
+    public let argv: [String]?
     /// Elapsed run time.
     public let elapsed: TimeInterval
     /// Controlling terminal as reported by `ps` (`??` = none).
@@ -128,10 +133,12 @@ public struct ProcessItem: Identifiable {
     public init(pid: Int32, ppid: Int32, command: String, elapsed: TimeInterval,
                 tty: String, kind: ProcessKind, riskTier: RiskTier,
                 cpuPercent: Double, rssKB: Int, startTime: ProcStartTime? = nil,
-                customLabel: String? = nil, uid: uid_t? = nil, members: [ProcessItem] = []) {
+                customLabel: String? = nil, uid: uid_t? = nil, members: [ProcessItem] = [],
+                argv: [String]? = nil) {
         self.pid = pid
         self.ppid = ppid
         self.command = command
+        self.argv = argv
         self.elapsed = elapsed
         self.tty = tty
         self.kind = kind
@@ -182,7 +189,7 @@ public struct ProcessItem: Identifiable {
         if let customLabel { return customLabel }
         // A Chrome helper's executable path contains spaces, so tokens can't name it.
         if kind == .chromeHelper { return kind.label }
-        return Self.name(of: command) ?? kind.label
+        return Self.name(of: command, argv: argv) ?? kind.label
     }
 
     private static let interpreters: Set<String> = ["node", "deno", "bun", "ruby", "tsx", "ts-node"]
@@ -197,8 +204,8 @@ public struct ProcessItem: Identifiable {
         "astro dev": "Astro dev server",
     ]
 
-    private static func name(of command: String) -> String? {
-        var tokens = command.split(separator: " ").map(String.init)
+    private static func name(of command: String, argv: [String]? = nil) -> String? {
+        var tokens = argv ?? command.split(separator: " ").map(String.init)
         // Skip leading `env` / `exec` wrappers (and their flags) and `VAR=value`
         // assignments.
         var afterWrapper = false
@@ -226,7 +233,8 @@ public struct ProcessItem: Identifiable {
 
         // `uv run python worker.py` / `poetry run …` name what they run; `uvx ruff` names the tool.
         if ["uv", "poetry"].contains(program), tokens.first == "run", tokens.count > 1 {
-            return name(of: tokens.dropFirst().joined(separator: " "))
+            let inner = Array(tokens.dropFirst())
+            return name(of: inner.joined(separator: " "), argv: inner)
         }
         if program == "uvx", let tool = tokens.first(where: { !$0.hasPrefix("-") }) {
             return stripVersion(tool)

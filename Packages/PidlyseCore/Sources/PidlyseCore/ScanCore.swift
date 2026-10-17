@@ -25,7 +25,8 @@ public enum ScanCore {
                                  disabledKinds: Set<ProcessKind> = [],
                                  customRules: [CustomRule] = [],
                                  startTimeProvider: ((Int32) -> ProcStartTime?)? = nil,
-                                 uidProvider: ((Int32) -> uid_t?)? = nil) -> [ProcessItem] {
+                                 uidProvider: ((Int32) -> uid_t?)? = nil,
+                                 argvProvider: ((Int32) -> [String]?)? = nil) -> [ProcessItem] {
         let output = psOutput ?? runPS()
         let portPIDs = registeredPIDs ?? PortRegistry.listeningPIDs()
         var all = output
@@ -33,7 +34,8 @@ public enum ScanCore {
             .compactMap { makeItem(from: String($0), elapsedThreshold: elapsedThreshold,
                                    registeredPIDs: portPIDs, customRules: customRules,
                                    startTimeProvider: startTimeProvider,
-                                   uidProvider: uidProvider) }
+                                   uidProvider: uidProvider,
+                                   argvProvider: argvProvider) }
         if !ignoredNames.isEmpty {
             all = all.filter { item in
                 !ignoredNames.contains { prefix in
@@ -109,7 +111,7 @@ public enum ScanCore {
                 cpuPercent: all.reduce(0) { $0 + $1.cpuPercent },
                 rssKB: all.reduce(0) { $0 + $1.rssKB },
                 startTime: root.startTime, customLabel: representative.customLabel,
-                uid: root.uid, members: members)
+                uid: root.uid, members: members, argv: representative.argv)
         }
         return items.compactMap { item in
             if let group = groupByRootPID[item.pid] { return group }
@@ -177,6 +179,9 @@ public enum ScanCore {
     /// `startTimeProvider` and `uidProvider` are the two scan-time identity reads (both
     /// backed by `KillCore`'s single `kinfo_proc` fetch); omitting either leaves the
     /// corresponding `ProcessItem` field `nil`, which every consumer reads as "unknown".
+    /// `argvProvider` reads the real argv (PID-087); it's kept only when it joins back
+    /// to the `ps` args exactly, so a PID recycled between the two reads, or a process
+    /// that rewrote its title, falls back to the `ps` string instead of misnaming.
     /// User `customRules` are consulted **ahead of** `detectKind`: a custom-rule
     /// match relabels the process (`.custom` kind + `customLabel`) even when a
     /// built-in kind would also match, and always lands in Needs Review. (PID-54.3)
@@ -184,7 +189,8 @@ public enum ScanCore {
                                 registeredPIDs: Set<Int32> = [],
                                 customRules: [CustomRule] = [],
                                 startTimeProvider: ((Int32) -> ProcStartTime?)? = nil,
-                                uidProvider: ((Int32) -> uid_t?)? = nil) -> ProcessItem? {
+                                uidProvider: ((Int32) -> uid_t?)? = nil,
+                                argvProvider: ((Int32) -> [String]?)? = nil) -> ProcessItem? {
         guard let p = parsePSLine(line) else { return nil }
         let kind: ProcessKind
         let customLabel: String?
@@ -214,10 +220,11 @@ public enum ScanCore {
         // Capture the owning uid the same way, so a foreign-owned process can be shown
         // as unkillable without a dead-end click first. (PID-62.3)
         let uid = uidProvider.flatMap { $0(p.pid) }
+        let argv = argvProvider.flatMap { $0(p.pid) }.flatMap { $0.joined(separator: " ").trimmingCharacters(in: .whitespaces) == p.args ? $0 : nil }
         return ProcessItem(pid: p.pid, ppid: p.ppid, command: p.args,
                            elapsed: elapsed, tty: p.tty, kind: kind, riskTier: tier,
                            cpuPercent: cpuPercent, rssKB: rssKB, startTime: startTime,
-                           customLabel: customLabel, uid: uid)
+                           customLabel: customLabel, uid: uid, argv: argv)
     }
 
     // MARK: - Scoped ignores (PID-54.4)

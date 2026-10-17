@@ -50,6 +50,33 @@ final class ProcessItemTests: XCTestCase {
         XCTAssertEqual(name("node /x/node_modules/.bin/next start"), "next start")
     }
 
+    func testDisplayName_spacedPath_usesArgvWhenKnown() {
+        // `ps` joins argv unquoted, so the path splits at the space; argv keeps it whole.
+        let path = "/Users/me/My Project/frontend/node_modules/.bin/vite"
+        let spaced = ProcessItem(pid: 1, ppid: 1, command: "node \(path) --port 5173", elapsed: 0,
+                                 tty: "??", kind: .vite, riskTier: .high, cpuPercent: 0, rssKB: 0,
+                                 argv: ["node", path, "--port", "5173"])
+        XCTAssertEqual(spaced.displayName, "Vite dev server")
+        let script = ProcessItem(pid: 1, ppid: 1, command: "node /My Apps/api/import-scraper.js", elapsed: 0,
+                                 tty: "??", kind: .node, riskTier: .high, cpuPercent: 0, rssKB: 0,
+                                 argv: ["node", "/My Apps/api/import-scraper.js"])
+        XCTAssertEqual(script.displayName, "import-scraper.js")
+    }
+
+    func testDisplayName_spacedPath_survivesLauncherRecursion() {
+        let argv = ["uv", "run", "python", "/My Apps/api/worker.py"]
+        let item = ProcessItem(pid: 1, ppid: 1, command: argv.joined(separator: " "), elapsed: 0,
+                               tty: "??", kind: .node, riskTier: .high, cpuPercent: 0, rssKB: 0,
+                               argv: argv)
+        XCTAssertEqual(item.displayName, "worker.py")
+    }
+
+    func testDisplayName_spacedPath_withoutArgv_fallsBackToPSString() {
+        // No argv (foreign-owned, or it disagreed with `ps`): the unquoted string splits
+        // at the space — the misnaming argv exists to avoid, kept as the graceful fallback.
+        XCTAssertEqual(name("node /My Apps/api/import-scraper.js"), "My")
+    }
+
     func testDisplayName_binPlusSubcommand() {
         XCTAssertEqual(name("node /x/worker/node_modules/.bin/wrangler dev"), "wrangler dev")
         XCTAssertEqual(name("cargo run --release"), "cargo run")

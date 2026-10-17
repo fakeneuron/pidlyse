@@ -127,6 +127,44 @@ public enum KillCore {
         procInfo(of: pid).map { $0.kp_eproc.e_pcred.p_ruid }
     }
 
+    /// Read a process's real argv via `sysctl` `KERN_PROCARGS2`, or `nil` when it
+    /// can't be read (the process exited, or another user owns it). `ps` prints argv
+    /// space-joined and unquoted, so a path containing a space is indistinguishable
+    /// from two arguments there; this keeps each argument whole. Injected into the
+    /// scan as `ScanCore`'s `argvProvider`. (PID-087)
+    public static func argv(of pid: Int32) -> [String]? {
+        var mib: [Int32] = [CTL_KERN, KERN_PROCARGS2, pid]
+        var size = 0
+        guard sysctl(&mib, u_int(mib.count), nil, &size, nil, 0) == 0, size > 0 else { return nil }
+        var buffer = [UInt8](repeating: 0, count: size)
+        guard sysctl(&mib, u_int(mib.count), &buffer, &size, nil, 0) == 0 else { return nil }
+        return parseProcArgs(Array(buffer.prefix(size)))
+    }
+
+    /// Parse a `KERN_PROCARGS2` buffer: a native-endian `int32` argc, the executable
+    /// path, NUL padding, then `argc` NUL-terminated argument strings (the
+    /// environment follows and is ignored). `nil` when the buffer is malformed. An
+    /// empty `argv[0]` can't be told from the padding and is skipped with it; the
+    /// scan's agreement check against `ps` then rejects the shifted result.
+    /// Pure; split from `argv(of:)` so it's testable without a live process. (PID-087)
+    static func parseProcArgs(_ bytes: [UInt8]) -> [String]? {
+        let header = MemoryLayout<Int32>.size
+        guard bytes.count > header else { return nil }
+        let argc = bytes.withUnsafeBytes { $0.loadUnaligned(as: Int32.self) }
+        guard argc > 0 else { return nil }
+        var index = header
+        while index < bytes.count, bytes[index] != 0 { index += 1 }   // executable path
+        while index < bytes.count, bytes[index] == 0 { index += 1 }   // padding
+        var args: [String] = []
+        while args.count < Int(argc) {
+            guard index < bytes.count,
+                  let end = bytes[index...].firstIndex(of: 0) else { return nil }
+            args.append(String(decoding: bytes[index..<end], as: UTF8.self))
+            index = end + 1
+        }
+        return args
+    }
+
     /// Whether `kill(_:containerOwners:)` stops this item with `docker stop` rather
     /// than a signal — a docker-kind PID that is a container's root process. Such a
     /// kill needs no signal permission, so the killability overlay must not call it
