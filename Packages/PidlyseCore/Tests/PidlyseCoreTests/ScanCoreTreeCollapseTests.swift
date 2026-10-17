@@ -42,6 +42,7 @@ final class ScanCoreTreeCollapseTests: XCTestCase {
         XCTAssertEqual(result.count, 1)
         XCTAssertEqual(result.first?.pid, 200)
         XCTAssertEqual(result.first?.kind, .vite)
+        XCTAssertEqual(result.first?.displayName, "Vite dev server")   // named after the representative (PID-086.3)
         XCTAssertEqual(result.first?.rssKB, 2704 + 12432)
     }
 
@@ -70,6 +71,7 @@ final class ScanCoreTreeCollapseTests: XCTestCase {
         XCTAssertEqual(result.count, 1)
         XCTAssertEqual(result.first?.pid, 99065)
         XCTAssertEqual(result.first?.command, py.command)
+        XCTAssertEqual(result.first?.displayName, "uvicorn")
         XCTAssertEqual(result.first?.members.map { $0.pid }, [99066, 99067])
     }
 

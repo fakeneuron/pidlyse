@@ -277,25 +277,10 @@ struct MenuBarView: View {
                 .buttonStyle(.borderless)
                 .foregroundStyle(.secondary)
                 if !collapsedKinds.contains(kind) {
-                    let ambiguousPIDs = duplicateDescriptorPIDs(rows)
-                    ForEach(rows) { row($0, ambiguousPIDs: ambiguousPIDs) }
+                    ForEach(rows) { row($0) }
                 }
             }
         }
-    }
-
-    /// PIDs within one kind-group whose row descriptor collides with a sibling's —
-    /// e.g. two identical dummy processes in the same project both label as
-    /// `pidlyse/b…` with nothing else to tell them apart. The row appends `ppid`
-    /// for these as a best-effort disambiguator; same-parent siblings (a common
-    /// case) still tie on that too, but the row's own PID — verbatim and
-    /// single-line as of PID-070 — stays the definitive unique identifier
-    /// regardless. Each descriptor is computed once and reused for both the
-    /// count and the membership check.
-    private func duplicateDescriptorPIDs(_ rows: [ProcessItem]) -> Set<Int32> {
-        let descriptors = rows.map { ($0.pid, rowDescriptor($0)) }
-        let counts = Dictionary(descriptors.map { ($0.1, 1) }, uniquingKeysWith: +)
-        return Set(descriptors.filter { (counts[$0.1] ?? 0) > 1 }.map(\.0))
     }
 
     private func riskColor(_ tier: RiskTier) -> Color {
@@ -306,34 +291,45 @@ struct MenuBarView: View {
         }
     }
 
-    /// Always-visible secondary line under the PID: the git-project the process runs in
-    /// (`bidviz` / `bidviz/frontend`) when resolvable — the owner hint PID-038 targets.
-    /// Falls back to the compact executable path when cwd can't be resolved. The group
-    /// header already carries the kind, so a bare `npm`/`node` `displayPath` is
-    /// redundant; the project answers "which app / dev server is this?".
-    private func rowDescriptor(_ item: ProcessItem) -> String {
-        // Custom-rule matches share one "Custom rules" group header, so the row
-        // itself carries the friendly per-rule label as its identity. (PID-54.3)
-        if item.kind == .custom, let label = item.customLabel { return label }
-        return engine.cwds[item.pid]?.label ?? item.displayPath
+    /// The git project the process runs in (`bidviz` / `bidviz/frontend`), shown after
+    /// the name — the owner hint PID-038 targets. `nil` when no cwd resolves: the
+    /// name already says what the process is (PID-086.3).
+    private func projectLabel(_ item: ProcessItem) -> String? {
+        engine.cwds[item.pid]?.label
     }
 
-    private func row(_ item: ProcessItem, ambiguousPIDs: Set<Int32> = []) -> some View {
+    /// Whether the row shows its name: not when it only repeats the kind-group header
+    /// it sits under (`playwright-mcp` under "playwright-mcp"), unless there is no
+    /// project to lead with instead.
+    private func showsName(_ item: ProcessItem) -> Bool {
+        item.displayName.caseInsensitiveCompare(item.kind.label) != .orderedSame
+            || projectLabel(item) == nil
+    }
+
+    /// Group row (PID-62.4): how many processes the one kill covers. Trails the
+    /// row's leading label — the name, or the project when the name is hidden.
+    @ViewBuilder
+    private func groupCount(_ item: ProcessItem) -> some View {
+        if !item.members.isEmpty {
+            Text("\u{00D7}\(item.members.count + 1)")
+                .font(.caption2).foregroundStyle(.secondary)
+                .layoutPriority(1)
+                .help("\(item.members.count + 1) processes that live and die together")
+        }
+    }
+
+    /// One dense line (PID-086.3): risk dot / 🔒, the descriptive name (never
+    /// truncated — the project gives way first, and an overlong name wraps), the
+    /// project, the grey PID, then the kill control. Clicking the row toggles the
+    /// inspector, which holds CPU / RAM / age; protect and ignore live in the
+    /// context menu.
+    private func row(_ item: ProcessItem) -> some View {
         let isOld = item.elapsed >= engine.elapsedThreshold
-        let isExpanded = expandedPIDs.contains(item.pid)
-        // ppid suffix (PID-070) only when a sibling in this kind-group shares the
-        // same descriptor — the common case stays as short as before.
-        let descriptor = ambiguousPIDs.contains(item.pid)
-            ? rowDescriptor(item) + " · ppid \(item.ppid)"
-            : rowDescriptor(item)
-        // Protection is only meaningful for Safe rows (only they're bulk-swept), so the
-        // 🔒 badge + lock toggle are gated there (PID-54.4).
-        let protectable = item.bucket == .safe && engine.cwds[item.pid] != nil
         let protected = item.bucket == .safe && isProtected(item)
         let killability = engine.killability(item)
         let killPhase = engine.killPhase(for: item)
         return VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 if protected {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 9))
@@ -345,58 +341,31 @@ struct MenuBarView: View {
                         .fill(riskColor(item.riskTier))
                         .frame(width: 8, height: 8)
                 }
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 4) {
-                        // `Text(verbatim:)` (PID-070): a plain string interpolation here
-                        // routes the PID through `Text`'s localized-number formatting,
-                        // which inserts a thousands separator and can wrap.
-                        Text(verbatim: "PID \(item.pid)")
-                            .font(.caption).monospaced().lineLimit(1)
-                        // Group row (PID-62.4): how many processes the one kill covers.
-                        if !item.members.isEmpty {
-                            Text("\u{00D7}\(item.members.count + 1)")
-                                .font(.caption2).foregroundStyle(.secondary)
-                                .help("\(item.members.count + 1) processes that live and die together")
-                        }
-                    }
-                    Text(descriptor)
-                        .font(.caption2).foregroundStyle(.secondary)
+                if showsName(item) {
+                    Text(item.displayName)
+                        .font(.caption)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .layoutPriority(1)
+                        .help(item.command)
+                    groupCount(item)
+                }
+                if let project = projectLabel(item) {
+                    // Leads the row (primary) when the name is hidden.
+                    Text(project)
+                        .font(showsName(item) ? .caption2 : .caption)
+                        .foregroundStyle(showsName(item) ? .secondary : .primary)
                         .lineLimit(1).truncationMode(.tail)
-                        .help(engine.cwds[item.pid]?.fullPath ?? item.command)
+                        .help(engine.cwds[item.pid]?.fullPath ?? project)
                 }
-                Spacer()
-                Text(String(format: "%.1f%%", item.cpuPercent))
-                    .font(.caption2).foregroundStyle(.secondary)
-                    .frame(width: 36, alignment: .trailing)
-                Text(ramString(item.rssKB))
-                    .font(.caption2).foregroundStyle(.secondary)
-                    .frame(width: 48, alignment: .trailing)
-                Text(ageString(item.elapsed))
-                    .font(.caption2).foregroundStyle(.secondary)
-                Button {
-                    expandedPIDs.toggle(item.pid)
-                } label: {
-                    Image(systemName: isExpanded ? "info.circle.fill" : "info.circle")
-                }
-                .buttonStyle(.borderless)
-                .help("Why is this here?")
-                if protectable {
-                    Button {
-                        toggleProtected(item)
-                    } label: {
-                        Image(systemName: protected ? "lock.fill" : "lock.open")
-                    }
-                    .buttonStyle(.borderless)
-                    .help(protected ? "Un-protect this project"
-                                    : "Protect: keep this project out of \u{201C}Clean all\u{201D}")
-                }
-                Button {
-                    engine.dismiss(item.pid)
-                } label: {
-                    Image(systemName: "eye.slash")
-                }
-                .buttonStyle(.borderless)
-                .help("Ignore for session")
+                if !showsName(item) { groupCount(item) }
+                Spacer(minLength: 4)
+                // `Text(verbatim:)` (PID-070): a plain string interpolation here
+                // routes the PID through `Text`'s localized-number formatting,
+                // which inserts a thousands separator and can wrap.
+                Text(verbatim: "\(item.pid)")
+                    .font(.caption2).monospaced().foregroundStyle(.tertiary)
+                    .fixedSize()
+                    .help("PID \(item.pid)")
                 // A kill in flight or just answered shows its phase where the button
                 // was (PID-62.5). Otherwise, a kill button is a promise the process
                 // will die and stay dead (PID-62.3). Where we can't make it —
@@ -405,9 +374,9 @@ struct MenuBarView: View {
                 if let killPhase {
                     killPhaseLabel(killPhase)
                 } else if let explanation = killability.explanation {
-                    // A bare Image sat in the same icon-button row as ⓘ/🔒/✕ and read as
-                    // one — the operator clicked expecting an action. Route the click to
-                    // the same inspector toggle ⓘ uses, so it now does one (PID-070).
+                    // A bare Image sat in the same icon-button row as the other buttons and
+                    // read as one — the operator clicked expecting an action. Route the
+                    // click to the same inspector toggle the row uses (PID-070, PID-086.3).
                     Button {
                         expandedPIDs.toggle(item.pid)
                     } label: {
@@ -426,10 +395,15 @@ struct MenuBarView: View {
                     .help("Kill PID \(item.pid)")
                 }
             }
-            if isExpanded {
+            // The whole line toggles the inspector ("Why is this here?"); the kill
+            // and badge buttons keep their own clicks.
+            .contentShape(Rectangle())
+            .onTapGesture { expandedPIDs.toggle(item.pid) }
+            .help("Click for details")
+            if expandedPIDs.contains(item.pid) {
                 reasoningBlock(item: item, isOld: isOld, killability: killability)
                     // On-demand open-files fetch (PID-52.3): fires whenever the inspector
-                    // appears, decoupled from the ⓘ toggle; the engine caches per session.
+                    // appears, decoupled from the row toggle; the engine caches per session.
                     .onAppear { engine.loadOpenFiles(for: item.pid) }
             }
         }
@@ -472,8 +446,19 @@ struct MenuBarView: View {
 
     /// Right-click affordances for a row (PID-50.2): clipboard copies + reveal the
     /// working directory in Finder. Pasteboard / NSWorkspace only — no shell-out.
+    /// Protect and ignore moved here from the row (PID-086.3).
     @ViewBuilder
     private func rowContextMenu(_ item: ProcessItem) -> some View {
+        // Protection is only meaningful for Safe rows (only they're bulk-swept), so the
+        // toggle is gated there (PID-54.4).
+        if item.bucket == .safe && engine.cwds[item.pid] != nil {
+            Button(isProtected(item) ? "Un-protect this project"
+                                     : "Protect this project (keep out of \u{201C}Clean all\u{201D})") {
+                toggleProtected(item)
+            }
+        }
+        Button("Ignore for session") { engine.dismiss(item.pid) }
+        Divider()
         Button("Copy PID") { copyToPasteboard(String(item.pid)) }
         Button("Copy command line") { copyToPasteboard(item.command) }
         Button("Copy `kill \(item.pid)`") { copyToPasteboard("kill \(item.pid)") }
@@ -533,10 +518,15 @@ struct MenuBarView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            // Resource figures moved off the row (PID-086.3).
+            Text(verbatim: "cpu \(String(format: "%.1f%%", item.cpuPercent))  ·  ram \(ramString(item.rssKB))  ·  age \(ageString(item.elapsed))")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .monospaced()
             // `Text(verbatim:)` (PID-070/PID-073): plain string interpolation here
             // routes `ppid` through `Text`'s localized-number formatting, which
             // inserts a thousands separator.
-            Text(verbatim: "tty \(item.tty)  ·  ppid \(item.ppid)  ·  age \(ageString(item.elapsed))")
+            Text(verbatim: "tty \(item.tty)  ·  ppid \(item.ppid)")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .monospaced()
@@ -551,8 +541,8 @@ struct MenuBarView: View {
             // Provenance hints (PID-036.3): rendered only when resolvable, so a
             // process with no registered-port listener / no scanned parent simply
             // shows fewer lines (graceful degrade). The cwd / project-folder hint
-            // (PID-038) is promoted to the always-visible row descriptor instead of a
-            // line here — see `rowDescriptor`.
+            // (PID-038) is promoted to the always-visible row instead of a line
+            // here — see `projectLabel`.
             if let ports = listeningPorts(item) {
                 Text("\(ports.sorted().map { ":\($0)" }.joined(separator: ", ")) listening")
                     .font(.caption2)
@@ -667,15 +657,16 @@ struct MenuBarView: View {
     }
 
     /// Quick-filter predicate (PID-50.5): an empty query passes everything; otherwise a
-    /// case-insensitive substring match against the command line, the row's
-    /// project/provenance label (`rowDescriptor`), or any listening port number.
+    /// case-insensitive substring match against the command line, the row's name
+    /// (`displayName`), its project label, or any listening port number.
     /// Folded into `safeItems` / `reviewItems` so the section counts, "Clean all" scope,
     /// and the reclaimable-footprint header all track the filtered set.
     private func matchesFilter(_ item: ProcessItem) -> Bool {
         let query = filterText.trimmingCharacters(in: .whitespaces)
         guard !query.isEmpty else { return true }
         if item.command.localizedCaseInsensitiveContains(query) { return true }
-        if rowDescriptor(item).localizedCaseInsensitiveContains(query) { return true }
+        if item.displayName.localizedCaseInsensitiveContains(query) { return true }
+        if projectLabel(item)?.localizedCaseInsensitiveContains(query) == true { return true }
         if let ports = listeningPorts(item),
            ports.contains(where: { String($0).contains(query) }) {
             return true
@@ -707,16 +698,20 @@ struct MenuBarView: View {
     private func grouped(_ items: [ProcessItem]) -> [(ProcessKind, [ProcessItem])] {
         ProcessKind.allCases.compactMap { kind in
             let matches = items.filter { $0.kind == kind }
-            // Order each group alphabetically by the provenance/project label so the
-            // list stays stable across scans instead of leaking `engine.items` scan
-            // order (PID-50.3). `pid` breaks ties (same descriptor) for full determinism.
-            let sorted = matches.sorted {
-                switch rowDescriptor($0).localizedCaseInsensitiveCompare(rowDescriptor($1)) {
-                case .orderedAscending:  return true
-                case .orderedDescending: return false
-                case .orderedSame:       return $0.pid < $1.pid
+            // Order each group alphabetically by name, then project, so the list stays
+            // stable across scans instead of leaking `engine.items` scan order
+            // (PID-50.3, PID-086.3). `pid` breaks ties for full determinism.
+            // Keys are computed once per row, not per comparison.
+            let sorted = matches
+                .map { (item: $0, name: $0.displayName, project: projectLabel($0) ?? "") }
+                .sorted {
+                    let byName = $0.name.localizedCaseInsensitiveCompare($1.name)
+                    if byName != .orderedSame { return byName == .orderedAscending }
+                    let byProject = $0.project.localizedCaseInsensitiveCompare($1.project)
+                    if byProject != .orderedSame { return byProject == .orderedAscending }
+                    return $0.item.pid < $1.item.pid
                 }
-            }
+                .map(\.item)
             return sorted.isEmpty ? nil : (kind, sorted)
         }
     }

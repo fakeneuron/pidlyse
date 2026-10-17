@@ -142,15 +142,19 @@ public enum ScanCore {
         if isNpmWrapper(command) { return true }
         let tokens = command.lowercased().split(separator: " ", maxSplits: 2).map(String.init)
         guard tokens.count > 1 else { return false }
-        // A login shell reports its argv[0] as `-zsh`.
-        var leaf = (tokens[0] as NSString).lastPathComponent
-        if leaf.hasPrefix("-") { leaf.removeFirst() }
+        let leaf = (tokens[0] as NSString).lastPathComponent
         let flag = tokens[1]
-        if ["sh", "bash", "zsh"].contains(leaf), flag.hasPrefix("-"), !flag.hasPrefix("--"),
-           flag.contains("c") {
-            return true
-        }
+        if isShellDashC(leaf, flag) { return true }
         return leaf == "uv" && flag == "run"
+    }
+
+    /// True when executable leaf `leaf` is `sh`/`bash`/`zsh` (or a login shell's `-zsh`)
+    /// and `flag` is a short-flag cluster carrying `c` — a shell running a command
+    /// string. Shared by `isLauncher` and `ProcessItem.displayName` (PID-086.3).
+    static func isShellDashC(_ leaf: String, _ flag: String) -> Bool {
+        let shell = leaf.hasPrefix("-") ? String(leaf.dropFirst()) : leaf
+        return ["sh", "bash", "zsh"].contains(shell)
+            && flag.hasPrefix("-") && !flag.hasPrefix("--") && flag.contains("c")
     }
 
     /// True when `command` is an npm/npx launcher invocation — the wrapper-process
