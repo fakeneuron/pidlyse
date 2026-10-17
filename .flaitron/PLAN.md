@@ -22,7 +22,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-(none)
+- [ ] **PID-087** [light] | spaced-path-names — `displayName` misnames commands whose path contains a space (`ps` argv is unquoted); read real argv via `KERN_PROCARGS2` instead. From [[PID-086.3]] review.
 
 ## Future Opportunities
 
