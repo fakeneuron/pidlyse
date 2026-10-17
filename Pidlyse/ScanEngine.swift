@@ -506,20 +506,24 @@ final class ScanEngine: ObservableObject {
     }
 
     /// Whether `item` belongs in a bulk sweep: the shared core predicate
-    /// (`ScanPipeline.isSweepable` — a stray that isn't high-risk, protected, or
-    /// unkillable; PID-079.6, PID-086.2) fed with this session's facts. `sweepableStrays`
+    /// (`ScanPipeline.isSweepable` — a stray that isn't high-risk, protected, bound to
+    /// a registered port, or unkillable; PID-079.6, PID-086.2, PID-088) fed with this
+    /// session's facts. `sweepableStrays`
     /// below and the popover's filtered variant both call it, so a row that shows no
     /// kill button can't still be swept by "Clean all" — nor can a row showing its
     /// kill's phase in place of the button.
     func isSweepable(_ item: ProcessItem) -> Bool {
         // A row already being killed — or just answered — isn't swept again (PID-62.5).
         ScanPipeline.isSweepable(verdict: verdict(item), riskTier: item.riskTier,
-                                 isProtected: isProtected(item), killability: killability(item))
+                                 isProtected: isProtected(item),
+                                 isPortBound: ScanPipeline.isPortBound(item, listeningPorts: listeningPorts),
+                                 killability: killability(item))
             && killPhase(for: item) == nil
     }
 
     /// The "Clean all" sweep set: likely strays (PID-086.2) minus high-risk rows,
-    /// protected projects (PID-54.4), and rows we can't honestly kill (PID-62.3).
+    /// protected projects (PID-54.4), registered-port listeners (PID-088), and rows we
+    /// can't honestly kill (PID-62.3).
     /// Engine-side SSOT shared by every external trigger (URL scheme, AppIntents) —
     /// the same set the CLI's `commandClean()` derives.
     var sweepableStrays: [ProcessItem] {

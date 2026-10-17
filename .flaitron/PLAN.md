@@ -18,7 +18,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-- [ ] **PID-088** [light] [unattended] | port-bound-sweep — Clean all now sweeps session-ended/idle strays on a registered port (demoted only to moderate); decide whether registered-port rows stay out of the sweep. From [[PID-086.4]] review.
+(none)
 
 ## Low
 
@@ -32,6 +32,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-088** [light] [unattended] | port-bound-sweep — Completed 2026-10-17.
 - [x] **PID-EPIC-079** [heavy]🧠 | consumer-seams — Completed 2026-10-15.
   - [x] **PID-079.2** [light]🔧 | clean-log-merge-on-write — Completed 2026-10-08.
   - [x] **PID-079.3** [medium]🧩 [unattended] | shell-run-timeout — Completed 2026-10-08.

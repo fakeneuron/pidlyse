@@ -73,13 +73,34 @@ final class ScanPipelineTests: XCTestCase {
         XCTAssertFalse(ScanPipeline.isProtected(item(10), cwds: cwds, protectedProjects: []))
     }
 
+    // MARK: - Port-bound (PID-088)
+
+    func testIsPortBound_rowListeningOnARegisteredPort() {
+        XCTAssertTrue(ScanPipeline.isPortBound(item(10), listeningPorts: [10: [5173]]))
+    }
+
+    func testIsPortBound_aTreeMemberListeningCountsForTheRow() {
+        let vite = item(11)
+        let root = ProcessItem(pid: 10, ppid: 1, command: "npm run dev", elapsed: 0, tty: "??",
+                               kind: .npm, riskTier: .moderate, cpuPercent: 0, rssKB: 0,
+                               members: [vite])
+        XCTAssertTrue(ScanPipeline.isPortBound(root, listeningPorts: [11: [5173]]))
+    }
+
+    func testIsPortBound_otherPIDsOrEmptyPortSetsAreNotBound() {
+        XCTAssertFalse(ScanPipeline.isPortBound(item(10), listeningPorts: [:]))
+        XCTAssertFalse(ScanPipeline.isPortBound(item(10), listeningPorts: [99: [5173]]))
+        XCTAssertFalse(ScanPipeline.isPortBound(item(10), listeningPorts: [10: []]))
+    }
+
     // MARK: - Sweep
 
     func testIsSweepable_strayNotHighRiskUnprotectedAndKillable() {
         func sweepable(_ verdict: StrayVerdict = .sessionEnded, _ tier: RiskTier = .moderate,
-                       protected: Bool = false, _ killability: Killability = .killable) -> Bool {
+                       protected: Bool = false, portBound: Bool = false,
+                       _ killability: Killability = .killable) -> Bool {
             ScanPipeline.isSweepable(verdict: verdict, riskTier: tier, isProtected: protected,
-                                     killability: killability)
+                                     isPortBound: portBound, killability: killability)
         }
         XCTAssertTrue(sweepable())
         XCTAssertTrue(sweepable(.duplicate, .easy))
@@ -88,6 +109,8 @@ final class ScanPipelineTests: XCTestCase {
         XCTAssertFalse(sweepable(.running, .easy), "the safe bucket alone no longer sweeps")
         XCTAssertFalse(sweepable(.sessionEnded, .high), "real dev infra stays a per-row call")
         XCTAssertFalse(sweepable(protected: true))
+        XCTAssertFalse(sweepable(portBound: true), "a registered-port listener stays a per-row call (PID-088)")
+        XCTAssertFalse(sweepable(.idle, .easy, portBound: true))
         XCTAssertFalse(sweepable(.sessionEnded, .moderate, .unkillable(owner: "root")))
         XCTAssertFalse(sweepable(.sessionEnded, .moderate, .respawner(manager: nil)))
     }

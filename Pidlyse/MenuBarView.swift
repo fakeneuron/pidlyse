@@ -629,7 +629,8 @@ struct MenuBarView: View {
 
     /// The strays that "Clean all" (and the ⌘⌫ shortcut) actually sweep — the visible
     /// likely strays the engine's `isSweepable` admits (not high-risk, protected
-    /// (PID-54.4), unkillable (PID-62.3), or mid-kill). The rest stay *listed*, badged,
+    /// (PID-54.4), registered-port-bound (PID-088), unkillable (PID-62.3), or
+    /// mid-kill). The rest stay *listed*, badged,
     /// but are excluded from the sweep and the reclaimable total. Delegating the
     /// predicate keeps the popover and the headless sweep from drifting; still
     /// reactive (reads `@Published` state).

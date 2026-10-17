@@ -115,13 +115,25 @@ public enum ScanPipeline {
         return protectedProjects.contains { CwdResolver.isUnderPrefix(cwd, $0) }
     }
 
+    /// Whether `item`, or any process folded into its row, listens on a registered
+    /// port (PID-088). `listeningPorts` is the scan's registered-port map, so a
+    /// non-empty entry is the fact. A sweep overlay like `isProtected`, never a
+    /// classification change.
+    public static func isPortBound(_ item: ProcessItem, listeningPorts: [Int32: Set<Int>]) -> Bool {
+        ([item] + item.members).contains { !(listeningPorts[$0.pid] ?? []).isEmpty }
+    }
+
     /// Whether a row belongs in a bulk sweep (PID-086.2): a likely stray
     /// (`StrayVerdict`) that isn't high-risk — real dev infra stays a per-row decision
-    /// even when forgotten — and isn't protected (PID-54.4), and is something Pidlyse
+    /// even when forgotten — isn't protected (PID-54.4), isn't bound to a registered
+    /// port (PID-088: a dev server on a reserved port is the stray signal's least
+    /// trustworthy case, so it stays a per-row decision too), and is something Pidlyse
     /// can honestly kill (PID-62.3). The bucket no longer gates the sweep; it stays
     /// the kill-safety model inside `riskTier`.
     public static func isSweepable(verdict: StrayVerdict, riskTier: RiskTier,
-                                   isProtected: Bool, killability: Killability) -> Bool {
-        verdict.isStray && riskTier != .high && !isProtected && killability == .killable
+                                   isProtected: Bool, isPortBound: Bool,
+                                   killability: Killability) -> Bool {
+        verdict.isStray && riskTier != .high && !isProtected && !isPortBound
+            && killability == .killable
     }
 }

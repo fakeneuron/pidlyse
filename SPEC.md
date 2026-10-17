@@ -24,7 +24,7 @@ Pidlyse/
     PidlyseCore/                  # pure, injectable, unit-tested core (SPM package)
       Sources/PidlyseCore/
         ScanCore.swift            # ps parse + stray detection + risk-tier classification
-        ScanPipeline.swift        # the one scan pipeline app + CLI call (ScanRequest → ScanSnapshot) + shared protected/sweep predicates
+        ScanPipeline.swift        # the one scan pipeline app + CLI call (ScanRequest → ScanSnapshot) + shared protected/port-bound/sweep predicates
         ScanSettings.swift        # the five scan-relevant `UserDefaults` keys (`SettingsKey`) + the one load of them (`ScanSettings.load(from:)` → raw saved values, `.request`) the app and CLI both read through
         ProcessItem.swift         # model: pid, ppid, command, elapsed, tty, kind, riskTier, cpu%, rss, owning uid; derived bucket + displayName (row name read from the command)
         PortRegistry.swift        # compiled port table + user-override merge + lsof listener parse
@@ -131,11 +131,11 @@ Each candidate carries a descriptive **`kind`** (see the Scan Engine table) and 
 
 Session tooling (`playwrightMCP`, `mcpServer`, `chromeHelper`) is never Idle or Duplicate. It lives exactly as long as its agent session, is quiet by nature, and every session runs its own copy, so only a gone session makes it a stray. The process table behind the session walk (`AncestryResolver`, `pid ppid tty comm`) is read once per scan by both the app and the CLI.
 
-**Sweep set**: "Clean all" (the popover, the external launchers, and CLI `clean`) takes rows that are a likely stray (`verdict.isStray`) **and** not high-risk **and** not protected **and** killable. That is the core `ScanPipeline.isSweepable(verdict:riskTier:isProtected:killability:)`; the app adds respawners and in-flight kills on top (`ScanEngine.isSweepable` / `sweepableStrays`). The bucket no longer gates the sweep. A session-ended `playwright-mcp` (moderate) is swept, while a session-ended `wrangler dev` (`.node`, always high) is listed but left to a per-row kill.
+**Sweep set**: "Clean all" (the popover, the external launchers, and CLI `clean`) takes rows that are a likely stray (`verdict.isStray`) **and** not high-risk **and** not protected **and** not port-bound **and** killable. That is the core `ScanPipeline.isSweepable(verdict:riskTier:isProtected:isPortBound:killability:)`; the app adds respawners and in-flight kills on top (`ScanEngine.isSweepable` / `sweepableStrays`). The bucket no longer gates the sweep. A session-ended `playwright-mcp` (moderate) is swept, while a session-ended `wrangler dev` (`.node`, always high) is listed but left to a per-row kill.
 
 Tree collapse ([[PID-039]], [[PID-62.4]]): `ScanCore.collapseTrees` folds every scanned process whose direct parent is also scanned *and belongs with it* (the parent is a launcher, the two share a kind, or the child is a Chrome helper / generic `.node` worker — so a `node`-run agent CLI never swallows the MCP servers it starts) into its topmost linked ancestor, so a chain that lives and dies together (`sh -c npm run dev` → `npm` → `vite`, `uv run` → uvicorn, `next dev` → `next-server`, playwright-mcp → its Chrome brood) is **one row**. The row keeps the root's identity (pid, start-time token, owner — the kill target), labels itself after the first member that isn't a launcher (npm/npx, `sh -c`, `uv run`), takes the **most cautious** `riskTier` of any member, and sums CPU/RAM. The members ride on `ProcessItem.members` and appear as a read-only "group of N" inspector line and a ×N row count. "Clean all", the section counts, the clean log and respawn signatures all see one logical unit. A group is foreign-owned (unkillable) if any member is. Docker processes never group. Disabled kinds filter per process before grouping. Dismissing a group row dismisses the whole group.
 
-Port registry awareness ([[PID-005]]): any process listening on a port in the localhost port registry (natabula `docs/PORT-REGISTRY.md`) is automatically demoted to "needs review" — never auto-killed.
+Port registry awareness ([[PID-005]]): any process listening on a port in the localhost port registry (natabula `docs/PORT-REGISTRY.md`) is automatically demoted to "needs review" — never auto-killed — and, as a sweep overlay like 🔒, is kept out of "Clean all" ([[PID-088]]): the row or any process folded into it listening on a registered port (`ScanPipeline.isPortBound`, from the scan's `listeningPorts`) leaves it a listed, individually killable per-row call even when its stray verdict says session ended or idle. The verdict, badge counts, and Likely-strays listing are unchanged.
 
 Protected-projects awareness (PID-54.4): a process that isn't high-risk and whose working directory sits under a user-protected project tree stays *listed* (badged 🔒) but is excluded from the "Clean all" sweep and the reclaimable total — a display/sweep overlay, not a bucket change. Its individual kill button still works.
 
@@ -187,7 +187,7 @@ Any process matched whose port appears in the merged registry is demoted to "nee
 |-------|------|-------|
 | No likely strays | outline cpu | none |
 | Likely strays, some sweepable | filled cpu | red count of likely strays |
-| Likely strays, none sweepable (all high-risk / protected / unkillable) | filled cpu | yellow count of likely strays |
+| Likely strays, none sweepable (all high-risk / protected / port-bound / unkillable) | filled cpu | yellow count of likely strays |
 | Scanning | spinner | — |
 
 The badge counts likely strays only ([[PID-086.4]]): in-use (Running) processes never badge.
@@ -217,7 +217,7 @@ Configurable at runtime (`SettingsView.swift`):
 | Command | Does |
 |---------|------|
 | `pidlyse list [--all]` | One-shot scan; prints likely strays (name, PID, reason, bucket, kind, age, RAM, project, command), grouped by reason in the popover's order. NAME is the core `displayName`, never truncated; REASON is the stray verdict label ([[PID-086.2]]). `--all` adds the running (in-use) rows; the old safe-bucket filter is retired ([[PID-086.5]]). Protected rows carry 🔒 |
-| `pidlyse clean` | Kills exactly the app's "Clean all" sweep set — likely strays that aren't high-risk, minus protected projects and foreign-owned rows, through the same core predicate and stray verdict ([[PID-086.2]]; idle reads the single CPU sample; respawners stay app-only, [[PID-62.3]]); prints each row's verdict and the shared `KillReport` summary line |
+| `pidlyse clean` | Kills exactly the app's "Clean all" sweep set — likely strays that aren't high-risk, minus protected projects, registered-port listeners, and foreign-owned rows, through the same core predicate and stray verdict ([[PID-086.2]]; idle reads the single CPU sample; respawners stay app-only, [[PID-62.3]]); prints each row's verdict and the shared `KillReport` summary line |
 | `pidlyse kill <pid>` | Kills one *scanned candidate* by PID (any bucket, like the app's per-row kill button); refuses PIDs the scan didn't surface |
 | `pidlyse help` | Usage (also the bare-invocation default — never scans or kills) |
 
@@ -225,7 +225,7 @@ Full app parity: settings (threshold, ignores incl. scoped, disabled kinds, cust
 
 ## Integrations (PID-EPIC-58)
 
-External launchers reach Pidlyse's clean/scan actions through one shared engine-side action layer — `ScanEngine.cleanAllSafe` (the `sweepableStrays` set — every row `ScanEngine.isSweepable` admits: a likely stray that isn't high-risk, protected, unkillable, a respawner, or mid-kill ([[PID-086.2]], [[PID-62.3]], [[PID-62.5]]) — through `ScanEngine.kill`, clean-log append, rescan) and `ScanEngine.rescan`, the same set CLI `clean` uses. Every trigger is bounded to that sweep set: it never touches a running (in-use) or high-risk row.
+External launchers reach Pidlyse's clean/scan actions through one shared engine-side action layer — `ScanEngine.cleanAllSafe` (the `sweepableStrays` set — every row `ScanEngine.isSweepable` admits: a likely stray that isn't high-risk, protected, port-bound, unkillable, a respawner, or mid-kill ([[PID-086.2]], [[PID-62.3]], [[PID-62.5]]) — through `ScanEngine.kill`, clean-log append, rescan) and `ScanEngine.rescan`, the same set CLI `clean` uses. Every trigger is bounded to that sweep set: it never touches a running (in-use) or high-risk row.
 
 | Surface | Entry point | Clean | Scan |
 |---------|-------------|-------|------|

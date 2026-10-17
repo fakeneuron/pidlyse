@@ -34,11 +34,13 @@ private struct Settings {
 /// One completed scan through the shared core `ScanPipeline` (PID-079.6) — the
 /// same call the app's `ScanEngine` makes. `protectedPIDs` and `verdicts` are the
 /// protected overlay and the stray verdict (PID-086.2) resolved eagerly (the CLI has
-/// no reactive layer to defer them to).
+/// no reactive layer to defer them to); `listeningPorts` feeds the port-bound sweep
+/// exclusion (PID-088).
 private struct ScanResult {
     let items: [ProcessItem]
     let cwds: [Int32: ProcessCwd]
     let containerOwners: [Int32: String]
+    let listeningPorts: [Int32: Set<Int>]
     let protectedPIDs: Set<Int32>
     let verdicts: [Int32: StrayVerdict]
 }
@@ -54,7 +56,8 @@ private func runScan(_ settings: Settings) -> ScanResult {
                                        processTable: snapshot.processTable,
                                        isQuiet: { $0.cpuPercent < ScanHistory.defaultLowCPUThreshold })
     return ScanResult(items: snapshot.items, cwds: snapshot.cwds,
-                      containerOwners: snapshot.containerOwners, protectedPIDs: protectedPIDs,
+                      containerOwners: snapshot.containerOwners,
+                      listeningPorts: snapshot.listeningPorts, protectedPIDs: protectedPIDs,
                       verdicts: verdicts)
 }
 
@@ -112,23 +115,24 @@ private func commandList(showAll: Bool) -> Int32 {
 private func commandClean() -> Int32 {
     let scan = runScan(Settings.load())
     // The app's "Clean all" sweep set: likely strays that aren't high-risk (PID-086.2),
-    // minus protected (PID-54.4), minus foreign-owned processes no signal of ours can
-    // reach (PID-62.3). The app also excludes known respawners, which a one-shot CLI
-    // has no session memory of — the respawn half of the overlay stays app-only
-    // (PID-62.1 clarification #4). The predicate itself is the app's, shared through
-    // core (PID-079.6).
+    // minus protected (PID-54.4), minus registered-port listeners (PID-088), minus
+    // foreign-owned processes no signal of ours can reach (PID-62.3). The app also
+    // excludes known respawners, which a one-shot CLI has no session memory of — the
+    // respawn half of the overlay stays app-only (PID-62.1 clarification #4). The
+    // predicate itself is the app's, shared through core (PID-079.6).
     let currentUID = getuid()
     let sweepable = scan.items.filter {
         ScanPipeline.isSweepable(
             verdict: scan.verdicts[$0.pid] ?? .running,
             riskTier: $0.riskTier,
             isProtected: scan.protectedPIDs.contains($0.pid),
+            isPortBound: ScanPipeline.isPortBound($0, listeningPorts: scan.listeningPorts),
             killability: Killability.derive(for: $0, containerOwners: scan.containerOwners,
                                             currentUID: currentUID,
                                             killDenied: false, isRespawner: false, manager: nil))
     }
     guard !sweepable.isEmpty else {
-        print("Nothing to clean — no likely strays that are unprotected and killable.")
+        print("Nothing to clean — no likely strays that are unprotected, off registered ports, and killable.")
         return 0
     }
     let outcomes = killAll(sweepable, containerOwners: scan.containerOwners)

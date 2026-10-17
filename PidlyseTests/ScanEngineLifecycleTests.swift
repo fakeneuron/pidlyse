@@ -92,8 +92,9 @@ final class ScanEngineLifecycleTests: XCTestCase {
                     startTime: ProcStartTime(sec: start, usec: 0), uid: uid)
     }
 
-    private func snapshot(_ items: [ProcessItem], cwds: [Int32: ProcessCwd] = [:]) -> ScanSnapshot {
-        ScanSnapshot(items: items, cwds: cwds)
+    private func snapshot(_ items: [ProcessItem], cwds: [Int32: ProcessCwd] = [:],
+                          listeningPorts: [Int32: Set<Int>] = [:]) -> ScanSnapshot {
+        ScanSnapshot(items: items, listeningPorts: listeningPorts, cwds: cwds)
     }
 
     private func scanAndWait(_ engine: ScanEngine) {
@@ -316,6 +317,21 @@ final class ScanEngineLifecycleTests: XCTestCase {
     }
 
     // MARK: - isSweepable fold
+
+    func testPortBoundStrayIsListedAndKillableButNotSwept() {
+        // PID-088: a session-ended stray on a registered port stays a per-row call.
+        let bound = item(10, tier: .moderate)
+        let free = item(11, tier: .moderate)
+        let source = FakeSource(snapshot([bound, free], listeningPorts: [10: [5173]]))
+        let engine = makeEngine(source)
+        scanAndWait(engine)
+
+        XCTAssertEqual(engine.verdict(bound), .sessionEnded)
+        XCTAssertEqual(engine.killability(bound), .killable, "its own ✕ still works")
+        XCTAssertFalse(engine.isSweepable(bound))
+        XCTAssertTrue(engine.isSweepable(free))
+        XCTAssertEqual(engine.sweepableStrays.map(\.pid), [11])
+    }
 
     func testIsSweepableFoldsVerdictProtectedOwnerAndKillPhase() {
         // `item` rows are orphans with no tty → session ended (PID-086.2).

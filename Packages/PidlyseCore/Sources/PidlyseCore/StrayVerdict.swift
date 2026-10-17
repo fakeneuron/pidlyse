@@ -6,7 +6,7 @@ import Foundation
 /// sweeps, while in-use processes fold away.
 ///
 /// Not a third bucket: `riskTier` / `bucket` stay the kill-safety model underneath —
-/// the sweep takes a stray only when it isn't high-risk (`ScanPipeline.isSweepable`).
+/// the sweep takes a stray only when it isn't high-risk or port-bound (`ScanPipeline.isSweepable`).
 ///
 /// Pure. `derive` reads one whole scan, because a duplicate is only visible against
 /// the other rows. The one fact a single scan can't hold — quiet CPU across recent
