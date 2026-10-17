@@ -11,7 +11,7 @@ import Foundation
 /// Pure. `derive` reads one whole scan, because a duplicate is only visible against
 /// the other rows. The one fact a single scan can't hold — quiet CPU across recent
 /// scans — is injected: the app feeds `ScanHistory`, the one-shot CLI a single sample.
-public enum StrayVerdict: Equatable {
+public enum StrayVerdict: Equatable, CaseIterable {
     /// No terminal or app holds the process any more: its session is gone.
     case sessionEnded
     /// Another row runs the same command in the same directory and started later,
@@ -45,6 +45,11 @@ public enum StrayVerdict: Equatable {
         case .running:      return "In use — attached to a live session."
         }
     }
+
+    /// The order the popover's sub-headers and `pidlyse list` group rows in (PID-089):
+    /// strays by reason, then running. Every case appears once; the popover, which
+    /// lists strays only, drops `.running`.
+    public static let displayOrder: [StrayVerdict] = [.sessionEnded, .idle, .duplicate, .running]
 
     /// How old a quiet, terminal-less process must be before it reads as idle.
     public static let idleAge: TimeInterval = 2 * 60 * 60

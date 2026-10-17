@@ -201,7 +201,7 @@ struct MenuBarView: View {
     }
 
     /// The reasons "Likely strays" is sub-headed by, in display order.
-    private static let strayReasons: [StrayVerdict] = [.sessionEnded, .idle, .duplicate]
+    private static let strayReasons = StrayVerdict.displayOrder.filter(\.isStray)
 
     private var straysSection: some View {
         VStack(alignment: .leading, spacing: 8) {

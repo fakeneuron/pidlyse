@@ -187,4 +187,13 @@ final class StrayVerdictTests: XCTestCase {
         XCTAssertEqual([StrayVerdict.sessionEnded, .duplicate, .idle, .running].map(\.label),
                        ["Session ended", "Duplicate", "Idle", "Running"])
     }
+
+    func testDisplayOrder_isPinnedAndCoversEveryCase() {
+        XCTAssertEqual(StrayVerdict.displayOrder, [.sessionEnded, .idle, .duplicate, .running])
+        XCTAssertEqual(Set(StrayVerdict.displayOrder), Set(StrayVerdict.allCases),
+                       "a new verdict case must be placed in displayOrder")
+        XCTAssertEqual(StrayVerdict.displayOrder.count, StrayVerdict.allCases.count, "each case once")
+        // The popover's sub-headers: strays only, the order it showed before the constant.
+        XCTAssertEqual(StrayVerdict.displayOrder.filter(\.isStray), [.sessionEnded, .idle, .duplicate])
+    }
 }

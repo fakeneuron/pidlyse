@@ -122,7 +122,7 @@ public enum CLICore {
     public static func listItems(_ items: [ProcessItem],
                                  verdicts: [Int32: StrayVerdict],
                                  showAll: Bool) -> [ProcessItem] {
-        let order: [StrayVerdict] = [.sessionEnded, .idle, .duplicate, .running]
+        let order = StrayVerdict.displayOrder
         let rank = { (item: ProcessItem) in order.firstIndex(of: verdicts[item.pid] ?? .running) ?? order.count }
         let shown = showAll ? items : items.filter { (verdicts[$0.pid] ?? .running).isStray }
         // `sorted` is not stable, so the scan position breaks ties.

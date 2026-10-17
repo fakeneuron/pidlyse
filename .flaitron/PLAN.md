@@ -22,7 +22,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- [ ] **PID-089** [light] [unattended] | stray-reason-order — Share one stray-reason display order between the popover (`MenuBarView.strayReasons`) and `CLICore.listItems` via a core `StrayVerdict` constant. From [[PID-086.5]] review.
 - [ ] **PID-090** [medium] | port-scan-fail-open — The port-bound sweep exclusion fails open: when the registered-port `lsof` times out the listener map is empty, so port-bound strays are swept again. Surface a port-data-unavailable signal and decide whether it blocks the sweep. From [[PID-088]] review.
 - [ ] **PID-091** [light] | spaced-display-path — `ProcessItem.displayPath` takes the first space-split token of `command`, so a path containing a space shows as a fragment in the inspector and provenance. Read the scan-time `ProcessItem.argv` (added by [[PID-087]]) instead. From [[PID-087]] Discovery.
 
@@ -32,6 +31,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-089** [light] [unattended] | stray-reason-order — Completed 2026-10-17.
 - [x] **PID-087** [light] [unattended] | spaced-path-names — Completed 2026-10-17.
 - [x] **PID-088** [light] [unattended] | port-bound-sweep — Completed 2026-10-17.
 - [x] **PID-EPIC-079** [heavy]🧠 | consumer-seams — Completed 2026-10-15.
