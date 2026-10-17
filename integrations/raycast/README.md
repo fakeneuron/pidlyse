@@ -8,7 +8,7 @@ fresh on every invocation.
 | Script | Wraps | Does |
 |--------|-------|------|
 | `clean-safe-strays.sh` | `pidlyse clean` | Kills the "Clean all" sweep set (likely strays that aren't high-risk, minus protected projects and other users' processes) — the same sweep as the app's "Clean all". Returns exit status 1 if any swept item is not verified gone. |
-| `list-strays.sh` | `pidlyse list --safe` | Lists the safe-to-clean candidates without killing anything. |
+| `list-strays.sh` | `pidlyse list` | Lists the likely strays, with the reason each reads as one, without killing anything. |
 
 ## Prerequisite
 
@@ -25,7 +25,7 @@ The scripts resolve the binary via `command -v pidlyse`, falling back to
 
 1. Copy this folder somewhere stable (or point Raycast straight at it).
 2. Raycast → **Extensions → Script Commands → Add Script Directory** → pick this folder.
-3. Run **Clean Safe Strays** / **List Safe Strays** from the Raycast root search.
+3. Run **Clean Safe Strays** / **List Strays** from the Raycast root search.
 
 ## Also available via Shortcuts
 

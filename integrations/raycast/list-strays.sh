@@ -4,7 +4,7 @@
 #
 # Required parameters:
 # @raycast.schemaVersion 1
-# @raycast.title List Safe Strays
+# @raycast.title List Strays
 # @raycast.mode fullOutput
 #
 # Optional parameters:
@@ -12,7 +12,7 @@
 # @raycast.packageName Pidlyse
 #
 # Documentation:
-# @raycast.description List the safe-to-clean stray processes Pidlyse would sweep, without killing anything.
+# @raycast.description List the likely stray processes Pidlyse found, with the reason each reads as one, without killing anything.
 # @raycast.author fakeneuron
 
 # Resolve the installed CLI (see integrations/raycast/README.md → `make install-cli`).
@@ -23,4 +23,4 @@ if [ ! -x "$PIDLYSE" ]; then
   exit 1
 fi
 
-"$PIDLYSE" list --safe
+"$PIDLYSE" list

@@ -97,14 +97,15 @@ private func printErr(_ message: String) {
 
 // MARK: - Commands
 
-private func commandList(safeOnly: Bool) -> Int32 {
+private func commandList(showAll: Bool) -> Int32 {
     let scan = runScan(Settings.load())
-    let items = safeOnly ? scan.items.filter { $0.bucket == .safe } : scan.items
+    let items = CLICore.listItems(scan.items, verdicts: scan.verdicts, showAll: showAll)
     guard !items.isEmpty else {
-        print(safeOnly ? "No safe-to-clean processes." : "No stray candidates.")
+        print(showAll ? "No stray candidates." : "No likely strays. `pidlyse list --all` also shows processes in use.")
         return 0
     }
-    print(CLICore.listTable(items: items, cwds: scan.cwds, protectedPIDs: scan.protectedPIDs))
+    print(CLICore.listTable(items: items, cwds: scan.cwds, protectedPIDs: scan.protectedPIDs,
+                            verdicts: scan.verdicts))
     return 0
 }
 
@@ -149,10 +150,10 @@ private func commandKill(pid: Int32) -> Int32 {
     let scan = runScan(Settings.load())
     // Only scanned candidates are killable: the identity token + classification
     // exist only for items the scan surfaced, and refusing arbitrary PIDs keeps
-    // the tool scoped to what `pidlyse list` shows (any bucket — an explicit
+    // the tool scoped to what `pidlyse list --all` shows (any bucket — an explicit
     // per-PID kill mirrors the app's per-row kill button, protection included).
     guard let item = scan.items.first(where: { $0.pid == pid }) else {
-        printErr("pidlyse: PID \(pid) is not a scan candidate — only processes `pidlyse list` surfaces can be killed")
+        printErr("pidlyse: PID \(pid) is not a scan candidate — only processes `pidlyse list --all` surfaces can be killed")
         return 1
     }
     let outcome = KillCore.kill(item, containerOwners: scan.containerOwners)
@@ -179,8 +180,8 @@ switch CLICore.parse(Array(CommandLine.arguments.dropFirst())) {
 case .success(.help):
     print(CLICore.usage)
     exit(0)
-case .success(.list(let safeOnly)):
-    exit(commandList(safeOnly: safeOnly))
+case .success(.list(let showAll)):
+    exit(commandList(showAll: showAll))
 case .success(.clean):
     exit(commandClean())
 case .success(.kill(let pid)):

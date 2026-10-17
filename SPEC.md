@@ -216,7 +216,7 @@ Configurable at runtime (`SettingsView.swift`):
 
 | Command | Does |
 |---------|------|
-| `pidlyse list [--safe]` | One-shot scan; prints candidates (PID, bucket, kind, age, RAM, project, command). `--safe` filters to the safe bucket; protected rows carry 🔒 |
+| `pidlyse list [--all]` | One-shot scan; prints likely strays (name, PID, reason, bucket, kind, age, RAM, project, command), grouped by reason in the popover's order. NAME is the core `displayName`, never truncated; REASON is the stray verdict label ([[PID-086.2]]). `--all` adds the running (in-use) rows; the old safe-bucket filter is retired ([[PID-086.5]]). Protected rows carry 🔒 |
 | `pidlyse clean` | Kills exactly the app's "Clean all" sweep set — likely strays that aren't high-risk, minus protected projects and foreign-owned rows, through the same core predicate and stray verdict ([[PID-086.2]]; idle reads the single CPU sample; respawners stay app-only, [[PID-62.3]]); prints each row's verdict and the shared `KillReport` summary line |
 | `pidlyse kill <pid>` | Kills one *scanned candidate* by PID (any bucket, like the app's per-row kill button); refuses PIDs the scan didn't surface |
 | `pidlyse help` | Usage (also the bare-invocation default — never scans or kills) |
@@ -231,7 +231,7 @@ External launchers reach Pidlyse's clean/scan actions through one shared engine-
 |---------|-------------|-------|------|
 | URL scheme | `AppDelegate.application(_:open:)`; pure verb parse in `PidlyseCore.URLScheme` (PID-58.2) | `pidlyse://clean` → sweep + result notification | `pidlyse://scan` → rescan |
 | Shortcuts / Spotlight | `AppShortcutsProvider` + two `AppIntent`s in `PidlyseApp.swift` (PID-58.3) | "Clean Likely Strays" → dialog summary | "Scan Now" → rescan |
-| Raycast | `integrations/raycast/*.sh` wrapping the installed CLI (PID-58.3) | `pidlyse clean` | `pidlyse list --safe` (view-only) |
+| Raycast | `integrations/raycast/*.sh` wrapping the installed CLI (PID-58.3) | `pidlyse clean` | `pidlyse list` (view-only) |
 
 The URL scheme and AppIntents run in-app against the live scan. On a cold launch, `pidlyse://clean` and "Clean Likely Strays" wait for the launch scan to publish before consuming `items`; the Raycast scripts shell out to the CLI, which scans fresh per invocation. AppIntents return a dialog as their feedback channel, so — unlike `pidlyse://clean`, which has no return path — they post no notification. AppleScript is deliberately unsupported (`osascript` users have `do shell script "pidlyse clean"`), keeping the PID-35.1 "no NSAppleScript" security baseline intact.
 

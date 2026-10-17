@@ -13,7 +13,7 @@ public enum CLICore {
     /// The `pidlyse` command surface. Hand-rolled parse over the argument
     /// vector — the repo stays zero-external-deps (PID-57.1 scoping).
     public enum Command: Equatable {
-        case list(safeOnly: Bool)
+        case list(showAll: Bool)
         case clean
         case kill(pid: Int32)
         case help
@@ -38,9 +38,9 @@ public enum CLICore {
         case "help", "--help", "-h":
             return .success(.help)
         case "list":
-            if rest.isEmpty { return .success(.list(safeOnly: false)) }
-            if rest == ["--safe"] { return .success(.list(safeOnly: true)) }
-            return .failure(.unexpectedArgument(rest.first { $0 != "--safe" } ?? rest[0]))
+            if rest.isEmpty { return .success(.list(showAll: false)) }
+            if rest == ["--all"] { return .success(.list(showAll: true)) }
+            return .failure(.unexpectedArgument(rest.first { $0 != "--all" } ?? rest[0]))
         case "clean":
             guard rest.isEmpty else { return .failure(.unexpectedArgument(rest[0])) }
             return .success(.clean)
@@ -67,10 +67,12 @@ public enum CLICore {
     public static let usage = """
         usage: pidlyse <command>
 
-          list [--safe]   Scan and print stray candidates (--safe: safe bucket only)
+          list [--all]    Scan and print likely strays, with the reason each reads
+                          as one (--all: also the processes in use)
           clean           Kill what the app's "Clean all" would sweep
-                          (safe bucket minus protected projects and
-                          processes owned by another user)
+                          (likely strays that aren't high-risk, minus
+                          protected projects and processes owned by
+                          another user)
           kill <pid>      Kill one scanned candidate by PID (any bucket)
           help            Show this help
 
@@ -113,19 +115,40 @@ public enum CLICore {
         return s.prefix(max - 1) + "…"
     }
 
-    /// Render the `pidlyse list` table: aligned columns computed from content,
-    /// protected rows carry a 🔒 suffix in the BUCKET cell (excluded from
-    /// `clean`, still individually killable — same semantics as the app's
-    /// protected overlay, PID-54.4). Command lines are truncated for one-row
-    /// readability; `pidlyse list` is a summary, not `ps`.
+    /// The rows `pidlyse list` prints, in print order (PID-086.5): likely strays only,
+    /// or every row with `showAll`. Grouped by reason in the popover's order (session
+    /// ended, idle, duplicate, then running), scan order kept within a reason. A row
+    /// with no verdict reads as running, the default `clean` uses too.
+    public static func listItems(_ items: [ProcessItem],
+                                 verdicts: [Int32: StrayVerdict],
+                                 showAll: Bool) -> [ProcessItem] {
+        let order: [StrayVerdict] = [.sessionEnded, .idle, .duplicate, .running]
+        let rank = { (item: ProcessItem) in order.firstIndex(of: verdicts[item.pid] ?? .running) ?? order.count }
+        let shown = showAll ? items : items.filter { (verdicts[$0.pid] ?? .running).isStray }
+        // `sorted` is not stable, so the scan position breaks ties.
+        return shown.enumerated()
+            .sorted { (rank($0.element), $0.offset) < (rank($1.element), $1.offset) }
+            .map(\.element)
+    }
+
+    /// Render the `pidlyse list` table: aligned columns computed from content, led
+    /// by the row's descriptive name (`ProcessItem.displayName`, never truncated)
+    /// and the stray verdict that put it there (PID-086.5). Protected rows carry a
+    /// 🔒 suffix in the BUCKET cell (excluded from `clean`, still individually
+    /// killable — same semantics as the app's protected overlay, PID-54.4). Command
+    /// lines are truncated for one-row readability; `pidlyse list` is a summary,
+    /// not `ps`.
     public static func listTable(items: [ProcessItem],
                                  cwds: [Int32: ProcessCwd] = [:],
                                  protectedPIDs: Set<Int32> = [],
+                                 verdicts: [Int32: StrayVerdict] = [:],
                                  commandMax: Int = 80) -> String {
-        let header = ["PID", "BUCKET", "KIND", "AGE", "RAM", "PROJECT", "COMMAND"]
+        let header = ["NAME", "PID", "REASON", "BUCKET", "KIND", "AGE", "RAM", "PROJECT", "COMMAND"]
         let rows = items.map { item -> [String] in
             let bucket = item.bucket == .safe ? "safe" : "review"
-            return [String(item.pid),
+            return [item.displayName,
+                    String(item.pid),
+                    (verdicts[item.pid] ?? .running).label,
                     protectedPIDs.contains(item.pid) ? bucket + " 🔒" : bucket,
                     item.displayLabel,
                     formatElapsed(item.elapsed),

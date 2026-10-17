@@ -16,13 +16,14 @@ final class CLICoreTests: XCTestCase {
     }
 
     func testParse_list() {
-        XCTAssertEqual(CLICore.parse(["list"]), .success(.list(safeOnly: false)))
-        XCTAssertEqual(CLICore.parse(["list", "--safe"]), .success(.list(safeOnly: true)))
+        XCTAssertEqual(CLICore.parse(["list"]), .success(.list(showAll: false)))
+        XCTAssertEqual(CLICore.parse(["list", "--all"]), .success(.list(showAll: true)))
     }
 
     func testParse_list_unexpectedArgument() {
-        XCTAssertEqual(CLICore.parse(["list", "--all"]), .failure(.unexpectedArgument("--all")))
-        XCTAssertEqual(CLICore.parse(["list", "--safe", "extra"]), .failure(.unexpectedArgument("extra")))
+        // `--safe` was retired by PID-086.5 — the bucket no longer gates what `list` shows.
+        XCTAssertEqual(CLICore.parse(["list", "--safe"]), .failure(.unexpectedArgument("--safe")))
+        XCTAssertEqual(CLICore.parse(["list", "--all", "extra"]), .failure(.unexpectedArgument("extra")))
     }
 
     func testParse_clean() {
@@ -90,6 +91,7 @@ final class CLICoreTests: XCTestCase {
         let lines = table.split(separator: "\n")
         XCTAssertEqual(lines.count, 3)
         XCTAssertTrue(lines[0].contains("PID") && lines[0].contains("BUCKET") && lines[0].contains("COMMAND"))
+        XCTAssertTrue(lines[0].hasPrefix("NAME"))
         XCTAssertTrue(lines[1].contains("100") && lines[1].contains("safe") && lines[1].contains("bidviz"))
         // No cwd resolved for 200 → em-dash placeholder; docker is needsReview.
         XCTAssertTrue(lines[2].contains("200") && lines[2].contains("review") && lines[2].contains("—"))
@@ -102,10 +104,52 @@ final class CLICoreTests: XCTestCase {
     }
 
     func testListTable_truncatesLongCommands() {
-        let long = String(repeating: "x", count: 200)
-        let table = CLICore.listTable(items: [item(pid: 100, kind: .node, tier: .high, command: long)],
+        // The flag value is long; the name (`app.js`) is short, so only COMMAND is trimmed.
+        let long = "--token=" + String(repeating: "x", count: 200)
+        let table = CLICore.listTable(items: [item(pid: 100, kind: .node, tier: .high, command: "node app.js " + long)],
                                       commandMax: 40)
         XCTAssertFalse(table.contains(long))
-        XCTAssertTrue(table.contains(String(repeating: "x", count: 39) + "…"))
+        XCTAssertTrue(table.contains("node app.js --token=" + String(repeating: "x", count: 19) + "…"))
+    }
+
+    func testListTable_leadsWithNameAndShowsReason() {
+        let items = [item(pid: 100, kind: .node, tier: .high, command: "node /usr/local/bin/vite --port 5173"),
+                     item(pid: 200, kind: .pytest, tier: .easy)]
+        let table = CLICore.listTable(items: items, verdicts: [100: .sessionEnded])
+        let lines = table.split(separator: "\n").map(String.init)
+        let header = lines[0]
+        XCTAssertTrue(header.range(of: "NAME")!.lowerBound < header.range(of: "PID")!.lowerBound)
+        XCTAssertTrue(header.range(of: "PID")!.lowerBound < header.range(of: "REASON")!.lowerBound)
+        XCTAssertTrue(lines[1].hasPrefix(items[0].displayName))
+        XCTAssertTrue(lines[1].contains("Session ended"))
+        // No verdict for 200 → reads as running.
+        XCTAssertTrue(lines[2].contains("Running"))
+    }
+
+    func testListTable_neverTruncatesName() {
+        let long = "node " + String(repeating: "x", count: 120) + ".js"
+        let one = item(pid: 100, kind: .node, tier: .high, command: long)
+        let table = CLICore.listTable(items: [one], commandMax: 20)
+        XCTAssertTrue(table.contains(one.displayName))
+    }
+
+    // MARK: - List rows (PID-086.5)
+
+    func testListItems_defaultsToStraysInReasonOrder() {
+        let items = [item(pid: 1, kind: .node, tier: .high), item(pid: 2, kind: .node, tier: .high),
+                     item(pid: 3, kind: .node, tier: .high), item(pid: 4, kind: .node, tier: .high),
+                     item(pid: 5, kind: .node, tier: .high)]
+        let verdicts: [Int32: StrayVerdict] = [1: .duplicate, 2: .running, 3: .sessionEnded,
+                                               4: .idle, 5: .sessionEnded]
+        XCTAssertEqual(CLICore.listItems(items, verdicts: verdicts, showAll: false).map(\.pid), [3, 5, 4, 1])
+    }
+
+    func testListItems_allAddsRunningLast() {
+        let items = [item(pid: 1, kind: .node, tier: .high), item(pid: 2, kind: .node, tier: .high),
+                     item(pid: 3, kind: .node, tier: .high)]
+        let verdicts: [Int32: StrayVerdict] = [1: .running, 2: .idle]
+        // 3 has no verdict → running; scan order holds within the running group.
+        XCTAssertEqual(CLICore.listItems(items, verdicts: verdicts, showAll: true).map(\.pid), [2, 1, 3])
+        XCTAssertEqual(CLICore.listItems(items, verdicts: verdicts, showAll: false).map(\.pid), [2])
     }
 }
