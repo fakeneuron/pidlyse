@@ -24,6 +24,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 - [ ] **PID-087** [light] [unattended] | spaced-path-names — `displayName` misnames commands whose path contains a space (`ps` argv is unquoted); read real argv via `KERN_PROCARGS2` instead. From [[PID-086.3]] review.
 - [ ] **PID-089** [light] [unattended] | stray-reason-order — Share one stray-reason display order between the popover (`MenuBarView.strayReasons`) and `CLICore.listItems` via a core `StrayVerdict` constant. From [[PID-086.5]] review.
+- [ ] **PID-090** [medium] | port-scan-fail-open — The port-bound sweep exclusion fails open: when the registered-port `lsof` times out the listener map is empty, so port-bound strays are swept again. Surface a port-data-unavailable signal and decide whether it blocks the sweep. From [[PID-088]] review.
 
 ## Future Opportunities
 
