@@ -2,6 +2,23 @@
 
 Closed rows rotated out of `PLAN.md` `## Completed` (append-only; contract: `.flaitron/core/SPEC/plan-filing.md` §"`## Completed` rotation").
 
+## Completed 2026-09
+
+- [x] **PID-064** [light]🔧 | gitleaks-ci-step — Completed 2026-09-24.
+- [x] **PID-66** [light]🔧 | ci-spine-shape — Completed 2026-09-24.
+- [x] **PID-072** [light]🔧 | shell-snapshot-misclassify — Completed 2026-09-24.
+- [x] **PID-071** [medium]🧠 | isolated-chrome-helper-detection — Completed 2026-09-24.
+- [x] **PID-EPIC-62** [heavy]🧠 | killability-truth — Completed 2026-09-24.
+  - [x] **PID-62.1** [heavy]🧠 | killability-truth discovery — Completed 2026-08-08.
+  - [x] **PID-62.2** [heavy]🧠 | respawn-detection-core — Completed 2026-08-08.
+  - [x] **PID-62.3** [medium]🧠 | honest-unkillable-ux — Completed 2026-09-23.
+  - [x] **PID-62.4** [medium]🧠 | tree-redundancy-collapse — Completed 2026-09-23.
+  - [x] **PID-62.5** [medium]🧠 | kill-feedback-stability — Completed 2026-09-24.
+  - [x] **PID-62.N** [heavy]🧠 | killability-truth audit — Completed 2026-09-24.
+- [x] **PID-65** [light]🔧 | quality-stack-gaps — Completed 2026-09-23.
+- [x] **PID-67** [light]🔧 | typecheck-verb-missing — Completed 2026-09-23.
+- [x] **PID-068** [light] | brand-kit-back-port — Completed 2026-09-23.
+
 ## Completed 2026-07
 
 - [x] **PID-EPIC-56** [medium]🧠 | docker-enhance — Completed 2026-07-02.
@@ -28,6 +45,17 @@ Closed rows rotated out of `PLAN.md` `## Completed` (append-only; contract: `.fl
   - [x] **PID-53.2** [medium]🧠 | clean-log-store — Completed 2026-07-01.
   - [x] **PID-53.3** [medium]🧠 | cleaned-tab-stats — Completed 2026-07-01.
   - [x] **PID-53.4** [medium]🧠 | audit — Completed 2026-07-01.
+- [x] **PID-060** [light]🔧 | readme-visuals — Completed 2026-07-03.
+- [x] **PID-EPIC-58** [medium]🧠 | integrations — Completed 2026-07-02.
+  - [x] **PID-58.1** [medium]🧠 | discovery — Completed 2026-07-02.
+  - [x] **PID-58.2** [medium]🧠 | url-scheme — Completed 2026-07-02.
+  - [x] **PID-58.3** [medium]🧠 | bridges — Completed 2026-07-02.
+  - [x] **PID-58.4** [medium]🧠 | audit — Completed 2026-07-02.
+- [x] **PID-EPIC-57** [heavy]🧠 | cli-companion — Completed 2026-07-02.
+  - [x] **PID-57.1** [heavy]🧠 | cli-companion discovery — Completed 2026-07-02.
+  - [x] **PID-57.2** [medium]🧠 | kill-core-extraction — Completed 2026-07-02.
+  - [x] **PID-57.3** [medium]🧠 | cli-target — Completed 2026-07-02.
+  - [x] **PID-57.4** [heavy]🧠 | audit — Completed 2026-07-02.
 
 ## Completed 2026-06
 
