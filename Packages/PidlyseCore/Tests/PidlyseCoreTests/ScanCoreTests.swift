@@ -381,6 +381,58 @@ final class ScanCoreTests: XCTestCase {
         XCTAssertEqual(items.first?.bucket, .safe)
     }
 
+    // MARK: - Port registry demotion fails closed (PID-093)
+
+    func testUnavailablePortScan_demotesEveryEasyRow() {
+        // Easy on its own, and not in the (empty-for-want-of-an-answer) set: still demoted.
+        let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60,
+                                         psOutput: output,
+                                         registeredPIDs: [],
+                                         portScanUnavailable: true)
+        XCTAssertEqual(items.first?.riskTier, .moderate)
+        XCTAssertEqual(items.first?.bucket, .needsReview)
+    }
+
+    func testUnavailablePortScan_leavesModerateAndHighRowsAlone() {
+        // The demotion only ever raises easy; a high-risk row stays high.
+        let moderate = ScanCore.makeItem(from: "  3000  2999    00:30 ttys002  0.0  4096   python -m pytest tests/unit",
+                                         elapsedThreshold: 30 * 60, portScanUnavailable: true)
+        let high = ScanCore.makeItem(from: "  5000     1 01:46:38 ??   0.0  4096   uvicorn app:app",
+                                     elapsedThreshold: 30 * 60, portScanUnavailable: true)
+        XCTAssertEqual(moderate?.riskTier, .moderate)
+        XCTAssertEqual(high?.riskTier, .high)
+    }
+
+    func testResolvePorts_suppliedSetIsTakenAsGiven() {
+        var ran = false
+        let live: () -> [Int32: Set<Int>]? = { ran = true; return nil }
+        let healthy = ScanCore.resolvePorts(registeredPIDs: [7], portScanUnavailable: false, liveScan: live)
+        XCTAssertEqual(healthy.pids, [7])
+        XCTAssertFalse(healthy.unavailable)
+        let blind = ScanCore.resolvePorts(registeredPIDs: [], portScanUnavailable: true, liveScan: live)
+        XCTAssertTrue(blind.pids.isEmpty)
+        XCTAssertTrue(blind.unavailable)
+        XCTAssertFalse(ran, "a supplied set never triggers the live lsof")
+    }
+
+    func testResolvePorts_nilRunsTheLiveScan() {
+        let answered = ScanCore.resolvePorts(registeredPIDs: nil, portScanUnavailable: false,
+                                             liveScan: { [4000: [3001], 4001: [5173]] })
+        XCTAssertEqual(answered.pids, [4000, 4001])
+        XCTAssertFalse(answered.unavailable)
+        // A finished scan with no listeners is data, not "unavailable".
+        let none = ScanCore.resolvePorts(registeredPIDs: nil, portScanUnavailable: false, liveScan: { [:] })
+        XCTAssertTrue(none.pids.isEmpty)
+        XCTAssertFalse(none.unavailable)
+    }
+
+    func testResolvePorts_nilLiveScanWithNoAnswerIsUnavailable() {
+        let blind = ScanCore.resolvePorts(registeredPIDs: nil, portScanUnavailable: false, liveScan: { nil })
+        XCTAssertTrue(blind.pids.isEmpty)
+        XCTAssertTrue(blind.unavailable)
+    }
+
     // MARK: - ignoredNames filtering
 
     func testEnumerate_ignoredNames_match_filtersProcess() {

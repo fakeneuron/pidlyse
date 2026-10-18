@@ -87,6 +87,7 @@ public enum ScanPipeline {
         // the real argv keeps a spaced path whole for the row name (PID-087).
         let items = ScanCore.enumerate(elapsedThreshold: request.elapsedThreshold,
                                        registeredPIDs: Set(portMap.keys),
+                                       portScanUnavailable: scannedPorts == nil,
                                        ignoredNames: request.globalIgnores,
                                        dismissedPIDs: request.dismissedPIDs,
                                        disabledKinds: request.disabledKinds,

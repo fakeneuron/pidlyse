@@ -15,11 +15,15 @@ public enum ScanCore {
     /// Parse + classify `ps` output into stray candidates. `psOutput`,
     /// `registeredPIDs`, `ignoredNames`, and `dismissedPIDs` are injectable
     /// for unit testing. When `registeredPIDs` is nil the live `lsof` query runs.
+    /// `portScanUnavailable` says a caller-supplied `registeredPIDs` is empty for want
+    /// of an answer (PID-093), so the classifier demotes every easy row; the live
+    /// query reports the same fact itself when it gets no answer.
     /// Items whose command args contain any `ignoredNames` entry, whose PID is
     /// in `dismissedPIDs`, or whose `kind` is in `disabledKinds`, are dropped.
     public static func enumerate(elapsedThreshold: TimeInterval = defaultElapsedThreshold,
                                  psOutput: String? = nil,
                                  registeredPIDs: Set<Int32>? = nil,
+                                 portScanUnavailable: Bool = false,
                                  ignoredNames: [String] = [],
                                  dismissedPIDs: Set<Int32> = [],
                                  disabledKinds: Set<ProcessKind> = [],
@@ -28,11 +32,13 @@ public enum ScanCore {
                                  uidProvider: ((Int32) -> uid_t?)? = nil,
                                  argvProvider: ((Int32) -> [String]?)? = nil) -> [ProcessItem] {
         let output = psOutput ?? runPS()
-        let portPIDs = registeredPIDs ?? PortRegistry.listeningPIDs()
+        let ports = resolvePorts(registeredPIDs: registeredPIDs, portScanUnavailable: portScanUnavailable)
         var all = output
             .split(separator: "\n", omittingEmptySubsequences: true)
             .compactMap { makeItem(from: String($0), elapsedThreshold: elapsedThreshold,
-                                   registeredPIDs: portPIDs, customRules: customRules,
+                                   registeredPIDs: ports.pids,
+                                   portScanUnavailable: ports.unavailable,
+                                   customRules: customRules,
                                    startTimeProvider: startTimeProvider,
                                    uidProvider: uidProvider,
                                    argvProvider: argvProvider) }
@@ -55,6 +61,18 @@ public enum ScanCore {
         // to re-form a smaller group on the next scan. (PID-62.4)
         guard !dismissedPIDs.isEmpty else { return collapsed }
         return collapsed.filter { !dismissedPIDs.contains($0.pid) }
+    }
+
+    /// The registered-port facts one `enumerate` classifies with (PID-093). A supplied
+    /// `registeredPIDs` is taken as given, `portScanUnavailable` marking it empty for
+    /// want of an answer. Nil runs `liveScan`, whose nil is the same "no answer"
+    /// (`PortRegistry.scanListeningPorts`' `finished`), so both paths apply one rule.
+    static func resolvePorts(registeredPIDs: Set<Int32>?, portScanUnavailable: Bool,
+                             liveScan: () -> [Int32: Set<Int>]? = { PortRegistry.scanListeningPorts() })
+        -> (pids: Set<Int32>, unavailable: Bool) {
+        if let registeredPIDs { return (registeredPIDs, portScanUnavailable) }
+        guard let scanned = liveScan() else { return ([], true) }
+        return (Set(scanned.keys), false)
     }
 
     // MARK: - Tree collapse (PID-039, PID-62.4)
@@ -175,7 +193,9 @@ public enum ScanCore {
     /// Build one classified `ProcessItem` from a `ps` line, or `nil` if the line
     /// doesn't parse or matches no known `ProcessKind`.
     /// A process whose PID is in `registeredPIDs` is demoted from `.easy` to `.moderate`
-    /// so it always lands in the Needs Review bucket.
+    /// so it always lands in the Needs Review bucket. When the port scan gave no answer
+    /// (`portScanUnavailable`, PID-093) `registeredPIDs` can't rule a listener out, so
+    /// every easy row is demoted: the classifier fails closed like `isPortBound`.
     /// `startTimeProvider` and `uidProvider` are the two scan-time identity reads (both
     /// backed by `KillCore`'s single `kinfo_proc` fetch); omitting either leaves the
     /// corresponding `ProcessItem` field `nil`, which every consumer reads as "unknown".
@@ -187,6 +207,7 @@ public enum ScanCore {
     /// built-in kind would also match, and always lands in Needs Review. (PID-54.3)
     public static func makeItem(from line: String, elapsedThreshold: TimeInterval,
                                 registeredPIDs: Set<Int32> = [],
+                                portScanUnavailable: Bool = false,
                                 customRules: [CustomRule] = [],
                                 startTimeProvider: ((Int32) -> ProcStartTime?)? = nil,
                                 uidProvider: ((Int32) -> uid_t?)? = nil,
@@ -213,7 +234,7 @@ public enum ScanCore {
                             hasTTY: hasTTY,
                             isOrphan: isOrphan,
                             isOld: elapsed >= elapsedThreshold)
-        if registeredPIDs.contains(p.pid) && tier == .easy { tier = .moderate }
+        if (portScanUnavailable || registeredPIDs.contains(p.pid)) && tier == .easy { tier = .moderate }
         // Capture the scan-time start-time identity token (when a provider is
         // supplied) so the kill path can detect PID reuse before SIGTERM. (PID-35.3)
         let startTime = startTimeProvider.flatMap { $0(p.pid) }

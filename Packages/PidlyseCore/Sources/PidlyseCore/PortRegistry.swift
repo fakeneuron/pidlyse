@@ -101,14 +101,6 @@ public enum PortRegistry {
 
     // MARK: - Port listener detection
 
-    /// PIDs currently listening on a registered port.
-    /// `lsofOutput` is injectable so the pure pipeline can be unit-tested without shelling out.
-    /// Just the key set of `listeningPorts` — both filter on registered ports via the shared
-    /// `parseListenerLine`, so a PID appears here iff it has ≥1 registered listening port.
-    public static func listeningPIDs(lsofOutput: String? = nil) -> Set<Int32> {
-        Set(listeningPorts(lsofOutput: lsofOutput).keys)
-    }
-
     /// Parse one line of `lsof -nPi -sTCP:LISTEN` output, returning the PID only if
     /// the line's port appears in `ports` (defaults to the current `effectivePorts` when
     /// nil). Returns nil for the header line or ports not in the registry.
@@ -136,16 +128,16 @@ public enum PortRegistry {
         return (pid, port)
     }
 
-    /// Map each listening PID to the set of registered ports it listens on, mirroring
-    /// `listeningPIDs`' injectable pipeline. A PID on multiple registered ports
-    /// accumulates them; header lines and unregistered ports are skipped. Exposed for
-    /// the per-row provenance hint (PID-036.3); the classifier still uses the bare PID
-    /// set from `listeningPIDs` for demotion.
-    public static func listeningPorts(lsofOutput: String? = nil) -> [Int32: Set<Int>] {
-        let output = lsofOutput ?? runLSOF().output
+    /// Map each listening PID to the set of registered ports it listens on. A PID on
+    /// multiple registered ports accumulates them; header lines and unregistered ports
+    /// are skipped, so a PID appears here iff it has ≥1 registered listening port. Pure
+    /// over `lsofOutput`: the live query goes through `scanListeningPorts`, which can tell
+    /// "no answer" from "no listeners" (PID-093). Feeds the classifier's port demotion
+    /// (its key set) and the per-row provenance hint (PID-036.3).
+    public static func listeningPorts(lsofOutput: String) -> [Int32: Set<Int>] {
         let ports = effectivePorts  // capture once per scan; effectivePorts re-reads disk each call
         var result = [Int32: Set<Int>]()
-        for line in output.split(separator: "\n", omittingEmptySubsequences: true) {
+        for line in lsofOutput.split(separator: "\n", omittingEmptySubsequences: true) {
             if let match = parseListenerLine(String(line), ports: ports) {
                 result[match.pid, default: []].insert(match.port)
             }
