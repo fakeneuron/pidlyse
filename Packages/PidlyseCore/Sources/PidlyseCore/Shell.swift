@@ -46,6 +46,15 @@ public enum Shell {
     /// the process exited with status 0 (`false` on launch failure or expiry).
     @discardableResult
     public static func run(_ path: String, _ args: [String], timeout: TimeInterval) -> (output: String, ok: Bool) {
+        let result = runReporting(path, args, timeout: timeout)
+        return (result.output, result.ok)
+    }
+
+    /// `run`, plus whether the child ran to exit (PID-090): `finished` is false on
+    /// launch failure, expiry, or a stuck drain, so a caller can tell "the tool
+    /// gave no answer" from "the tool exited non-zero with nothing to say".
+    public static func runReporting(_ path: String, _ args: [String],
+                                    timeout: TimeInterval) -> (output: String, ok: Bool, finished: Bool) {
         let task = Process()
         task.executableURL = URL(fileURLWithPath: path)
         task.arguments = args
@@ -79,7 +88,7 @@ public enum Shell {
             leaveOnce.leave()
             try? pipe.fileHandleForWriting.close()
             _ = drained.wait(timeout: .now() + killGrace)
-            return ("", false)
+            return ("", false, false)
         }
         launchObserver?(task.processIdentifier)
 
@@ -87,14 +96,14 @@ public enum Shell {
         if limit <= 0 || exited.wait(timeout: .now() + limit) == .timedOut {
             stop(task, exited)
             _ = drained.wait(timeout: .now() + killGrace)
-            return ("", false)
+            return ("", false, false)
         }
 
         if drained.wait(timeout: .now() + killGrace) == .timedOut {
-            return ("", false)
+            return ("", false, false)
         }
         let text = String(data: collected.get(), encoding: .utf8) ?? ""
-        return (text, task.terminationStatus == 0)
+        return (text, task.terminationStatus == 0, true)
     }
 
     /// SIGTERM, then SIGKILL of the direct pid if it is still alive. Callers exec

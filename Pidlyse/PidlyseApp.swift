@@ -52,19 +52,20 @@ struct CleanSafeStraysIntent: AppIntent {
     static var openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let report: KillReport = await withCheckedContinuation { continuation in
+        let (report, sweepPaused): (KillReport, Bool) = await withCheckedContinuation { continuation in
             Task { @MainActor in
                 guard let engine = sharedEngine() else {
-                    continuation.resume(returning: KillReport(items: [], phases: [:]))
+                    continuation.resume(returning: (KillReport(items: [], phases: [:]), false))
                     return
                 }
                 engine.afterInitialScan {
-                    engine.cleanAllSafe { continuation.resume(returning: $0) }
+                    engine.cleanAllSafe { continuation.resume(returning: ($0, engine.isSweepPausedByPortScan)) }
                 }
             }
         }
+        // A failed port scan blocked the sweep (PID-090): say so, not "nothing to clean".
         let dialog: IntentDialog = report.requested == 0
-            ? "No likely strays to clean."
+            ? (sweepPaused ? "\(ScanPipeline.portScanUnavailableNote)" : "No likely strays to clean.")
             : "\(report.summaryLine)."
         return .result(dialog: dialog)
     }

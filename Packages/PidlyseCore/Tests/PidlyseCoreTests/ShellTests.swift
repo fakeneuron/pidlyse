@@ -69,6 +69,16 @@ final class ShellTests: XCTestCase {
         assertDead(pid)
     }
 
+    func testRunReporting_finishedSeparatesNonzeroExitFromNoAnswer() {
+        // PID-090: exit 1 with no output still finished; expiry and launch failure didn't.
+        let quiet = Shell.runReporting("/bin/sh", ["-c", "exit 1"], timeout: Shell.Budget.ps)
+        XCTAssertEqual(quiet.output, "")
+        XCTAssertFalse(quiet.ok)
+        XCTAssertTrue(quiet.finished)
+        XCTAssertFalse(Shell.runReporting("/bin/sleep", ["30"], timeout: 0.4).finished)
+        XCTAssertFalse(Shell.runReporting("/no/such/pidlyse-bin", [], timeout: 1).finished)
+    }
+
     func testRun_deadlineOverrideZero_discardsAFastCommand() {
         Shell.deadlineOverride = 0
         let result = Shell.run("/bin/echo", ["ok"], timeout: Shell.Budget.ps)

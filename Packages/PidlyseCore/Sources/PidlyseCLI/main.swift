@@ -35,12 +35,14 @@ private struct Settings {
 /// same call the app's `ScanEngine` makes. `protectedPIDs` and `verdicts` are the
 /// protected overlay and the stray verdict (PID-086.2) resolved eagerly (the CLI has
 /// no reactive layer to defer them to); `listeningPorts` feeds the port-bound sweep
-/// exclusion (PID-088).
+/// exclusion (PID-088), and `portScanUnavailable` blocks it when that scan failed
+/// (PID-090).
 private struct ScanResult {
     let items: [ProcessItem]
     let cwds: [Int32: ProcessCwd]
     let containerOwners: [Int32: String]
     let listeningPorts: [Int32: Set<Int>]
+    let portScanUnavailable: Bool
     let protectedPIDs: Set<Int32>
     let verdicts: [Int32: StrayVerdict]
 }
@@ -57,7 +59,8 @@ private func runScan(_ settings: Settings) -> ScanResult {
                                        isQuiet: { $0.cpuPercent < ScanHistory.defaultLowCPUThreshold })
     return ScanResult(items: snapshot.items, cwds: snapshot.cwds,
                       containerOwners: snapshot.containerOwners,
-                      listeningPorts: snapshot.listeningPorts, protectedPIDs: protectedPIDs,
+                      listeningPorts: snapshot.listeningPorts,
+                      portScanUnavailable: snapshot.portScanUnavailable, protectedPIDs: protectedPIDs,
                       verdicts: verdicts)
 }
 
@@ -121,17 +124,25 @@ private func commandClean() -> Int32 {
     // respawn half of the overlay stays app-only (PID-62.1 clarification #4). The
     // predicate itself is the app's, shared through core (PID-079.6).
     let currentUID = getuid()
-    let sweepable = scan.items.filter {
+    func isSweepable(_ item: ProcessItem, portScanUnavailable: Bool) -> Bool {
         ScanPipeline.isSweepable(
-            verdict: scan.verdicts[$0.pid] ?? .running,
-            riskTier: $0.riskTier,
-            isProtected: scan.protectedPIDs.contains($0.pid),
-            isPortBound: ScanPipeline.isPortBound($0, listeningPorts: scan.listeningPorts),
-            killability: Killability.derive(for: $0, containerOwners: scan.containerOwners,
+            verdict: scan.verdicts[item.pid] ?? .running,
+            riskTier: item.riskTier,
+            isProtected: scan.protectedPIDs.contains(item.pid),
+            isPortBound: ScanPipeline.isPortBound(item, listeningPorts: scan.listeningPorts,
+                                                  portScanUnavailable: portScanUnavailable),
+            killability: Killability.derive(for: item, containerOwners: scan.containerOwners,
                                             currentUID: currentUID,
                                             killDenied: false, isRespawner: false, manager: nil))
     }
+    let sweepable = scan.items.filter { isSweepable($0, portScanUnavailable: scan.portScanUnavailable) }
     guard !sweepable.isEmpty else {
+        // A failed port scan held back rows a sweep would otherwise take (PID-090) —
+        // the app's `isSweepPausedByPortScan` — so this is not a clean result.
+        if scan.portScanUnavailable && scan.items.contains(where: { isSweepable($0, portScanUnavailable: false) }) {
+            printErr("pidlyse: \(ScanPipeline.portScanUnavailableNote)")
+            return 1
+        }
         print("Nothing to clean — no likely strays that are unprotected, off registered ports, and killable.")
         return 0
     }

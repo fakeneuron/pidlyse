@@ -76,7 +76,7 @@ final class ScanPipelineTests: XCTestCase {
     // MARK: - Port-bound (PID-088)
 
     func testIsPortBound_rowListeningOnARegisteredPort() {
-        XCTAssertTrue(ScanPipeline.isPortBound(item(10), listeningPorts: [10: [5173]]))
+        XCTAssertTrue(ScanPipeline.isPortBound(item(10), listeningPorts: [10: [5173]], portScanUnavailable: false))
     }
 
     func testIsPortBound_aTreeMemberListeningCountsForTheRow() {
@@ -84,13 +84,18 @@ final class ScanPipelineTests: XCTestCase {
         let root = ProcessItem(pid: 10, ppid: 1, command: "npm run dev", elapsed: 0, tty: "??",
                                kind: .npm, riskTier: .moderate, cpuPercent: 0, rssKB: 0,
                                members: [vite])
-        XCTAssertTrue(ScanPipeline.isPortBound(root, listeningPorts: [11: [5173]]))
+        XCTAssertTrue(ScanPipeline.isPortBound(root, listeningPorts: [11: [5173]], portScanUnavailable: false))
     }
 
     func testIsPortBound_otherPIDsOrEmptyPortSetsAreNotBound() {
-        XCTAssertFalse(ScanPipeline.isPortBound(item(10), listeningPorts: [:]))
-        XCTAssertFalse(ScanPipeline.isPortBound(item(10), listeningPorts: [99: [5173]]))
-        XCTAssertFalse(ScanPipeline.isPortBound(item(10), listeningPorts: [10: []]))
+        XCTAssertFalse(ScanPipeline.isPortBound(item(10), listeningPorts: [:], portScanUnavailable: false))
+        XCTAssertFalse(ScanPipeline.isPortBound(item(10), listeningPorts: [99: [5173]], portScanUnavailable: false))
+        XCTAssertFalse(ScanPipeline.isPortBound(item(10), listeningPorts: [10: []], portScanUnavailable: false))
+    }
+
+    func testIsPortBound_unavailablePortScanCountsEveryRowAsBound() {
+        // PID-090: an empty map from a failed lsof can't rule a listener out.
+        XCTAssertTrue(ScanPipeline.isPortBound(item(10), listeningPorts: [:], portScanUnavailable: true))
     }
 
     // MARK: - Sweep

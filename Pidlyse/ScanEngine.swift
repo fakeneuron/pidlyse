@@ -34,6 +34,10 @@ final class ScanEngine: ObservableObject {
     /// the same set `enumerate` uses for port-demotion (so no second `lsof` runs).
     @Published private(set) var listeningPorts: [Int32: Set<Int>] = [:]
 
+    /// This scan's registered-port `lsof` gave no data (PID-090). While set, every
+    /// row counts as port-bound, so nothing is swept until a scan reads ports again.
+    @Published private(set) var portScanUnavailable = false
+
     /// PID → the Docker container name that owns it, captured at scan time
     /// (PID-037.2). Resolved once per scan via a single bulk `docker inspect`;
     /// consumed by the kill path (`docker stop <name>`, retiring the per-click
@@ -278,6 +282,7 @@ final class ScanEngine: ObservableObject {
                 let visible = snapshot.items.filter { !self.dismissedPIDs.contains($0.pid) }
                 self.items = visible
                 self.listeningPorts = snapshot.listeningPorts
+                self.portScanUnavailable = snapshot.portScanUnavailable
                 self.containerOwners = snapshot.containerOwners
                 self.cwds = snapshot.cwds
                 self.processTable = snapshot.processTable
@@ -507,18 +512,30 @@ final class ScanEngine: ObservableObject {
 
     /// Whether `item` belongs in a bulk sweep: the shared core predicate
     /// (`ScanPipeline.isSweepable` — a stray that isn't high-risk, protected, bound to
-    /// a registered port, or unkillable; PID-079.6, PID-086.2, PID-088) fed with this
-    /// session's facts. `sweepableStrays`
+    /// a registered port, or unkillable; PID-079.6, PID-086.2, PID-088; a failed port
+    /// scan blocks it, PID-090) fed with this session's facts. `sweepableStrays`
     /// below and the popover's filtered variant both call it, so a row that shows no
     /// kill button can't still be swept by "Clean all" — nor can a row showing its
     /// kill's phase in place of the button.
     func isSweepable(_ item: ProcessItem) -> Bool {
+        isSweepable(item, portScanUnavailable: portScanUnavailable)
+    }
+
+    private func isSweepable(_ item: ProcessItem, portScanUnavailable: Bool) -> Bool {
         // A row already being killed — or just answered — isn't swept again (PID-62.5).
         ScanPipeline.isSweepable(verdict: verdict(item), riskTier: item.riskTier,
                                  isProtected: isProtected(item),
-                                 isPortBound: ScanPipeline.isPortBound(item, listeningPorts: listeningPorts),
+                                 isPortBound: ScanPipeline.isPortBound(item, listeningPorts: listeningPorts,
+                                                                       portScanUnavailable: portScanUnavailable),
                                  killability: killability(item))
             && killPhase(for: item) == nil
+    }
+
+    /// A failed port scan is what holds back rows a sweep would otherwise take
+    /// (PID-090): the one condition the popover note, the headless notification,
+    /// and the Shortcut dialog show `ScanPipeline.portScanUnavailableNote` on.
+    var isSweepPausedByPortScan: Bool {
+        portScanUnavailable && items.contains { isSweepable($0, portScanUnavailable: false) }
     }
 
     /// The "Clean all" sweep set: likely strays (PID-086.2) minus high-risk rows,
@@ -547,7 +564,11 @@ final class ScanEngine: ObservableObject {
     /// no-ops if the user has denied notifications.
     func fireCleanResultNotification(_ report: KillReport) {
         let content = UNMutableNotificationContent()
-        if report.requested == 0 {
+        if report.requested == 0 && isSweepPausedByPortScan {
+            // A failed port scan blocked the sweep (PID-090), not an empty one.
+            content.title = "Nothing cleaned"
+            content.body = ScanPipeline.portScanUnavailableNote
+        } else if report.requested == 0 {
             content.title = "Nothing to clean"
             content.body = "No likely strays to clean."
         } else {

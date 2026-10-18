@@ -16,7 +16,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Low
 
-- [ ] **PID-090** [medium] | port-scan-fail-open — The port-bound sweep exclusion fails open: when the registered-port `lsof` times out the listener map is empty, so port-bound strays are swept again. Surface a port-data-unavailable signal and decide whether it blocks the sweep. From [[PID-088]] review.
 - [ ] **PID-091** [light] | spaced-display-path — `ProcessItem.displayPath` takes the first space-split token of `command`, so a path containing a space shows as a fragment in the inspector and provenance. Read the scan-time `ProcessItem.argv` (added by [[PID-087]]) instead. From [[PID-087]] Discovery.
 - [ ] **PID-092** [light] | readme-screenshots — Re-record `docs/screenshots/popover.png` and `clean-all.gif`: both date from 2026-07-03 and show the pre-[[PID-EPIC-086]] popover (PID-titled rows, kind groups, a Needs review section). Operator-recorded; refresh the alt text if the framing changes. From [[PID-086.N]] audit.
 - [ ] **PID-093** [light] | port-demotion-fail-open — An unanswered port scan still drops the PID-005 demotion (empty `registeredPIDs`), and `enumerate`'s live fallback ignores `finished`. Decide whether classification fails closed too. From [[PID-090]] review.
@@ -27,6 +26,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-090** [medium] | port-scan-fail-open — Completed 2026-10-18.
 - [x] **PID-EPIC-086** [heavy]🧠 | stray-utility-ux — Completed 2026-10-17.
   - [x] **PID-086.1** [frontier]💎 | stray-utility-ux discovery — Completed 2026-10-15.
   - [x] **PID-086.2** [heavy]🧠 | stray-verdict-core — Completed 2026-10-16.

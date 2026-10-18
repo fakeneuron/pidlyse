@@ -222,6 +222,10 @@ struct MenuBarView: View {
                 .foregroundStyle(.red)
                 .disabled(sweepableStrayItems.isEmpty)
             }
+            if engine.isSweepPausedByPortScan {
+                Text(ScanPipeline.portScanUnavailableNote)
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if let cleanReport {
                 Text(cleanReport.summaryLine)
                     .font(.caption).foregroundStyle(.secondary)

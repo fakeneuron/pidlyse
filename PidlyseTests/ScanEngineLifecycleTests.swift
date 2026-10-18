@@ -333,6 +333,38 @@ final class ScanEngineLifecycleTests: XCTestCase {
         XCTAssertEqual(engine.sweepableStrays.map(\.pid), [11])
     }
 
+    func testUnavailablePortScanBlocksTheSweepUntilAHealthyScan() {
+        // PID-090: an empty port map from a failed lsof can't rule a listener out.
+        let stray = item(10, tier: .moderate)
+        var blind = snapshot([stray])
+        blind.portScanUnavailable = true
+        let source = FakeSource(blind, snapshot([stray]))
+        let engine = makeEngine(source)
+        scanAndWait(engine)
+
+        XCTAssertTrue(engine.portScanUnavailable)
+        XCTAssertEqual(engine.items.map(\.pid), [10], "still listed")
+        XCTAssertEqual(engine.killability(stray), .killable, "its own ✕ still works")
+        XCTAssertTrue(engine.sweepableStrays.isEmpty)
+        XCTAssertTrue(engine.isSweepPausedByPortScan)
+
+        scanAndWait(engine)
+        XCTAssertFalse(engine.portScanUnavailable)
+        XCTAssertFalse(engine.isSweepPausedByPortScan)
+        XCTAssertEqual(engine.sweepableStrays.map(\.pid), [10])
+    }
+
+    func testUnavailablePortScanIsNotAPauseWhenNothingWouldBeSwept() {
+        // PID-090: a high-risk stray is a per-row call either way, so nothing is held back.
+        var blind = snapshot([item(10, tier: .high)])
+        blind.portScanUnavailable = true
+        let engine = makeEngine(FakeSource(blind))
+        scanAndWait(engine)
+
+        XCTAssertTrue(engine.portScanUnavailable)
+        XCTAssertFalse(engine.isSweepPausedByPortScan)
+    }
+
     func testIsSweepableFoldsVerdictProtectedOwnerAndKillPhase() {
         // `item` rows are orphans with no tty → session ended (PID-086.2).
         let plain = item(10)

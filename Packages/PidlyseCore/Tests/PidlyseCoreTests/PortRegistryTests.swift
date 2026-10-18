@@ -103,6 +103,23 @@ final class PortRegistryTests: XCTestCase {
         XCTAssertTrue(PortRegistry.listeningPorts(lsofOutput: "").isEmpty)
     }
 
+    // MARK: - PortRegistry.scanListeningPorts (PID-090 — no data vs no listeners)
+
+    func testScanListeningPorts_unfinishedRunIsUnavailable() {
+        // Expiry or launch failure (`Shell.runReporting` finished == false).
+        XCTAssertNil(PortRegistry.scanListeningPorts(lsof: ("", false, false)))
+    }
+
+    func testScanListeningPorts_finishedEmptyRunIsAnEmptyMap() {
+        // lsof exits 1 with no output when nothing listens: no listeners, not no data.
+        XCTAssertEqual(PortRegistry.scanListeningPorts(lsof: ("", false, true)), [:])
+    }
+
+    func testScanListeningPorts_finishedRunParsesListeners() {
+        let output = "node       1234 user  22u  IPv4 0x0  0t0  TCP *:3001 (LISTEN)"
+        XCTAssertEqual(PortRegistry.scanListeningPorts(lsof: (output, true, true)), [1234: [3001]])
+    }
+
     // MARK: - PortRegistry.registeredPorts (anti-drift canary)
 
     /// Tripwire for the manually-synced port table. `registeredPorts` mirrors

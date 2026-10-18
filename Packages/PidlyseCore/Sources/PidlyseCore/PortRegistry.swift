@@ -142,7 +142,7 @@ public enum PortRegistry {
     /// the per-row provenance hint (PID-036.3); the classifier still uses the bare PID
     /// set from `listeningPIDs` for demotion.
     public static func listeningPorts(lsofOutput: String? = nil) -> [Int32: Set<Int>] {
-        let output = lsofOutput ?? runLSOF()
+        let output = lsofOutput ?? runLSOF().output
         let ports = effectivePorts  // capture once per scan; effectivePorts re-reads disk each call
         var result = [Int32: Set<Int>]()
         for line in output.split(separator: "\n", omittingEmptySubsequences: true) {
@@ -153,9 +153,19 @@ public enum PortRegistry {
         return result
     }
 
+    /// The scan's listener map, or nil when `lsof` gave no answer (PID-090): it
+    /// expired or failed to launch (`Shell.runReporting`'s `finished`). A finished
+    /// run is data whatever its exit — `lsof` exits 1 with no output when nothing
+    /// listens. `lsof` is injectable for tests; nil runs the live query.
+    public static func scanListeningPorts(lsof: (output: String, ok: Bool, finished: Bool)? = nil) -> [Int32: Set<Int>]? {
+        let result = lsof ?? runLSOF()
+        guard result.finished else { return nil }
+        return listeningPorts(lsofOutput: result.output)
+    }
+
     // MARK: - lsof shell-out
 
-    static func runLSOF() -> String {
-        Shell.run("/usr/sbin/lsof", ["-nPi", "-sTCP:LISTEN"], timeout: Shell.Budget.lsof).output
+    static func runLSOF() -> (output: String, ok: Bool, finished: Bool) {
+        Shell.runReporting("/usr/sbin/lsof", ["-nPi", "-sTCP:LISTEN"], timeout: Shell.Budget.lsof)
     }
 }

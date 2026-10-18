@@ -38,17 +38,22 @@ public struct ScanRequest {
 public struct ScanSnapshot {
     public var items: [ProcessItem]
     public var listeningPorts: [Int32: Set<Int>]
+    /// The registered-port `lsof` gave no data (PID-090), so `listeningPorts` is
+    /// empty for want of an answer, not because nothing listens.
+    public var portScanUnavailable: Bool
     public var containerOwners: [Int32: String]
     public var cwds: [Int32: ProcessCwd]
     public var processTable: [Int32: ProcessNode]
 
     public init(items: [ProcessItem],
                 listeningPorts: [Int32: Set<Int>] = [:],
+                portScanUnavailable: Bool = false,
                 containerOwners: [Int32: String] = [:],
                 cwds: [Int32: ProcessCwd] = [:],
                 processTable: [Int32: ProcessNode] = [:]) {
         self.items = items
         self.listeningPorts = listeningPorts
+        self.portScanUnavailable = portScanUnavailable
         self.containerOwners = containerOwners
         self.cwds = cwds
         self.processTable = processTable
@@ -71,8 +76,9 @@ public enum ScanPipeline {
     public static func run(_ request: ScanRequest, includeProcessTable: Bool = true) -> ScanSnapshot {
         // Resolve the registered-port listeners once: its keys feed the classifier's
         // port-demotion (so `enumerate` doesn't re-run lsof), and the full map drives
-        // the per-row port hint (PID-036.3).
-        let portMap = PortRegistry.listeningPorts()
+        // the per-row port hint (PID-036.3). Nil means no data (PID-090).
+        let scannedPorts = PortRegistry.scanListeningPorts()
+        let portMap = scannedPorts ?? [:]
         // One bulk inspect per scan; the kill path and the row hint read it instead
         // of a per-click inspect (PID-037.2).
         let owners = DockerService.containerOwners()
@@ -93,7 +99,8 @@ public enum ScanPipeline {
         // One bulk `ps` the inspector's parent chain walks to launchd (PID-52.2).
         let procTable = includeProcessTable ? AncestryResolver.processTable() : [:]
         return ScanSnapshot(items: finish(items, cwds: cwdMap, request: request),
-                            listeningPorts: portMap, containerOwners: owners,
+                            listeningPorts: portMap, portScanUnavailable: scannedPorts == nil,
+                            containerOwners: owners,
                             cwds: cwdMap, processTable: procTable)
     }
 
@@ -120,10 +127,19 @@ public enum ScanPipeline {
     /// Whether `item`, or any process folded into its row, listens on a registered
     /// port (PID-088). `listeningPorts` is the scan's registered-port map, so a
     /// non-empty entry is the fact. A sweep overlay like `isProtected`, never a
-    /// classification change.
-    public static func isPortBound(_ item: ProcessItem, listeningPorts: [Int32: Set<Int>]) -> Bool {
-        ([item] + item.members).contains { !(listeningPorts[$0.pid] ?? []).isEmpty }
+    /// classification change. When the port scan gave no data (PID-090) every row
+    /// counts as bound: an empty map can't rule a listener out, so the sweep fails
+    /// closed for that scan.
+    public static func isPortBound(_ item: ProcessItem, listeningPorts: [Int32: Set<Int>],
+                                   portScanUnavailable: Bool) -> Bool {
+        portScanUnavailable
+            || ([item] + item.members).contains { !(listeningPorts[$0.pid] ?? []).isEmpty }
     }
+
+    /// The one sentence every surface shows while a port-scan failure blocks the
+    /// sweep (PID-090): the popover note and `pidlyse clean`.
+    public static let portScanUnavailableNote =
+        "Port scan unavailable — the sweep is paused until a scan reads ports again."
 
     /// Whether a row belongs in a bulk sweep (PID-086.2): a likely stray
     /// (`StrayVerdict`) that isn't high-risk — real dev infra stays a per-row decision
