@@ -166,10 +166,12 @@ public struct ProcessItem: Identifiable {
 
     /// Compact display label shown in the popover row. Absolute-path executables
     /// format as `parentDir/executableName` (e.g. `bin/uvicorn`); bare-word
-    /// commands show just the first token (e.g. `npm`).
+    /// commands show just the first token (e.g. `npm`). The executable comes from
+    /// `argv[0]` when known, so a path containing a space stays whole. (PID-091)
     public var displayPath: String {
-        let firstToken = command.split(separator: " ", maxSplits: 1)
-            .first.map(String.init) ?? command
+        let firstToken = argv?.first.flatMap { $0.isEmpty ? nil : $0 }
+            ?? command.split(separator: " ", maxSplits: 1).first.map(String.init)
+            ?? command
         guard firstToken.hasPrefix("/") else { return firstToken }
         let url = URL(fileURLWithPath: firstToken)
         let execName = url.lastPathComponent

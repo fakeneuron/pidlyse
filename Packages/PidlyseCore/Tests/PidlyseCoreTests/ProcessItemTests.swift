@@ -28,6 +28,31 @@ final class ProcessItemTests: XCTestCase {
         XCTAssertEqual(item(command: "/uvicorn").displayPath, "uvicorn")
     }
 
+    func testDisplayPath_spacedPath_usesArgvWhenKnown() {
+        let exe = "/Applications/My App.app/Contents/MacOS/My Tool"
+        let spaced = ProcessItem(pid: 1, ppid: 1, command: "\(exe) --serve", elapsed: 0,
+                                 tty: "??", kind: .pytest, riskTier: .easy, cpuPercent: 0, rssKB: 0,
+                                 argv: [exe, "--serve"])
+        XCTAssertEqual(spaced.displayPath, "MacOS/My Tool")
+    }
+
+    func testDisplayPath_spacedPath_withoutArgv_fallsBackToPSString() {
+        // No argv (foreign-owned, or it disagreed with `ps`): the first token is the fragment.
+        XCTAssertEqual(item(command: "/Applications/My App.app/Contents/MacOS/My Tool").displayPath,
+                       "Applications/My")
+    }
+
+    func testDisplayPath_emptyArgv_fallsBackToPSString() {
+        let empty = ProcessItem(pid: 1, ppid: 1, command: "/usr/local/bin/uvicorn main:app", elapsed: 0,
+                                tty: "??", kind: .pytest, riskTier: .easy, cpuPercent: 0, rssKB: 0,
+                                argv: [])
+        XCTAssertEqual(empty.displayPath, "bin/uvicorn")
+        let blankFirst = ProcessItem(pid: 1, ppid: 1, command: "/usr/local/bin/uvicorn main:app", elapsed: 0,
+                                     tty: "??", kind: .pytest, riskTier: .easy, cpuPercent: 0, rssKB: 0,
+                                     argv: [""])
+        XCTAssertEqual(blankFirst.displayPath, "bin/uvicorn")
+    }
+
     // MARK: - displayName (PID-086.3)
 
     private func name(_ command: String, kind: ProcessKind = .node, customLabel: String? = nil) -> String {
