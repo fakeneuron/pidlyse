@@ -65,7 +65,8 @@ public enum RiskTier: Comparable {
     case high       // real dev infra (docker / uvicorn) or actively managed
 }
 
-/// The two kill-action buckets — the only classification the kill flow acts on.
+/// The two kill-action buckets — the kill-safety model; the stray verdict, not the
+/// bucket, decides what "Clean all" sweeps (PID-086.2).
 /// Per AGENTS.md: never auto-kill; `safe` items still require an explicit click.
 public enum Bucket {
     case safe

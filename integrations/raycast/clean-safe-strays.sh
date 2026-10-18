@@ -4,7 +4,7 @@
 #
 # Required parameters:
 # @raycast.schemaVersion 1
-# @raycast.title Clean Safe Strays
+# @raycast.title Clean Likely Strays
 # @raycast.mode fullOutput
 #
 # Optional parameters:
@@ -12,7 +12,7 @@
 # @raycast.packageName Pidlyse
 #
 # Documentation:
-# @raycast.description Kill every likely stray in the "Clean all" sweep set (not high-risk, minus protected projects). Exit status 1 means one or more swept items were not verified gone.
+# @raycast.description Kill every likely stray in the "Clean all" sweep set (not high-risk, minus protected projects, registered-port listeners, and other users' processes). Exit status 1 means one or more swept items were not verified gone.
 # @raycast.author fakeneuron
 
 # Resolve the installed CLI (see integrations/raycast/README.md → `make install-cli`).

@@ -143,7 +143,7 @@ private func commandClean() -> Int32 {
     for item in sweepable {
         let phase = phases[item.pid]
         let mark = (phase == .gone ? "✓ " : "✗ ") + (phase?.label ?? "?").padding(toLength: 10, withPad: " ", startingAt: 0)
-        print("\(mark)  \(item.pid)  \(item.displayLabel)  \(scan.cwds[item.pid]?.label ?? item.displayPath)")
+        print("\(mark)  \(item.pid)  \(item.displayName)  \(scan.cwds[item.pid]?.label ?? item.displayPath)")
     }
     let report = KillReport(items: sweepable, phases: phases)
     print(report.summaryLine)
@@ -164,7 +164,7 @@ private func commandKill(pid: Int32) -> Int32 {
     recordCleaned([item], outcomes: [pid: outcome], cwds: scan.cwds)
     switch outcome {
     case .confirmed:
-        print("✓ killed  \(pid)  \(item.displayLabel)  \(scan.cwds[pid]?.label ?? item.displayPath)")
+        print("✓ killed  \(pid)  \(item.displayName)  \(scan.cwds[pid]?.label ?? item.displayPath)")
         return 0
     case .survived:
         printErr("pidlyse: PID \(pid) survived — SIGTERM and SIGKILL delivered, process still running")

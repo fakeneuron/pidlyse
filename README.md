@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/clean-all.gif" alt="Clean all — sweeping safe strays in one click" width="480">
+  <img src="docs/screenshots/clean-all.gif" alt="Clean all — sweeping likely strays in one click" width="480">
 </p>
 
 Native macOS menu bar app that spots stray dev processes and clears them in one click.

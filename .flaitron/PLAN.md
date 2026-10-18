@@ -2,19 +2,13 @@
 
 ## Vision
 
-Pidlyse is a native macOS menu bar app (Swift + SwiftUI, M-series) that scans for stray and zombie processes — orphaned test runners, playwright-mcp instances, zombie Chrome helpers — and surfaces them with a badge count. One click expands a tray UI with categorised candidates, kill buttons for safe ones, and a "needs review" section for anything tied to a registered port or recently started. The goal is to replace the manual `ps aux | grep` ritual with a permanent, low-friction process hygiene tool that lives beside the clock.
+Pidlyse is a native macOS menu bar app (Swift + SwiftUI, M-series) that scans for stray and zombie processes — orphaned test runners, playwright-mcp instances, zombie Chrome helpers — and surfaces them with a badge count. One click expands a tray UI that leads with the likely strays, grouped by why each reads as stray, with in-use processes folded away and a per-row kill plus a bounded "Clean all". The goal is to replace the manual `ps aux | grep` ritual with a permanent, low-friction process hygiene tool that lives beside the clock.
 
 See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-- [ ] **PID-EPIC-086** [heavy]🧠 | stray-utility-ux — Turn Pidlyse from a status locator into a stray finder: a core verdict (session ended / idle / duplicate / running) drives a strays-first popover, badge, sweep set and CLI, while in-use processes fold away. Rows lead with a descriptive name on one dense line, PID subordinate, nothing truncated. Live scan at filing: 30 candidates, all attached, 0 safe.
-  - [x] **PID-086.1** [frontier]💎 | stray-utility-ux discovery — Completed 2026-10-15.
-  - [x] **PID-086.2** [heavy]🧠 | stray-verdict-core — Completed 2026-10-16.
-  - [x] **PID-086.3** [medium]🧩 | row-identity — Completed 2026-10-17.
-  - [x] **PID-086.4** [medium]🧩 | stray-first-popover — Completed 2026-10-17.
-  - [x] **PID-086.5** [light]🔧 | cli-stray-parity — Completed 2026-10-17.
-  - [ ] **PID-086.N** [heavy]🧠 | stray-utility-ux audit — Final-subtask audit per SPEC/epic.md (fixed doc-drift sweep acceptance line). Filed now with the reserved terminal `.N` suffix (never renumbers as children are added).
+(none)
 
 ## Medium
 
@@ -24,6 +18,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 - [ ] **PID-090** [medium] | port-scan-fail-open — The port-bound sweep exclusion fails open: when the registered-port `lsof` times out the listener map is empty, so port-bound strays are swept again. Surface a port-data-unavailable signal and decide whether it blocks the sweep. From [[PID-088]] review.
 - [ ] **PID-091** [light] | spaced-display-path — `ProcessItem.displayPath` takes the first space-split token of `command`, so a path containing a space shows as a fragment in the inspector and provenance. Read the scan-time `ProcessItem.argv` (added by [[PID-087]]) instead. From [[PID-087]] Discovery.
+- [ ] **PID-092** [light] | readme-screenshots — Re-record `docs/screenshots/popover.png` and `clean-all.gif`: both date from 2026-07-03 and show the pre-[[PID-EPIC-086]] popover (PID-titled rows, kind groups, a Needs review section). Operator-recorded; refresh the alt text if the framing changes. From [[PID-086.N]] audit.
 
 ## Future Opportunities
 
@@ -31,6 +26,13 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-EPIC-086** [heavy]🧠 | stray-utility-ux — Completed 2026-10-17.
+  - [x] **PID-086.1** [frontier]💎 | stray-utility-ux discovery — Completed 2026-10-15.
+  - [x] **PID-086.2** [heavy]🧠 | stray-verdict-core — Completed 2026-10-16.
+  - [x] **PID-086.3** [medium]🧩 | row-identity — Completed 2026-10-17.
+  - [x] **PID-086.4** [medium]🧩 | stray-first-popover — Completed 2026-10-17.
+  - [x] **PID-086.5** [light]🔧 | cli-stray-parity — Completed 2026-10-17.
+  - [x] **PID-086.N** [heavy]🧠 | stray-utility-ux audit — Completed 2026-10-17.
 - [x] **PID-089** [light] [unattended] | stray-reason-order — Completed 2026-10-17.
 - [x] **PID-087** [light] [unattended] | spaced-path-names — Completed 2026-10-17.
 - [x] **PID-088** [light] [unattended] | port-bound-sweep — Completed 2026-10-17.

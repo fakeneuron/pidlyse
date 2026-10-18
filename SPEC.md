@@ -109,7 +109,7 @@ Each match is evaluated on:
 
 ## Classification
 
-Each candidate carries a descriptive **`kind`** (see the Scan Engine table) and a 3-level **`riskTier`** — `easy` / `moderate` / `high` — the display gradient (the popover may render all three). The two **kill-action buckets** (`safe` / `needsReview`) are **derived** from the tier and remain the only classification the kill flow acts on:
+Each candidate carries a descriptive **`kind`** (see the Scan Engine table) and a 3-level **`riskTier`** — `easy` / `moderate` / `high` — the display gradient (the popover may render all three). The two **kill-action buckets** (`safe` / `needsReview`) are **derived** from the tier and remain the kill-safety model; what "Clean all" sweeps is decided by the stray verdict below, not the bucket:
 
 | `riskTier` | Bucket | When |
 |------------|--------|------|

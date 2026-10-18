@@ -9,8 +9,9 @@ import Foundation
 /// External launchers (a browser, a `.desktop`-style opener, `open pidlyse://…`)
 /// trigger these verbs; the launcher invocation *is* the explicit user action
 /// that the "never kill without explicit user action" non-negotiable requires,
-/// and `clean` is bounded to the safe-minus-protected sweep set (never
-/// `needsReview`) — see PID-58.1 discovery / PID-35.1 security baseline.
+/// and `clean` is bounded to the engine's "Clean all" sweep set (likely strays
+/// that aren't high-risk, protected, port-bound, or unkillable — PID-086.2) — see
+/// PID-58.1 discovery / PID-35.1 security baseline.
 public enum URLScheme {
 
     /// The registered scheme (matches `CFBundleURLSchemes` in `Info.plist`).
@@ -18,7 +19,7 @@ public enum URLScheme {
 
     /// The `pidlyse://` verb surface.
     public enum Command: Equatable {
-        /// `pidlyse://clean` — run the headless "Clean all safe" sweep directly
+        /// `pidlyse://clean` — run the headless "Clean all" sweep directly
         /// and post a result notification.
         case clean
         /// `pidlyse://scan` — clear the session's dismissed set and re-enumerate
