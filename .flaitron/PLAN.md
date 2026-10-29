@@ -8,15 +8,16 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-(none)
+- [ ] **PID-094** [medium]🧩 | url-clean-gate — `pidlyse://clean` (`AppDelegate.swift:74`) runs the Clean-all sweep on any URL open with no confirmation, so a web page or local app can trigger kills; README §Security says every kill is an explicit click. Choose the gate (confirmation alert listing the sweep set / drop the verb / per-install token), implement it with a test, and make README §Security name every non-click trigger (URL, Shortcuts, CLI, Raycast). Surfaced by audit-security 2026-10-29 (Finding #1, High)
 
 ## Medium
 
-(none)
+- [ ] **PID-095** [medium]🧩 | nil-token-kill-guard — `KillCore.shouldSendSIGTERM(expected: nil, …)` returns true (`KillCore.swift:208`), so a row whose scan-time start token was unreadable skips the PID-reuse guard, can SIGTERM then SIGKILL a recycled bystander, and logs `.confirmed` for a process that was already gone. Production always supplies the token (`ScanPipeline.swift:95`): make nil refuse (`.notKilled`), flip `testShouldSendSIGTERM_noScanToken_sends`, and audit tokenless fixtures. Surfaced by audit-security 2026-10-29 (Finding #2, Medium)
 
 ## Low
 
 - [ ] **PID-092** [light] | readme-screenshots — Re-record `docs/screenshots/popover.png` and `clean-all.gif`: both date from 2026-07-03 and show the pre-[[PID-EPIC-086]] popover (PID-titled rows, kind groups, a Needs review section). Operator-recorded; refresh the alt text if the framing changes. From [[PID-086.N]] audit.
+- [ ] **PID-096** [light]🔧 | ci-workflow-hardening — Add `permissions: contents: read` to `test.yml`, verify the gitleaks tarball's SHA-256 before running it, and pass `github.ref_name` to `release.yml`'s `gh release create` via `env:` instead of interpolating it. Surfaced by audit-security 2026-10-29 (Finding #3, Low)
 
 ## Future Opportunities
 
