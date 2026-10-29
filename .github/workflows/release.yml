@@ -18,6 +18,7 @@ jobs:
       - name: Package DMG
         run: make dmg
       - name: Create GitHub Release and attach DMG + checksum
-        run: gh release create "${{ github.ref_name }}" build/Pidlyse.dmg build/Pidlyse.dmg.sha256 --title "${{ github.ref_name }}" --notes ""
+        run: gh release create "$REF_NAME" build/Pidlyse.dmg build/Pidlyse.dmg.sha256 --title "$REF_NAME" --notes ""
         env:
           GH_TOKEN: ${{ github.token }}
+          REF_NAME: ${{ github.ref_name }}

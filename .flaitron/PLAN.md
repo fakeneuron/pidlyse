@@ -13,7 +13,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## Low
 
 - [ ] **PID-092** [light] | readme-screenshots — Re-record `docs/screenshots/popover.png` and `clean-all.gif`: both date from 2026-07-03 and show the pre-[[PID-EPIC-086]] popover (PID-titled rows, kind groups, a Needs review section). Operator-recorded; refresh the alt text if the framing changes. From [[PID-086.N]] audit.
-- [ ] **PID-096** [light]🔧 | ci-workflow-hardening — Add `permissions: contents: read` to `test.yml`, verify the gitleaks tarball's SHA-256 before running it, and pass `github.ref_name` to `release.yml`'s `gh release create` via `env:` instead of interpolating it. Surfaced by audit-security 2026-10-29 (Finding #3, Low)
 
 ## Future Opportunities
 
@@ -21,6 +20,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-096** [light]🔧 | ci-workflow-hardening — Completed 2026-10-29.
 - [x] **PID-095** [medium]🧩 | nil-token-kill-guard — Completed 2026-10-29.
 - [x] **PID-094** [medium]🧩 | url-clean-gate — Completed 2026-10-29.
 - [x] **PID-091** [light] | spaced-display-path — Completed 2026-10-18.
