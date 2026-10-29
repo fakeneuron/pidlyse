@@ -28,8 +28,8 @@ public struct ScanHistory: Equatable {
 
     /// PID-reuse-safe series key. Two observations of the same PID with different
     /// start times are distinct series; a `nil` start time (tests / a sysctl miss)
-    /// collapses to one series per PID — acceptable degradation, matching how the
-    /// kill path treats a missing token as a legacy fallback.
+    /// collapses to one series per PID — acceptable degradation for a CPU history
+    /// (the kill path, by contrast, refuses a tokenless row — PID-095).
     public struct Key: Hashable {
         public let pid: Int32
         public let startTime: ProcStartTime?

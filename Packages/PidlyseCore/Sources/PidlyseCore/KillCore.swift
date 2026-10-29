@@ -34,8 +34,9 @@ public enum KillCore {
     /// (PID-62.2). `unkillable` = SIGTERM hit EPERM: the process is owned by another
     /// user (e.g. the root Docker daemon), so no signal of ours will ever reach it
     /// and no amount of retrying changes that (PID-62.3). `notKilled` = the PID was
-    /// recycled or gone before SIGTERM and the identity guard refused to signal a
-    /// bystander — nothing of ours killed anything, and nothing was wrong either.
+    /// recycled or gone before SIGTERM, or carried no scan-time token (PID-095), and
+    /// the identity guard refused to signal a possible bystander — nothing of ours
+    /// killed anything.
     ///
     /// Only `confirmed` is logged as a clean — excluding the other three keeps
     /// "RAM reclaimed" honest. A process that *does* die but comes back under a new
@@ -201,12 +202,14 @@ public enum KillCore {
     /// (`current`). Guards the scan→click window the SIGKILL-escalation check can't
     /// see: a PID recycled between the scan and the user's click would map to an
     /// unrelated process. Rules:
-    /// - `expected == nil` (no scan-time token captured) → send (legacy behavior;
-    ///   nothing to enforce against, so this is never worse than pre-PID-35.3).
+    /// - `expected == nil` (no scan-time token captured) → don't send. Identity was
+    ///   never established, so a recycled PID would pass unchecked and take both
+    ///   signals; the scan always supplies the token, so a nil one means the
+    ///   process was already gone at scan time (PID-095, fail closed).
     /// - `expected` set, `current == nil` → don't send (the process is gone).
     /// - both set → send only when identical (same process as scanned).
     public static func shouldSendSIGTERM(expected: ProcStartTime?, current: ProcStartTime?) -> Bool {
-        guard let expected else { return true }
+        guard let expected else { return false }
         guard let current else { return false }
         return expected == current
     }
@@ -220,8 +223,9 @@ public enum KillCore {
     /// - `current == nil` → no process-table entry at all → dead.
     /// - `isZombie` → exited, just not yet reaped by its parent → dead. (Without
     ///   this a zombie's unchanged start time would read as a false `survived`.)
-    /// - `snapshot == nil` → identity was never established (legacy no-token path),
-    ///   so existence is all we can honestly assert → still running.
+    /// - `snapshot == nil` → identity was never established, so existence is all we
+    ///   can honestly assert → still running. (`killPosix` never passes `nil` since
+    ///   PID-095 refuses a tokenless kill; kept so the truth table stays total.)
     /// - both present → still running only if it's the *same* process; a different
     ///   start time means ours died and the kernel recycled the PID.
     public static func isStillRunning(snapshot: ProcStartTime?,

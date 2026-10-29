@@ -115,8 +115,9 @@ public struct ProcessItem: Identifiable {
     /// Resident set size in KB from `ps rss` column.
     public let rssKB: Int
     /// Process start-time identity token captured at scan, or `nil` when not
-    /// captured (tests, or a sysctl miss). The kill path re-verifies it before the
-    /// initial SIGTERM to refuse killing a PID recycled since the scan. (PID-35.3)
+    /// captured (tests, or a sysctl miss — the process exited mid-scan). The kill
+    /// path re-verifies it before the initial SIGTERM to refuse killing a PID
+    /// recycled since the scan, and refuses a `nil` token outright. (PID-35.3, PID-095)
     public let startTime: ProcStartTime?
     /// The user id that owns the process, captured at scan time, or `nil` when it
     /// wasn't resolved (no provider injected — e.g. unit tests). Pidlyse runs

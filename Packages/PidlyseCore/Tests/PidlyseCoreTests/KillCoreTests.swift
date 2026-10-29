@@ -110,11 +110,12 @@ final class KillCoreTests: XCTestCase {
         XCTAssertFalse(KillCore.shouldSendSIGTERM(expected: a, current: nil))
     }
 
-    func testShouldSendSIGTERM_noScanToken_sends() {
-        // No identity captured at scan → legacy fallback: send (never worse than
-        // pre-PID-35.3, and a wiring miss can't silently no-op every kill).
-        XCTAssertTrue(KillCore.shouldSendSIGTERM(expected: nil, current: a))
-        XCTAssertTrue(KillCore.shouldSendSIGTERM(expected: nil, current: nil))
+    func testShouldSendSIGTERM_noScanToken_doesNotSend() {
+        // No identity captured at scan → fail closed (PID-095): a live `current` may
+        // be a recycled bystander, and a nil one is a gone process that would
+        // otherwise be logged as a confirmed kill.
+        XCTAssertFalse(KillCore.shouldSendSIGTERM(expected: nil, current: a))
+        XCTAssertFalse(KillCore.shouldSendSIGTERM(expected: nil, current: nil))
     }
 
     // MARK: - isStillRunning death check (PID-62.2 — post-SIGKILL verification)
@@ -143,7 +144,7 @@ final class KillCoreTests: XCTestCase {
     }
 
     func testIsStillRunning_noSnapshot_fallsBackToExistence() {
-        // Identity never established (legacy no-token path) → existence is all we
+        // Identity never established (unreachable from killPosix since PID-095) → existence is all we
         // can honestly assert, so a live entry counts as still running.
         XCTAssertTrue(KillCore.isStillRunning(snapshot: nil, current: a, isZombie: false))
         XCTAssertFalse(KillCore.isStillRunning(snapshot: nil, current: nil, isZombie: false))

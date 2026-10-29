@@ -79,8 +79,8 @@ public enum Killability: Equatable {
 
     /// Whether a process belongs to someone other than the user Pidlyse runs as — the
     /// pre-click half of the unkillable signal. An unresolved uid means "unknown", and
-    /// the honest response to not knowing is to leave the affordance alone (the same
-    /// permissive default `startTime == nil` gets in the PID-35.3 identity guard).
+    /// the honest response to not knowing is to leave the affordance alone — the
+    /// kill-time identity guard (PID-35.3, PID-095) still refuses a tokenless row.
     public static func isForeignOwned(ownerUID: uid_t?, currentUID: uid_t) -> Bool {
         guard let ownerUID else { return false }
         return ownerUID != currentUID
