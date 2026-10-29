@@ -532,8 +532,7 @@ final class ScanEngine: ObservableObject {
     }
 
     /// A failed port scan is what holds back rows a sweep would otherwise take
-    /// (PID-090): the one condition the popover note, the headless notification,
-    /// and the Shortcut dialog show `ScanPipeline.portScanUnavailableNote` on.
+    /// (PID-090): the one condition the popover note and the Shortcut dialog show `ScanPipeline.portScanUnavailableNote` on.
     var isSweepPausedByPortScan: Bool {
         portScanUnavailable && items.contains { isSweepable($0, portScanUnavailable: false) }
     }
@@ -541,7 +540,8 @@ final class ScanEngine: ObservableObject {
     /// The "Clean all" sweep set: likely strays (PID-086.2) minus high-risk rows,
     /// protected projects (PID-54.4), registered-port listeners (PID-088), and rows we
     /// can't honestly kill (PID-62.3).
-    /// Engine-side SSOT shared by every external trigger (URL scheme, AppIntents) —
+    /// Engine-side SSOT shared by every external trigger (AppIntents; the URL scheme
+    /// has no kill verb, PID-094) —
     /// the same set the CLI's `commandClean()` derives.
     var sweepableStrays: [ProcessItem] {
         items.filter(isSweepable)
@@ -554,43 +554,6 @@ final class ScanEngine: ObservableObject {
     /// every kill is verified and the follow-up scan has published.
     func cleanAllSafe(completion: @escaping (KillReport) -> Void = { _ in }) {
         kill(sweepableStrays, completion: completion)
-    }
-
-    /// Post a system notification summarising a headless clean (PID-58.2). Unlike
-    /// the new-stray notification, this is the *only* feedback channel for a
-    /// headless `pidlyse://clean`, so it always posts and requests authorization
-    /// on demand if not yet determined — independent of the `notificationsEnabled`
-    /// setting (which stays scoped to new-stray scan notifications). Silently
-    /// no-ops if the user has denied notifications.
-    func fireCleanResultNotification(_ report: KillReport) {
-        let content = UNMutableNotificationContent()
-        if report.requested == 0 && isSweepPausedByPortScan {
-            // A failed port scan blocked the sweep (PID-090), not an empty one.
-            content.title = "Nothing cleaned"
-            content.body = ScanPipeline.portScanUnavailableNote
-        } else if report.requested == 0 {
-            content.title = "Nothing to clean"
-            content.body = "No likely strays to clean."
-        } else {
-            content.title = report.headline
-            content.body = report.details
-        }
-        content.sound = .default
-
-        let center = UNUserNotificationCenter.current()
-        center.getNotificationSettings { settings in
-            let post = {
-                let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
-                center.add(request)
-            }
-            if settings.authorizationStatus == .notDetermined {
-                center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
-                    if granted { post() }
-                }
-            } else {
-                post()
-            }
-        }
     }
 
     // MARK: - Scan history (PID-55.2)

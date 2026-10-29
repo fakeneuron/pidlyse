@@ -8,8 +8,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
-- [ ] **PID-094** [medium]🧩 | url-clean-gate — `pidlyse://clean` (`AppDelegate.swift:74`) runs the Clean-all sweep on any URL open with no confirmation, so a web page or local app can trigger kills; README §Security says every kill is an explicit click. Choose the gate (confirmation alert listing the sweep set / drop the verb / per-install token), implement it with a test, and make README §Security name every non-click trigger (URL, Shortcuts, CLI, Raycast). Surfaced by audit-security 2026-10-29 (Finding #1, High)
-
 ## Medium
 
 - [ ] **PID-095** [medium]🧩 | nil-token-kill-guard — `KillCore.shouldSendSIGTERM(expected: nil, …)` returns true (`KillCore.swift:208`), so a row whose scan-time start token was unreadable skips the PID-reuse guard, can SIGTERM then SIGKILL a recycled bystander, and logs `.confirmed` for a process that was already gone. Production always supplies the token (`ScanPipeline.swift:95`): make nil refuse (`.notKilled`), flip `testShouldSendSIGTERM_noScanToken_sends`, and audit tokenless fixtures. Surfaced by audit-security 2026-10-29 (Finding #2, Medium)
@@ -25,6 +23,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-094** [medium]🧩 | url-clean-gate — Completed 2026-10-29.
 - [x] **PID-091** [light] | spaced-display-path — Completed 2026-10-18.
 - [x] **PID-093** [light] | port-demotion-fail-open — Completed 2026-10-18.
 - [x] **PID-090** [medium] | port-scan-fail-open — Completed 2026-10-18.

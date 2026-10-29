@@ -35,14 +35,13 @@ private func sharedEngine() -> ScanEngine? {
 }
 
 /// "Clean likely strays" — the Shortcuts/Spotlight parallel of the popover's "Clean
-/// all" and `pidlyse://clean` (PID-58.2). Rides the engine's `cleanAllSafe` action
+/// all" and `pidlyse clean`. Rides the engine's `cleanAllSafe` action
 /// (likely strays minus high-risk, protected and unkillable rows, clean-log append,
 /// rescan; PID-086.2), so it can never touch in-use, high-risk or protected work. The
 /// type keeps its pre-PID-086.4 name: existing user shortcuts bind to it. It waits
 /// for the launch scan when invoked on a cold app, so it never treats the initial
 /// empty snapshot as a clean result.
-/// The returned dialog is the intent's feedback channel, so —
-/// unlike `pidlyse://clean`, which has no return path — it posts no notification.
+/// The returned dialog is the intent's feedback channel; it posts no notification.
 struct CleanSafeStraysIntent: AppIntent {
     static var title: LocalizedStringResource = "Clean Likely Strays"
     static var description = IntentDescription(

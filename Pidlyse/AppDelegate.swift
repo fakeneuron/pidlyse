@@ -67,19 +67,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// `LSUIElement` status-item app the open lands on the delegate with no window.
     /// The pure verb parse lives in `PidlyseCore.URLScheme`; foreign schemes and
     /// unknown verbs are ignored silently (no error surface for a drive-by URL).
-    /// `clean` runs the headless "Clean all" sweep directly and posts a result
-    /// notification — the launcher invocation is the explicit user action, and the
-    /// sweep is bounded to the engine's sweep set (`sweepableStrays`). `scan`
-    /// re-enumerates (the manual ↺ equivalent).
+    /// `scan` re-enumerates (the manual ↺ equivalent). There is deliberately no
+    /// kill verb: any web page or app can open a URL (PID-094).
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls {
             switch URLScheme.parse(url) {
-            case .clean:
-                engine.afterInitialScan { [weak self] in
-                    self?.engine.cleanAllSafe { report in
-                        self?.engine.fireCleanResultNotification(report)
-                    }
-                }
             case .scan:
                 engine.rescan()
             case nil:

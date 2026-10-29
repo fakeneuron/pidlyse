@@ -60,7 +60,7 @@ public enum KillPhase: Equatable {
 
 /// The honest tally of a bulk kill (PID-62.5): what actually happened to each row,
 /// not how many signals were sent. One source for the popover's Clean-all line,
-/// the `pidlyse://clean` notification, the Shortcuts dialog, and CLI `clean`.
+/// the Shortcuts dialog, and CLI `clean`.
 public struct KillReport: Equatable {
     public let requested: Int
     /// Verified gone and still gone at the follow-up check.
