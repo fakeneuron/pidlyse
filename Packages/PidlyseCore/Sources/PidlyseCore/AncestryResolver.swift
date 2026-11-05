@@ -3,8 +3,7 @@ import Foundation
 /// One node in the full system process table: a parent pid plus a compact,
 /// human-readable label for the executable. Built for the inspector's parent-chain
 /// hint (PID-52.2), which walks ancestors all the way to launchd — including the
-/// non-stray processes (shells, `login`, launchd) that `ScanCore.parentCommand`
-/// deliberately omits (it resolves only within the scanned stray set).
+/// non-stray processes (shells, `login`, launchd) outside the scanned stray set.
 public struct ProcessNode: Equatable {
     /// Parent process id (`ps ppid`).
     public let ppid: Int32
@@ -26,9 +25,9 @@ public struct ProcessNode: Equatable {
 }
 
 /// Resolves a process's complete ancestor chain up to launchd (pid 1) for the
-/// inspector's "child of …" hint (PID-52.2). Unlike `ScanCore.parentCommand`
-/// (scanned strays only), this walks the *whole* system process table, so it can
-/// name shells / `login` / launchd that were never stray candidates.
+/// inspector's "child of …" hint (PID-52.2). It walks the *whole* system process
+/// table, not just the scanned strays, so it can name shells / `login` / launchd
+/// that were never stray candidates.
 ///
 /// Mirrors `PortRegistry` / `CwdResolver`: a single bulk `ps` shell-out feeds a
 /// pure, injectable parser; the chain walk is pure. Resolved once per scan in

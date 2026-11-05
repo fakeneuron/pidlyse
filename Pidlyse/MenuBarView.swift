@@ -496,7 +496,7 @@ struct MenuBarView: View {
 
     private func reasoningBlock(item: ProcessItem, isOld: Bool, killability: Killability) -> some View {
         // Full ancestor chain to launchd (PID-52.2): walks the whole process table,
-        // so it names non-stray shells / login that `ScanCore.parentCommand` couldn't.
+        // so it names non-stray shells / login outside the scanned stray set.
         let ancestors = AncestryResolver.ancestorChain(ofPPID: item.ppid, in: engine.processTable)
         return VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 4) {

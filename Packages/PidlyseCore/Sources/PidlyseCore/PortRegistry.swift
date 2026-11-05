@@ -102,17 +102,10 @@ public enum PortRegistry {
 
     // MARK: - Port listener detection
 
-    /// Parse one line of `lsof -nPi -sTCP:LISTEN` output, returning the PID only if
-    /// the line's port appears in `ports` (defaults to the current `effectivePorts` when
-    /// nil). Returns nil for the header line or ports not in the registry.
-    public static func parsePIDAndPort(_ line: String, ports: Set<Int>? = nil) -> Int32? {
-        parseListenerLine(line, ports: ports)?.pid
-    }
-
     /// Parse one line of `lsof -nPi -sTCP:LISTEN` output into its (PID, registered port)
     /// pair, or nil for the header line / ports not in `ports` (defaults to the current
     /// `effectivePorts` when nil). Single source of truth for the listener-line column
-    /// layout; `parsePIDAndPort` and `listeningPorts` both build on it.
+    /// layout; `listeningPorts` builds on it.
     ///
     /// Expected column layout (fields split on whitespace):
     ///   COMMAND(0) PID(1) USER(2) FD(3) TYPE(4) DEVICE(5) SIZE/OFF(6) NODE(7) NAME(8) [(LISTEN)]

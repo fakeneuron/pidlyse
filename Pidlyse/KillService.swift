@@ -17,10 +17,6 @@ enum KillService {
     /// shape (PID-53.2 — only `.confirmed` deaths are logged).
     typealias KillOutcome = KillCore.KillOutcome
 
-    /// The process-identity token (PID-18.3, PID-35.3), re-exported for the
-    /// existing `KillService.ProcStartTime` call shape.
-    typealias ProcStartTime = PidlyseCore.ProcStartTime
-
     /// Terminate one process. The signals and the grace period happen inside the
     /// blocking `KillCore.kill`, dispatched to a background queue here.
     /// `onComplete` always fires on the main queue.

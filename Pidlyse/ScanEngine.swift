@@ -48,7 +48,7 @@ final class ScanEngine: ObservableObject {
     /// whole system, captured at scan time (PID-52.2). Resolved once per scan via a
     /// single bulk `ps -axo pid=,ppid=,comm=`; consumed by the inspector's parent-chain
     /// hint (`AncestryResolver.ancestorChain`) to walk every ancestor up to launchd —
-    /// including non-stray shells / `login` that `ScanCore.parentCommand` can't see.
+    /// including non-stray shells / `login` outside the scanned stray set.
     /// Empty when nothing resolves. Mirrors `listeningPorts` / `cwds`.
     @Published private(set) var processTable: [Int32: ProcessNode] = [:]
 

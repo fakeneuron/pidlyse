@@ -3,28 +3,10 @@ import XCTest
 
 final class PortRegistryTests: XCTestCase {
 
-    // MARK: - PortRegistry.parsePIDAndPort
-
-    func testParsePIDAndPort_registeredPort_returnsPID() {
-        // 3001 is siteguy's frontend port — in registeredPorts.
-        let line = "node       1234 user  22u  IPv4 0x0  0t0  TCP *:3001 (LISTEN)"
-        let pid = PortRegistry.parsePIDAndPort(line)
-        XCTAssertEqual(pid, 1234)
-    }
-
-    func testParsePIDAndPort_unregisteredPort_returnsNil() {
-        let line = "ruby       5678 user  11u  IPv4 0x0  0t0  TCP *:9999 (LISTEN)"
-        XCTAssertNil(PortRegistry.parsePIDAndPort(line))
-    }
-
-    func testParsePIDAndPort_headerLine_returnsNil() {
-        let line = "COMMAND    PID   USER   FD   TYPE DEVICE SIZE/OFF NODE NAME"
-        XCTAssertNil(PortRegistry.parsePIDAndPort(line))
-    }
-
     // MARK: - PortRegistry.parseListenerLine
 
     func testParseListenerLine_registeredPort_returnsPIDAndPort() {
+        // 3001 is siteguy's frontend port — in registeredPorts.
         let line = "node       1234 user  22u  IPv4 0x0  0t0  TCP *:3001 (LISTEN)"
         let match = PortRegistry.parseListenerLine(line)
         XCTAssertEqual(match?.pid, 1234)
@@ -33,6 +15,11 @@ final class PortRegistryTests: XCTestCase {
 
     func testParseListenerLine_unregisteredPort_returnsNil() {
         let line = "ruby       5678 user  11u  IPv4 0x0  0t0  TCP *:9999 (LISTEN)"
+        XCTAssertNil(PortRegistry.parseListenerLine(line))
+    }
+
+    func testParseListenerLine_headerLine_returnsNil() {
+        let line = "COMMAND    PID   USER   FD   TYPE DEVICE SIZE/OFF NODE NAME"
         XCTAssertNil(PortRegistry.parseListenerLine(line))
     }
 
