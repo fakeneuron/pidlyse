@@ -19,8 +19,7 @@ final class ScanEngine: ObservableObject {
 
     /// Kills rows and reports every outcome once, on the main queue. Injected so
     /// tests can drive the kill lifecycle without signalling anything (PID-078.3).
-    typealias Killer = ([ProcessItem], [Int32: String],
-                        @escaping ([Int32: KillService.KillOutcome]) -> Void) -> Void
+    typealias Killer = ([ProcessItem], @escaping ([Int32: KillService.KillOutcome]) -> Void) -> Void
 
     /// Posts the new-stray notification (title, body). Injected so tests can see what
     /// a scan would announce without touching Notification Center (PID-086.4).
@@ -38,19 +37,11 @@ final class ScanEngine: ObservableObject {
     /// row counts as port-bound, so nothing is swept until a scan reads ports again.
     @Published private(set) var portScanUnavailable = false
 
-    /// PID → the Docker container name that owns it, captured at scan time
-    /// (PID-037.2). Resolved once per scan via a single bulk `docker inspect`;
-    /// consumed by the kill path (`docker stop <name>`, retiring the per-click
-    /// `findContainerID` inspect — F9) and the row-expansion ownership hint
-    /// (PID-037.3). Empty when Docker is absent. Mirrors `listeningPorts`.
-    @Published private(set) var containerOwners: [Int32: String] = [:]
-
     /// PID → its working-directory provenance (project label + abbreviated full path),
     /// captured at scan time (PID-038). Resolved once per scan via a single bulk `lsof`
     /// over the scanned PIDs; consumed by the row descriptor (showing the git-project
     /// `bidviz`/`bidviz/frontend`) so a bare `npm`/`node` row is identifiable beyond the
-    /// executable name. Empty when nothing resolves. Mirrors `listeningPorts` /
-    /// `containerOwners`.
+    /// executable name. Empty when nothing resolves. Mirrors `listeningPorts`.
     @Published private(set) var cwds: [Int32: ProcessCwd] = [:]
 
     /// PID → its process-table node (parent pid + compact executable label) for the
@@ -58,7 +49,7 @@ final class ScanEngine: ObservableObject {
     /// single bulk `ps -axo pid=,ppid=,comm=`; consumed by the inspector's parent-chain
     /// hint (`AncestryResolver.ancestorChain`) to walk every ancestor up to launchd —
     /// including non-stray shells / `login` that `ScanCore.parentCommand` can't see.
-    /// Empty when nothing resolves. Mirrors `listeningPorts` / `containerOwners` / `cwds`.
+    /// Empty when nothing resolves. Mirrors `listeningPorts` / `cwds`.
     @Published private(set) var processTable: [Int32: ProcessNode] = [:]
 
     /// PID → its open files + sockets, fetched **on-demand** when a row expands
@@ -221,7 +212,7 @@ final class ScanEngine: ObservableObject {
     /// and a notification recorder (PID-086.4).
     init(defaults: UserDefaults = .standard,
          scanSource: @escaping ScanSource = { ScanPipeline.run($0) },
-         killer: @escaping Killer = { KillService.kill($0, containerOwners: $1, onComplete: $2) },
+         killer: @escaping Killer = { KillService.kill($0, onComplete: $1) },
          cleanLog: CleanLogStore = CleanLogStore(),
          killFeedbackLinger: TimeInterval = ScanEngine.defaultKillFeedbackLinger,
          notifier: @escaping Notifier = ScanEngine.postNotification) {
@@ -283,7 +274,6 @@ final class ScanEngine: ObservableObject {
                 self.items = visible
                 self.listeningPorts = snapshot.listeningPorts
                 self.portScanUnavailable = snapshot.portScanUnavailable
-                self.containerOwners = snapshot.containerOwners
                 self.cwds = snapshot.cwds
                 self.processTable = snapshot.processTable
                 self.recordScanHistory(visible)
@@ -450,7 +440,7 @@ final class ScanEngine: ObservableObject {
         let preKillCwds = cwds.filter { pid, _ in targets.contains { $0.pid == pid } }
         let preKillVerdicts = Dictionary(targets.map { ($0.pid, verdict($0)) }, uniquingKeysWith: { first, _ in first })
         targets.forEach { setKillPhase(.killing, for: $0, token: token) }
-        killer(targets, containerOwners) { [weak self] outcomes in
+        killer(targets) { [weak self] outcomes in
             guard let self else { return }
             self.recordCleaned(targets, outcomes: outcomes, preKillCwds: preKillCwds, killStartedAt: startedAt)
             var phases = outcomes.mapValues(KillPhase.init)
@@ -632,7 +622,7 @@ final class ScanEngine: ObservableObject {
     /// Whether Pidlyse can honestly offer to kill this row — and if not, why, in a
     /// sentence the user can act on (PID-62.3). Folds the scan-time owner uid, the
     /// session's observed `EPERM`s, the respawn signal (PID-62.2), and the
-    /// container/ancestor attribution into the pure `PidlyseCore.Killability`
+    /// ancestor attribution into the pure `PidlyseCore.Killability`
     /// derivation. An **overlay**: it removes an affordance and adds an explanation,
     /// but never touches the risk tier, the bucket, or the classification.
     func killability(_ item: ProcessItem) -> Killability {
@@ -641,12 +631,10 @@ final class ScanEngine: ObservableObject {
         // killable row doesn't pay for an ancestor walk.
         let manager = respawner
             ? Killability.manager(ancestors: AncestryResolver.ancestorChain(ofPPID: item.ppid,
-                                                                           in: processTable),
-                                  containerOwner: containerOwners[item.pid])
+                                                                           in: processTable))
             : nil
-        // The Docker-aware owner fold is shared with the CLI (PID-079.6).
+        // The group-aware owner fold is shared with the CLI (PID-079.6).
         return Killability.derive(for: item,
-                                  containerOwners: containerOwners,
                                   currentUID: currentUID,
                                   killDenied: wasKillDenied(item),
                                   isRespawner: respawner,

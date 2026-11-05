@@ -31,7 +31,7 @@ public struct ProcessCwd: Equatable {
 /// Mirrors `PortRegistry`: a single bulk `lsof` shell-out feeds a pure, injectable
 /// parser; the git-root walk and label derivation are likewise injectable/pure.
 /// Resolved once per scan in `ScanEngine` and published as a `[Int32: ProcessCwd]` map
-/// alongside `listeningPorts` / `containerOwners`. Empty when nothing resolves — the UI
+/// alongside `listeningPorts`. Empty when nothing resolves — the UI
 /// degrades gracefully (falls back to the executable name), like the other hints.
 public enum CwdResolver {
 

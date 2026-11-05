@@ -63,27 +63,18 @@ final class KillabilityTests: XCTestCase {
 
     // MARK: - Respawn attribution
 
-    func testManager_containerOwnerWins() {
-        // A container's restart policy is the most specific answer available, so it
-        // outranks the ancestor chain even when both resolve.
-        XCTAssertEqual(Killability.manager(ancestors: ["node", "zsh"], containerOwner: "bidviz-db"),
-                       "container bidviz-db")
-    }
-
-    func testManager_fallsBackToNearestAncestor() {
-        XCTAssertEqual(Killability.manager(ancestors: ["node", "zsh", "launchd"], containerOwner: nil),
-                       "node")
+    func testManager_namesNearestAncestor() {
+        XCTAssertEqual(Killability.manager(ancestors: ["node", "zsh", "launchd"]), "node")
     }
 
     func testManager_orphanNamesLaunchd() {
         // A reparented orphan's nearest ancestor *is* launchd — the right answer, not
         // a fallback.
-        XCTAssertEqual(Killability.manager(ancestors: ["launchd"], containerOwner: nil), "launchd")
+        XCTAssertEqual(Killability.manager(ancestors: ["launchd"]), "launchd")
     }
 
     func testManager_unresolvableIsNil() {
-        XCTAssertNil(Killability.manager(ancestors: [], containerOwner: nil))
-        XCTAssertNil(Killability.manager(ancestors: [], containerOwner: ""))
+        XCTAssertNil(Killability.manager(ancestors: []))
     }
 
     // MARK: - State derivation
@@ -162,23 +153,6 @@ final class KillabilityTests: XCTestCase {
         XCTAssertNil(ScanCore.makeItem(from: line, elapsedThreshold: 60)?.uid)
     }
 
-    // MARK: - Docker-stop route
-
-    func testDockerContainerRootRoutesViaDockerStop() throws {
-        let line = " 4711     1    30:13 ??       0.1  12345  /usr/local/bin/docker run redis"
-        let item = try XCTUnwrap(ScanCore.makeItem(from: line, elapsedThreshold: 60))
-        XCTAssertEqual(item.kind, .docker)
-        XCTAssertTrue(KillCore.routesViaDockerStop(item, containerOwners: [4711: "redis"]))
-        // Daemon/helper PIDs with no container owner fall through to signals.
-        XCTAssertFalse(KillCore.routesViaDockerStop(item, containerOwners: [:]))
-    }
-
-    func testNonDockerKindNeverRoutesViaDockerStop() throws {
-        let line = " 4711     1    30:13 ??       0.1  12345  /usr/local/bin/npm run dev"
-        let item = try XCTUnwrap(ScanCore.makeItem(from: line, elapsedThreshold: 60))
-        XCTAssertFalse(KillCore.routesViaDockerStop(item, containerOwners: [4711: "redis"]))
-    }
-
     // MARK: - Row derivation (PID-079.6)
 
     private func row(_ pid: Int32, kind: ProcessKind, uid: uid_t?, members: [ProcessItem] = []) -> ProcessItem {
@@ -187,10 +161,10 @@ final class KillabilityTests: XCTestCase {
     }
 
     /// The CLI's call: a one-shot run has no session facts.
-    private func derive(_ item: ProcessItem, owners: [Int32: String] = [:],
+    private func derive(_ item: ProcessItem,
                         killDenied: Bool = false, isRespawner: Bool = false,
                         manager: String? = nil) -> Killability {
-        Killability.derive(for: item, containerOwners: owners, currentUID: me,
+        Killability.derive(for: item, currentUID: me,
                            killDenied: killDenied, isRespawner: isRespawner, manager: manager)
     }
 
@@ -198,12 +172,12 @@ final class KillabilityTests: XCTestCase {
         XCTAssertEqual(derive(row(10, kind: .node, uid: 0)), .unkillable(owner: "root"))
     }
 
-    func testDeriveForRow_dockerStopRoute_ignoresForeignOwner() {
-        // `docker stop` needs no signal permission, so a root-owned container root
-        // stays killable — the CLI sweep and the app's ✕ agree.
-        let item = row(10, kind: .docker, uid: 0)
-        XCTAssertEqual(derive(item, owners: [10: "redis"]), .killable)
-        XCTAssertNotEqual(derive(item), .killable, "no container owner → signals → EPERM")
+    func testDeriveForRow_foreignOwnedDocker_isUnkillable() {
+        // PID-097: a docker row (a `docker` CLI client) gets no owner-check exemption.
+        // On macOS no scanned host PID is a container root (containers run in Docker's
+        // VM), so every kill is a signal and a foreign owner means EPERM.
+        XCTAssertEqual(derive(row(10, kind: .docker, uid: 0)), .unkillable(owner: "root"))
+        XCTAssertEqual(derive(row(10, kind: .docker, uid: me)), .killable)
     }
 
     func testDeriveForRow_foreignGroupMember_isUnkillable() {

@@ -41,20 +41,17 @@ public struct ScanSnapshot {
     /// The registered-port `lsof` gave no data (PID-090), so `listeningPorts` is
     /// empty for want of an answer, not because nothing listens.
     public var portScanUnavailable: Bool
-    public var containerOwners: [Int32: String]
     public var cwds: [Int32: ProcessCwd]
     public var processTable: [Int32: ProcessNode]
 
     public init(items: [ProcessItem],
                 listeningPorts: [Int32: Set<Int>] = [:],
                 portScanUnavailable: Bool = false,
-                containerOwners: [Int32: String] = [:],
                 cwds: [Int32: ProcessCwd] = [:],
                 processTable: [Int32: ProcessNode] = [:]) {
         self.items = items
         self.listeningPorts = listeningPorts
         self.portScanUnavailable = portScanUnavailable
-        self.containerOwners = containerOwners
         self.cwds = cwds
         self.processTable = processTable
     }
@@ -68,7 +65,7 @@ public struct ScanSnapshot {
 public enum ScanPipeline {
 
     /// Run one scan against the live system: one `lsof` for registered-port
-    /// listeners, one bulk `docker inspect`, one `ps` enumeration, one `lsof` for
+    /// listeners, one `ps` enumeration, one `lsof` for
     /// cwds, optionally one `ps` for the process table, then the cwd-scoped ignores.
     /// Synchronous; callers own the queue. `includeProcessTable` feeds the stray
     /// verdict's session walk (PID-086.2) and the app's parent-chain hint (PID-52.2);
@@ -79,9 +76,6 @@ public enum ScanPipeline {
         // the per-row port hint (PID-036.3). Nil means no data (PID-090).
         let scannedPorts = PortRegistry.scanListeningPorts()
         let portMap = scannedPorts ?? [:]
-        // One bulk inspect per scan; the kill path and the row hint read it instead
-        // of a per-click inspect (PID-037.2).
-        let owners = DockerService.containerOwners()
         // The start time lets the kill path detect a recycled PID (PID-35.3); the
         // owner uid lets a foreign-owned row show as unkillable pre-click (PID-62.3);
         // the real argv keeps a spaced path whole for the row name (PID-087).
@@ -101,7 +95,6 @@ public enum ScanPipeline {
         let procTable = includeProcessTable ? AncestryResolver.processTable() : [:]
         return ScanSnapshot(items: finish(items, cwds: cwdMap, request: request),
                             listeningPorts: portMap, portScanUnavailable: scannedPorts == nil,
-                            containerOwners: owners,
                             cwds: cwdMap, processTable: procTable)
     }
 

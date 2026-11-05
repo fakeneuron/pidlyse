@@ -5,7 +5,7 @@ import PidlyseCore
 // A thin impure shell over PidlyseCore: reads the app's defaults domain for
 // full rule parity, runs the same core ScanPipeline as the app, and routes kills
 // through the same KillCore path (SIGTERM → 2 s grace → SIGKILL, identity
-// guards, docker-stop routing) the app uses. One-shot by design — it never
+// guards, EPERM → unkillable) the app uses. One-shot by design — it never
 // kills without an explicit `clean` / `kill` invocation, and confirmed kills
 // append to the same clean-log the app's "Cleaned" tab reads.
 //
@@ -40,7 +40,6 @@ private struct Settings {
 private struct ScanResult {
     let items: [ProcessItem]
     let cwds: [Int32: ProcessCwd]
-    let containerOwners: [Int32: String]
     let listeningPorts: [Int32: Set<Int>]
     let portScanUnavailable: Bool
     let protectedPIDs: Set<Int32>
@@ -58,7 +57,6 @@ private func runScan(_ settings: Settings) -> ScanResult {
                                        processTable: snapshot.processTable,
                                        isQuiet: { $0.cpuPercent < ScanHistory.defaultLowCPUThreshold })
     return ScanResult(items: snapshot.items, cwds: snapshot.cwds,
-                      containerOwners: snapshot.containerOwners,
                       listeningPorts: snapshot.listeningPorts,
                       portScanUnavailable: snapshot.portScanUnavailable, protectedPIDs: protectedPIDs,
                       verdicts: verdicts)
@@ -67,14 +65,14 @@ private func runScan(_ settings: Settings) -> ScanResult {
 /// Kill `items` concurrently and block until every grace period resolves —
 /// the CLI's run-loop-free equivalent of KillService's bulk shape (DispatchGroup
 /// + global queue), so a multi-item `clean` doesn't serialize 2 s graces.
-private func killAll(_ items: [ProcessItem], containerOwners: [Int32: String]) -> [Int32: KillCore.KillOutcome] {
+private func killAll(_ items: [ProcessItem]) -> [Int32: KillCore.KillOutcome] {
     let group = DispatchGroup()
     let lock = NSLock()
     var outcomes: [Int32: KillCore.KillOutcome] = [:]
     for item in items {
         group.enter()
         DispatchQueue.global(qos: .userInitiated).async {
-            let outcome = KillCore.kill(item, containerOwners: containerOwners)
+            let outcome = KillCore.kill(item)
             lock.lock()
             outcomes[item.pid] = outcome
             lock.unlock()
@@ -131,8 +129,7 @@ private func commandClean() -> Int32 {
             isProtected: scan.protectedPIDs.contains(item.pid),
             isPortBound: ScanPipeline.isPortBound(item, listeningPorts: scan.listeningPorts,
                                                   portScanUnavailable: portScanUnavailable),
-            killability: Killability.derive(for: item, containerOwners: scan.containerOwners,
-                                            currentUID: currentUID,
+            killability: Killability.derive(for: item, currentUID: currentUID,
                                             killDenied: false, isRespawner: false, manager: nil))
     }
     let sweepable = scan.items.filter { isSweepable($0, portScanUnavailable: scan.portScanUnavailable) }
@@ -146,7 +143,7 @@ private func commandClean() -> Int32 {
         print("Nothing to clean — no likely strays that are unprotected, off registered ports, and killable.")
         return 0
     }
-    let outcomes = killAll(sweepable, containerOwners: scan.containerOwners)
+    let outcomes = killAll(sweepable)
     recordCleaned(sweepable, outcomes: outcomes, cwds: scan.cwds)
     // Same phase labels and tally as the app (PID-62.5). No respawn check: a
     // one-shot CLI has no follow-up scan or session memory to detect one.
@@ -171,7 +168,7 @@ private func commandKill(pid: Int32) -> Int32 {
         printErr("pidlyse: PID \(pid) is not a scan candidate — only processes `pidlyse list --all` surfaces can be killed")
         return 1
     }
-    let outcome = KillCore.kill(item, containerOwners: scan.containerOwners)
+    let outcome = KillCore.kill(item)
     recordCleaned([item], outcomes: [pid: outcome], cwds: scan.cwds)
     switch outcome {
     case .confirmed:

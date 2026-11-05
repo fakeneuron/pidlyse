@@ -74,7 +74,7 @@ final class ScanEngineLifecycleTests: XCTestCase {
 
     private func makeEngine(_ source: FakeSource,
                             defaults: UserDefaults? = nil,
-                            killer: @escaping ScanEngine.Killer = { _, _, _ in XCTFail("unexpected kill") },
+                            killer: @escaping ScanEngine.Killer = { _, _ in XCTFail("unexpected kill") },
                             linger: TimeInterval = 0.2,
                             notifier: @escaping ScanEngine.Notifier = { _, _ in }) -> ScanEngine {
         ScanEngine(defaults: defaults ?? makeSuite(),
@@ -228,7 +228,7 @@ final class ScanEngineLifecycleTests: XCTestCase {
         let stuck = item(11)
         let source = FakeSource(snapshot([gone, stuck]), snapshot([stuck]))
         var killed: [[Int32]] = []
-        let engine = makeEngine(source, killer: { targets, _, done in
+        let engine = makeEngine(source, killer: { targets, done in
             killed.append(targets.map(\.pid))
             DispatchQueue.main.async { done([10: .confirmed, 11: .survived]) }
         })
@@ -263,7 +263,7 @@ final class ScanEngineLifecycleTests: XCTestCase {
     func testNewerKillSurvivesOlderLingerClear() {
         let row = item(10)
         var pendingKills: [([Int32: KillService.KillOutcome]) -> Void] = []
-        let engine = makeEngine(FakeSource(snapshot([row])), killer: { _, _, done in
+        let engine = makeEngine(FakeSource(snapshot([row])), killer: { _, done in
             pendingKills.append(done)
         })
         scanAndWait(engine)
@@ -294,7 +294,7 @@ final class ScanEngineLifecycleTests: XCTestCase {
         let row = item(10, start: 1)
         let comeback = item(20, start: Int(Date().timeIntervalSince1970) + 60)
         let source = FakeSource(snapshot([row]), snapshot([comeback]))
-        let engine = makeEngine(source, killer: { _, _, done in
+        let engine = makeEngine(source, killer: { _, done in
             DispatchQueue.main.async { done([10: .confirmed]) }
         })
         scanAndWait(engine)
@@ -381,7 +381,7 @@ final class ScanEngineLifecycleTests: XCTestCase {
             11: ProcessCwd(label: "proj", fullPath: "~/code/proj/app"),
         ]))
         var killed: [[Int32]] = []
-        let engine = makeEngine(source, killer: { targets, _, _ in
+        let engine = makeEngine(source, killer: { targets, _ in
             killed.append(targets.map(\.pid))
         })
         engine.protectedProjects = ["~/code/proj"]
@@ -409,7 +409,7 @@ final class ScanEngineLifecycleTests: XCTestCase {
         // An orphan with no tty → session ended; once killed, no scan sees it again.
         let gone = item(10)
         let source = FakeSource(snapshot([gone]), snapshot([]))
-        let engine = makeEngine(source, killer: { _, _, done in
+        let engine = makeEngine(source, killer: { _, done in
             DispatchQueue.main.async { done([10: .confirmed]) }
         })
         scanAndWait(engine)

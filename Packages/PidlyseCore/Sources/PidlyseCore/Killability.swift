@@ -56,25 +56,21 @@ public enum Killability: Equatable {
         return isRespawner ? .respawner(manager: manager) : .killable
     }
 
-    /// Derive a scanned row's killability, folding in the owner the kill would
-    /// actually run into (PID-079.6). A container root stopped via `docker stop`
-    /// needs no signal permission, so its uid says nothing; a group row answers for
-    /// every member it would kill (PID-62.4). The session facts are required so no
-    /// caller drops them by omission: the app supplies its `EPERM` memory and respawn
-    /// signal; the one-shot CLI has none and says so explicitly.
+    /// Derive a scanned row's killability from its group owner fold (PID-079.6): a
+    /// group row answers for every member it would kill (PID-62.4). Every kind,
+    /// docker included, is killed by signal, so no kind is exempt (PID-097). The session facts are required so no caller drops them by
+    /// omission: the app supplies its `EPERM` memory and respawn signal; the one-shot
+    /// CLI has none and says so explicitly.
     public static func derive(for item: ProcessItem,
-                              containerOwners: [Int32: String],
                               currentUID: uid_t,
                               killDenied: Bool,
                               isRespawner: Bool,
                               manager: String?) -> Killability {
-        let ownerUID = KillCore.routesViaDockerStop(item, containerOwners: containerOwners)
-            ? nil : groupOwnerUID(item, currentUID: currentUID)
-        return derive(ownerUID: ownerUID,
-                      currentUID: currentUID,
-                      killDenied: killDenied,
-                      isRespawner: isRespawner,
-                      manager: manager)
+        derive(ownerUID: groupOwnerUID(item, currentUID: currentUID),
+               currentUID: currentUID,
+               killDenied: killDenied,
+               isRespawner: isRespawner,
+               manager: manager)
     }
 
     /// Whether a process belongs to someone other than the user Pidlyse runs as — the
@@ -105,14 +101,12 @@ public enum Killability: Equatable {
         return uid == 0 ? "root" : "another user (uid \(uid))"
     }
 
-    /// Who to blame for a respawn. A container owner is the most specific answer
-    /// available (its restart policy is doing this); otherwise the nearest ancestor
-    /// from `AncestryResolver.ancestorChain` — which for an orphan is `launchd`,
-    /// exactly the right answer. `nil` when neither resolves, and the explanation
+    /// Who to blame for a respawn: the nearest ancestor from
+    /// `AncestryResolver.ancestorChain` — which for an orphan is `launchd`, exactly
+    /// the right answer. `nil` when the chain doesn't resolve, and the explanation
     /// degrades to naming the behavior without the culprit.
-    public static func manager(ancestors: [String], containerOwner: String?) -> String? {
-        if let containerOwner, !containerOwner.isEmpty { return "container \(containerOwner)" }
-        return ancestors.first
+    public static func manager(ancestors: [String]) -> String? {
+        ancestors.first
     }
 
     // MARK: - Presentation

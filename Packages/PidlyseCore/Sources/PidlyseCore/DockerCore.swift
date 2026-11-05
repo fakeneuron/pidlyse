@@ -11,13 +11,6 @@ public enum DockerCore {
     /// `DockerService` and the tests share one source of truth.
     public static let psFormat = "{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}\t{{.Label \"com.docker.compose.project\"}}"
 
-    /// Tab-separated field order for the scan-time owner cache, produced by
-    /// `docker inspect --format "{{.State.Pid}}\t{{.Name}}"`. Resolves each
-    /// running container's host root PID to its name so the kill path and the
-    /// row-expansion hint can map a scanned PID back to its owning container
-    /// without a per-click inspect. Kept here as the shared source of truth.
-    public static let inspectOwnerFormat = "{{.State.Pid}}\t{{.Name}}"
-
     /// Tab-separated field order for the one-shot per-container stats sample,
     /// produced by `docker stats --no-stream --format
     /// "{{.ID}}\t{{.CPUPerc}}\t{{.MemUsage}}"`. Kept here so `DockerService`
@@ -48,27 +41,6 @@ public enum DockerCore {
                          status: fields[3],
                          ports: fields[4],
                          composeProject: project.isEmpty ? nil : project)
-    }
-
-    /// Parse `docker inspect --format inspectOwnerFormat` output (one container
-    /// per line, `<State.Pid>\t<Name>`) into a host-PID → container-name map.
-    /// Lines with a missing/unparseable PID, a PID of 0 (the container isn't
-    /// running, so it owns no host process), or fewer than two fields are
-    /// dropped. The `{{.Name}}` field carries a leading `/` (unlike
-    /// `docker ps {{.Names}}`), so it is stripped to match the panel's naming.
-    public static func parseContainerOwners(_ output: String) -> [Int32: String] {
-        var owners: [Int32: String] = [:]
-        for line in output.split(separator: "\n", omittingEmptySubsequences: true) {
-            let fields = line.components(separatedBy: "\t")
-            guard fields.count >= 2,
-                  let pid = Int32(fields[0].trimmingCharacters(in: .whitespaces)),
-                  pid != 0 else { continue }
-            let name = fields[1].trimmingCharacters(in: .whitespaces)
-                .drop(while: { $0 == "/" })
-            guard !name.isEmpty else { continue }
-            owners[pid] = String(name)
-        }
-        return owners
     }
 
     /// Parse `docker stats --no-stream --format statsFormat` output (one

@@ -567,12 +567,6 @@ struct MenuBarView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            if let owner = engine.containerOwners[item.pid] {
-                Text("owned by container \(owner)")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1).truncationMode(.middle)
-            }
             // On-demand open files + sockets (PID-52.3): fetched lazily when this block
             // appears (see `.onAppear` in `row`), cached per session. Rendered only once
             // resolved and non-empty — a process with nothing to show adds no lines

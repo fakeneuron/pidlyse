@@ -3,8 +3,10 @@ import Foundation
 /// Shared synchronous kill path: SIGTERM first, then a SIGKILL fallback after a
 /// 2 s grace period if the process is still alive, then a **death check** that
 /// confirms the process is actually gone before reporting success (PID-62.2).
-/// Docker processes route through `docker stop` (graceful container shutdown)
-/// before falling back to signals. EPERM is detected and reported as
+/// Docker-kind rows take the same path: on macOS a container's `State.Pid` lives
+/// in Docker's Linux VM, so no scanned host PID is a container root, and a
+/// `docker stop` keyed on one would stop an unrelated container (PID-097).
+/// EPERM is detected and reported as
 /// `.unkillable` (PID-62.3) — the process belongs to another user and no
 /// signal of ours will ever reach it.
 ///
@@ -27,8 +29,7 @@ public enum KillCore {
 
     /// Outcome of a kill attempt, threaded out so the clean log records only real
     /// deaths (PID-53.2). `confirmed` = the process is **verified gone** (absent,
-    /// PID recycled, or an unreaped zombie) after the grace period, or `docker stop`
-    /// succeeded. `survived` = our signals landed but the process is still running
+    /// PID recycled, or an unreaped zombie) after the grace period. `survived` = our signals landed but the process is still running
     /// under the same identity after the SIGKILL fallback — rare (uninterruptible
     /// state), and the honest answer where the old contract claimed success
     /// (PID-62.2). `unkillable` = SIGTERM hit EPERM: the process is owned by another
@@ -50,13 +51,8 @@ public enum KillCore {
 
     // MARK: - Public kill API
 
-    /// Terminate one process, blocking through the grace period. Docker items
-    /// whose PID maps to a container root process (per the scan-time
-    /// `containerOwners` map) route through `docker stop` first; docker
-    /// daemon/helper PIDs and all other processes use SIGTERM → grace → SIGKILL.
-    /// `containerOwners` is the scan-time owner cache; an empty map (its default)
-    /// means no container resolution is available and docker items fall through
-    /// to POSIX.
+    /// Terminate one process, blocking through the grace period: SIGTERM → grace →
+    /// SIGKILL for every kind, docker included.
     ///
     /// A group row (`ScanCore.collapseTrees`, PID-62.4) kills its root first, which
     /// takes a well-behaved tree down with it inside the root's grace period. Then
@@ -65,11 +61,7 @@ public enum KillCore {
     /// (e.g. under a `sh -c` root that doesn't forward signals) gets its own SIGTERM →
     /// grace → SIGKILL. `groupOutcome` folds the per-member answers into the row's one
     /// outcome.
-    public static func kill(_ item: ProcessItem, containerOwners: [Int32: String] = [:]) -> KillOutcome {
-        if routesViaDockerStop(item, containerOwners: containerOwners),
-           dockerStopByName(containerOwners[item.pid]) {
-            return .confirmed
-        }
+    public static func kill(_ item: ProcessItem) -> KillOutcome {
         let root = killPosix(item.pid, expected: item.startTime)
         // An EPERM root is still alive and foreign-owned: signalling its members would
         // only half-kill a tree we've already said we can't kill.
@@ -164,14 +156,6 @@ public enum KillCore {
             index = end + 1
         }
         return args
-    }
-
-    /// Whether `kill(_:containerOwners:)` stops this item with `docker stop` rather
-    /// than a signal — a docker-kind PID that is a container's root process. Such a
-    /// kill needs no signal permission, so the killability overlay must not call it
-    /// unkillable just because the PID is foreign-owned. (PID-62.3)
-    public static func routesViaDockerStop(_ item: ProcessItem, containerOwners: [Int32: String]) -> Bool {
-        item.kind == .docker && containerOwners[item.pid] != nil
     }
 
     /// One `sysctl` read of a PID's process-table entry, or `nil` when the kernel
@@ -286,21 +270,5 @@ public enum KillCore {
         // outcome now reports what a re-read of the process table actually shows.
         Thread.sleep(forTimeInterval: verificationDelay)
         return isStillRunning(pid, snapshot: startSnapshot) ? .survived : .confirmed
-    }
-
-    // MARK: - Docker stop path
-
-    /// Try to stop a container by name via `docker stop`. `name` is the scan-time
-    /// `containerOwners` lookup for the killed PID — non-`nil` only when the PID
-    /// matched a running container's root process at scan time; Docker daemon and
-    /// helper PIDs (and unmatched PIDs) pass `nil` and fall through to POSIX
-    /// signals. Returns `true` if the container was stopped. The Docker CLI access
-    /// is delegated to `DockerService` (shared with the container panel).
-    private static func dockerStopByName(_ name: String?) -> Bool {
-        guard let name, DockerService.isInstalled,
-              DockerService.run(["stop", name]).ok else {
-            return false
-        }
-        return true
     }
 }

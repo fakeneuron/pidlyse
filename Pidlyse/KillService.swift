@@ -2,7 +2,7 @@ import Foundation
 import PidlyseCore
 
 /// Thin async wrapper over the shared `KillCore` kill path (SIGTERM → 2 s grace
-/// → SIGKILL with PID-reuse identity guards, docker-stop routing, EPERM →
+/// → SIGKILL with PID-reuse identity guards, EPERM →
 /// `.unkillable`). The blocking core call runs on a background queue and every
 /// `onComplete` fires on the main queue, so SwiftUI callers never block. All
 /// kill semantics live in `PidlyseCore.KillCore` (shared with the
@@ -21,24 +21,21 @@ enum KillService {
     /// existing `KillService.ProcStartTime` call shape.
     typealias ProcStartTime = PidlyseCore.ProcStartTime
 
-    /// Terminate one process. Routing (docker stop vs POSIX signals) and the
-    /// grace period happen inside the blocking `KillCore.kill`, dispatched to a
-    /// background queue here. `onComplete` always fires on the main queue.
-    /// `containerOwners` is the `ScanEngine.containerOwners` cache; an empty map
-    /// (its default) means no container resolution is available and docker items
-    /// fall through to POSIX.
-    static func kill(_ item: ProcessItem, containerOwners: [Int32: String] = [:],
+    /// Terminate one process. The signals and the grace period happen inside the
+    /// blocking `KillCore.kill`, dispatched to a background queue here.
+    /// `onComplete` always fires on the main queue.
+    static func kill(_ item: ProcessItem,
                      onComplete: @escaping (KillOutcome) -> Void = { _ in }) {
         DispatchQueue.global().async {
-            let outcome = KillCore.kill(item, containerOwners: containerOwners)
+            let outcome = KillCore.kill(item)
             DispatchQueue.main.async { onComplete(outcome) }
         }
     }
 
     /// Terminate many processes concurrently; each follows the same per-item
-    /// routing and shares the same scan-time `containerOwners` map. `onComplete`
-    /// fires once, on the main queue, after every kill has resolved.
-    static func kill(_ items: [ProcessItem], containerOwners: [Int32: String] = [:],
+    /// path. `onComplete` fires once, on the main queue, after every kill has
+    /// resolved.
+    static func kill(_ items: [ProcessItem],
                      onComplete: @escaping ([Int32: KillOutcome]) -> Void = { _ in }) {
         guard !items.isEmpty else { onComplete([:]); return }
         let group = DispatchGroup()
@@ -48,7 +45,7 @@ enum KillService {
         var outcomes: [Int32: KillOutcome] = [:]
         for item in items {
             group.enter()
-            kill(item, containerOwners: containerOwners) { outcome in
+            kill(item) { outcome in
                 outcomes[item.pid] = outcome
                 group.leave()
             }

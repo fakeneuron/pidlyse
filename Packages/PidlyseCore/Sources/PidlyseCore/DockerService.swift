@@ -1,9 +1,8 @@
 import Foundation
 
 /// Shared access to the Docker CLI: path resolution, a single shell-out
-/// primitive, container listing, and the per-scan container-owner map. Owns the
-/// impure `docker` invocations so the kill path (`KillCore`), the Containers
-/// panel, and the cli-companion binary (PID-EPIC-57) share one code path; the
+/// primitive, and container listing. Owns the impure `docker` invocations so the
+/// Containers panel and the cli-companion binary (PID-EPIC-57) share one code path; the
 /// pure parsing lives in `DockerCore` (mirrors the `ScanEngine` / `ScanCore`
 /// split). The SwiftUI-facing async wrappers (list / stats) stay app-side in
 /// `DockerService+Async.swift` so the core remains run-loop-free.
@@ -11,7 +10,7 @@ public enum DockerService {
     /// Path to the Docker CLI, or `nil` if not installed. A candidate is only
     /// accepted when its resolved binary passes the trust check below, so a trojan
     /// `docker` planted in a world-writable or foreign-owned location can't be
-    /// exec'd on a docker-kill. (PID-35.3 / F2)
+    /// exec'd. (PID-35.3 / F2)
     public static func cliPath() -> String? {
         let candidates = ["/usr/local/bin/docker", "/opt/homebrew/bin/docker"]
         return candidates.first { isTrustedExecutable($0) }
@@ -65,20 +64,5 @@ public enum DockerService {
         let result = run(["ps", "--format", DockerCore.psFormat])
         guard result.ok else { return [] }
         return DockerCore.parsePS(result.output)
-    }
-
-    /// Resolve every running container's host root PID to its name in a single
-    /// bulk `docker inspect` over `docker ps -q`. Returns an empty map when
-    /// Docker is absent or no containers run. Captured once per scan (see
-    /// `ScanEngine.containerOwners`) so the kill path and the row-expansion
-    /// ownership hint avoid a per-click inspect (retires the F9 `findContainerID`
-    /// smell). The pure parse lives in `DockerCore.parseContainerOwners`.
-    public static func containerOwners() -> [Int32: String] {
-        let ids = run(["ps", "-q"]).output
-            .split(separator: "\n", omittingEmptySubsequences: true).map(String.init)
-        guard !ids.isEmpty else { return [:] }
-        let result = run(["inspect", "--format", DockerCore.inspectOwnerFormat] + ids)
-        guard result.ok else { return [:] }
-        return DockerCore.parseContainerOwners(result.output)
     }
 }

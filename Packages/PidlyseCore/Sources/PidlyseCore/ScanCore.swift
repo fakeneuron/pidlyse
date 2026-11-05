@@ -95,8 +95,7 @@ public enum ScanCore {
     /// Links are direct parent → child within the scanned set only, and only where the
     /// pair plausibly lives and dies together (`belongsWithParent`); a chain broken by
     /// an unscanned or unrelated process stays separate rows. Docker processes never
-    /// group (the daemon tree is Docker Desktop's to manage, and container roots stop
-    /// via `docker stop`).
+    /// group (the daemon tree is Docker Desktop's to manage).
     public static func collapseTrees(_ items: [ProcessItem]) -> [ProcessItem] {
         let groupable = items.filter { $0.kind != .docker }
         let byPID = Dictionary(groupable.map { ($0.pid, $0) }, uniquingKeysWith: { first, _ in first })
