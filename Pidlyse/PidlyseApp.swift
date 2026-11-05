@@ -70,9 +70,10 @@ struct CleanSafeStraysIntent: AppIntent {
     }
 }
 
-/// "Scan now" — the Shortcuts/Spotlight parallel of the manual ↺ and `pidlyse://scan`
-/// (PID-58.2): clears the session's dismissed PIDs and re-enumerates. Fire-and-forget;
-/// the scan runs async on the engine, so the dialog confirms the trigger, not a count.
+/// "Scan now" — the Shortcuts/Spotlight parallel of the manual ↺ (PID-58.2): clears the
+/// session's dismissed PIDs and re-enumerates. Unlike `pidlyse://scan`, which keeps
+/// dismissals (PID-098). Fire-and-forget; the scan runs async on the engine, so the
+/// dialog confirms the trigger, not a count.
 struct ScanNowIntent: AppIntent {
     static var title: LocalizedStringResource = "Scan Now"
     static var description = IntentDescription("Rescan for stray processes now.")

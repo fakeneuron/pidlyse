@@ -2,7 +2,7 @@ import XCTest
 @testable import PidlyseCore
 
 /// Pure `pidlyse://` grammar (PID-58.2) — the app's `application(_:open:)` routes
-/// a parsed verb to `ScanEngine.rescan`; only the parse is tested.
+/// a parsed verb to `ScanEngine.scan`; only the parse is tested.
 final class URLSchemeTests: XCTestCase {
 
     func testParsesVerbFromHost() {

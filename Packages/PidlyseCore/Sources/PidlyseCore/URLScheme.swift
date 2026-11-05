@@ -4,7 +4,7 @@ import Foundation
 /// `PidlyseCore` — not the app target — so `PidlyseCoreTests` can cover the parse
 /// via `swift test`, mirroring the `CLICore` (cli-companion) precedent. The
 /// app's `AppDelegate.application(_:open:)` owns the impure side (routing a
-/// parsed verb to `ScanEngine.rescan`).
+/// parsed verb to `ScanEngine.scan`).
 ///
 /// Any web page or local app can open a `pidlyse://` URL with no click inside
 /// Pidlyse, so the scheme carries no destructive verb: `pidlyse://clean` was
@@ -18,8 +18,9 @@ public enum URLScheme {
 
     /// The `pidlyse://` verb surface.
     public enum Command: Equatable {
-        /// `pidlyse://scan` — clear the session's dismissed set and re-enumerate
-        /// (headless; the manual ↺ equivalent).
+        /// `pidlyse://scan` — re-enumerate, keeping the session's dismissed set
+        /// (headless; unlike the manual ↺, which clears it — any page can open a
+        /// URL, so it must not undo "Ignore for session", PID-098).
         case scan
     }
 

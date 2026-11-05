@@ -10,8 +10,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
-- [ ] **PID-098** [light]🔧 [unattended] | url-scan-keeps-dismissals — `pidlyse://scan` routes to `ScanEngine.rescan()`, which clears the session's dismissed set, so any web page or app can undo "Ignore for session" and return dismissed rows to the "Clean all" set. Route the URL verb to `engine.scan()` (↺ and the Scan Now Shortcut keep `rescan()`); update `URLScheme.Command.scan`'s doc, `AppDelegate.application(_:open:)`'s comment and SPEC.md's integrations entry. From PID-094 review note 7. Surfaced by audit 2026-11-05 (Finding #2, Medium).
-
 ## Low
 
 - [ ] **PID-099** [medium]🧩 [unattended] | pid-keyed-session-caches — `ScanEngine.openFiles` and `dismissedPIDs` key by bare PID for the session, so after PID reuse the inspector shows the previous process's open files and a dismissal hides an unrelated new process. Key both by pid + scan-time start time (the `killDeniedIdentities` shape), with `ScanEngineLifecycleTests` coverage. Surfaced by audit 2026-11-05 (Finding #3, Low).
@@ -26,6 +24,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-098** [light]🔧 [unattended] | url-scan-keeps-dismissals — Completed 2026-11-05.
 - [x] **PID-097** [medium]🧩 | docker-stop-pid-collision — Completed 2026-11-05.
 - [x] **PID-102** [light] | stale-core-comments — `ScanCore.swift` header named the abandoned PID-EPIC-27 LaunchAgent helper as a consumer (now the `pidlyse` CLI); `KillService.swift` said "Kill logic lives here" against its own header (it lives in `KillCore`). Comment-only. Surfaced by audit 2026-11-05 (Finding #6, Low), fixed inline.
 - [x] **PID-101** [light] | port-registry-pointer — AGENTS.md §Conventions, SPEC.md (2 lines) and `PortRegistry.swift`'s header comments named natabula `docs/PORT-REGISTRY.md`, now a row-less template; they now name the live registry natabula's `port_registry` key resolves to. Surfaced by audit 2026-11-05 (Finding #5, Medium), fixed inline.
