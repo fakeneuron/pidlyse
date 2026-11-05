@@ -18,6 +18,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 - [ ] **PID-100** [light]🔧 [unattended] | dead-test-only-symbols — Delete `KillService.ProcStartTime` (no users), `ScanCore.parentCommand(ofPPID:in:)` (superseded by `AncestryResolver`, PID-52.2; drop `ScanCoreParentResolutionTests`) and `PortRegistry.parsePIDAndPort` (retarget its `PortRegistryTests` cases to `parseListenerLine`); `make test` green. Surfaced by audit 2026-11-05 (Finding #4, Low).
 
 - [ ] **PID-092** [light] | readme-screenshots — Re-record `docs/screenshots/popover.png` and `clean-all.gif`: both date from 2026-07-03 and show the pre-[[PID-EPIC-086]] popover (PID-titled rows, kind groups, a Needs review section). Operator-recorded; refresh the alt text if the framing changes. From [[PID-086.N]] audit.
+- [ ] **PID-103** [moderate] | scan-now-dismissals-and-url-seam — Scan Now AppIntent still calls `rescan()`, clearing session dismissals from an externally triggerable path: switch to `scan()` or accept. Also add a testable seam for URL-verb→`scan()` routing.
 
 ## Future Opportunities
 
