@@ -1,12 +1,13 @@
 import Foundation
 
-/// Hardcoded port table — a compiled snapshot of natabula `docs/PORT-REGISTRY.md`
-/// (the canonical localhost port registry; moved there from the global CLAUDE.md by NAT-281).
+/// Hardcoded port table — a compiled snapshot of the live natabula port registry (the
+/// file natabula's `port_registry` config key names; natabula `docs/PORT-REGISTRY.md` is
+/// only its row-less template).
 /// Any process whose PID is listening on one of these ports is demoted to Needs Review
 /// regardless of other classification criteria.
 public enum PortRegistry {
 
-    // MARK: - Port table (snapshot of ~/Code/natabula/docs/PORT-REGISTRY.md — project
+    // MARK: - Port table (snapshot of the live natabula port registry — project
     // ports only; Supabase / Docker-infra bands and macOS-reserved ports are excluded)
 
     public static let registeredPorts: Set<Int> = [

@@ -8,9 +8,16 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## High
 
+- [ ] **PID-097** [medium]🧩 | docker-stop-pid-collision — Remove the `docker stop`-by-PID kill route: `DockerService.containerOwners()` keys containers by `State.Pid`, a PID inside Docker's Linux VM, so on macOS a match against a scanned host PID is a coincidence; a colliding `.docker` row stops an unrelated container, skips the start-time identity guard, reports `.confirmed` without re-reading the process table, and `Killability` skips its owner check. Drop `KillCore.routesViaDockerStop` / `dockerStopByName`, the `containerOwners` threading (`ScanPipeline`, `ScanEngine`, CLI, `Killability.derive` / `manager`) and the inspector's "owned by container" line so docker rows take the guarded POSIX path; reconcile README §Features, SPEC.md, AGENTS.md. Surfaced by audit 2026-11-05 (Finding #1, Critical).
+
 ## Medium
 
+- [ ] **PID-098** [light]🔧 [unattended] | url-scan-keeps-dismissals — `pidlyse://scan` routes to `ScanEngine.rescan()`, which clears the session's dismissed set, so any web page or app can undo "Ignore for session" and return dismissed rows to the "Clean all" set. Route the URL verb to `engine.scan()` (↺ and the Scan Now Shortcut keep `rescan()`); update `URLScheme.Command.scan`'s doc, `AppDelegate.application(_:open:)`'s comment and SPEC.md's integrations entry. From PID-094 review note 7. Surfaced by audit 2026-11-05 (Finding #2, Medium).
+
 ## Low
+
+- [ ] **PID-099** [medium]🧩 [unattended] | pid-keyed-session-caches — `ScanEngine.openFiles` and `dismissedPIDs` key by bare PID for the session, so after PID reuse the inspector shows the previous process's open files and a dismissal hides an unrelated new process. Key both by pid + scan-time start time (the `killDeniedIdentities` shape), with `ScanEngineLifecycleTests` coverage. Surfaced by audit 2026-11-05 (Finding #3, Low).
+- [ ] **PID-100** [light]🔧 [unattended] | dead-test-only-symbols — Delete `KillService.ProcStartTime` (no users), `ScanCore.parentCommand(ofPPID:in:)` (superseded by `AncestryResolver`, PID-52.2; drop `ScanCoreParentResolutionTests`) and `PortRegistry.parsePIDAndPort` (retarget its `PortRegistryTests` cases to `parseListenerLine`); `make test` green. Surfaced by audit 2026-11-05 (Finding #4, Low).
 
 - [ ] **PID-092** [light] | readme-screenshots — Re-record `docs/screenshots/popover.png` and `clean-all.gif`: both date from 2026-07-03 and show the pre-[[PID-EPIC-086]] popover (PID-titled rows, kind groups, a Needs review section). Operator-recorded; refresh the alt text if the framing changes. From [[PID-086.N]] audit.
 
@@ -20,6 +27,8 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-102** [light] | stale-core-comments — `ScanCore.swift` header named the abandoned PID-EPIC-27 LaunchAgent helper as a consumer (now the `pidlyse` CLI); `KillService.swift` said "Kill logic lives here" against its own header (it lives in `KillCore`). Comment-only. Surfaced by audit 2026-11-05 (Finding #6, Low), fixed inline.
+- [x] **PID-101** [light] | port-registry-pointer — AGENTS.md §Conventions, SPEC.md (2 lines) and `PortRegistry.swift`'s header comments named natabula `docs/PORT-REGISTRY.md`, now a row-less template; they now name the live registry natabula's `port_registry` key resolves to. Surfaced by audit 2026-11-05 (Finding #5, Medium), fixed inline.
 - [x] **PID-096** [light]🔧 | ci-workflow-hardening — Completed 2026-10-29.
 - [x] **PID-095** [medium]🧩 | nil-token-kill-guard — Completed 2026-10-29.
 - [x] **PID-094** [medium]🧩 | url-clean-gate — Completed 2026-10-29.

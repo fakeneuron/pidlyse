@@ -4,7 +4,7 @@ import Foundation
 /// classify each into a descriptive `kind` + `riskTier` (→ derived
 /// `safe`/`needsReview` bucket). Side-effect-light and injectable (all inputs
 /// can be supplied for unit testing), so both the Pidlyse app's `ScanEngine`
-/// `ObservableObject` and the LaunchAgent helper (PID-EPIC-27) share one
+/// `ObservableObject` and the `pidlyse` CLI (PID-57.3) share one
 /// classification path. The app-side timer / persistence / notification
 /// lifecycle lives in `ScanEngine`, not here.
 public enum ScanCore {
