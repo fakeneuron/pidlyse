@@ -1,7 +1,7 @@
 ---
 name: audit
 description: Pidlyse audit — thin overlay over flaitron's bundled `ft-audit` (runs its passes by reference, applies the project deltas below). Swift/SwiftUI macOS menu bar app; domains general, security, structure, context, docs, performance. Forked from flaitron's audit-overlay template; see `docs/MIGRATION.md` §1.2.1.
-flaitron-reconciled: v7.5.0
+flaitron-reconciled: v8.3.0
 flaitron-tracks: ft-audit
 ---
 
