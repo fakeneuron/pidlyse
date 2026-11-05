@@ -54,11 +54,18 @@ final class ScanEngine: ObservableObject {
 
     /// PID → its open files + sockets, fetched **on-demand** when a row expands
     /// (PID-52.3) — never during a scan, unlike every map above. Populated lazily by
-    /// `loadOpenFiles(for:)` via a single per-PID `lsof -p <pid>`; consumed by the
-    /// inspector's open-files list. Cached per session (fetch once per PID, empty
-    /// results included) so re-expanding a row doesn't re-spawn `lsof`; bounded to the
-    /// rows the user has inspected.
-    @Published private(set) var openFiles: [Int32: OpenFileList] = [:]
+    /// `loadOpenFiles(for:)` via a single per-PID `lsof -p <pid>`; read through
+    /// `openFiles(for:)` by the inspector's open-files list. Cached per session (fetch
+    /// once per process, empty results included) so re-expanding a row doesn't
+    /// re-spawn `lsof`; bounded to the rows the user has inspected. Each entry keeps
+    /// the scan-time start time it was fetched for, so a recycled PID never shows the
+    /// previous process's files (PID-099).
+    @Published private var openFilesCache: [Int32: CachedOpenFiles] = [:]
+
+    private struct CachedOpenFiles {
+        let startTime: ProcStartTime?
+        let list: OpenFileList
+    }
 
     /// PID → this scan's stray verdict (PID-086.2): session ended / duplicate / idle /
     /// running. Derived once per scan by the pure `PidlyseCore.StrayVerdict` over the
@@ -144,8 +151,10 @@ final class ScanEngine: ObservableObject {
     /// "Cleaned" tab can bind to its `events`.
     let cleanLog: CleanLogStore
 
-    /// PIDs dismissed for this session. Not persisted — cleared on app restart.
-    private(set) var dismissedPIDs: Set<Int32> = []
+    /// Processes dismissed for this session, pid → scan-time start time, so a recycled
+    /// PID isn't hidden by its previous occupant's dismissal (`ScanCore.isDismissed`,
+    /// PID-099). Not persisted — cleared on app restart.
+    private(set) var dismissed: [Int32: ProcStartTime?] = [:]
 
     /// Every process (pid + start time) that has read as a likely stray this session —
     /// the new-stray baseline (PID-086.4). Remembered, not just last scan's set, so a
@@ -206,20 +215,36 @@ final class ScanEngine: ObservableObject {
     private let scanSource: ScanSource
     private let killer: Killer
     private let notifier: Notifier
+    private let openFilesLoader: OpenFilesLoader
+
+    /// Reads one process identity's open files (PID-52.3). Called on a background
+    /// queue. Injected so tests can drive the cache without `lsof` (PID-099).
+    typealias OpenFilesLoader = (_ pid: Int32, _ startTime: ProcStartTime?) -> OpenFileList
+
+    /// The live loader: one `lsof -p <pid>`, then a start-time re-read. If the PID
+    /// was recycled after the scan, the files belong to another process, so the
+    /// stale row gets an empty list rather than someone else's (PID-099).
+    static func liveOpenFiles(pid: Int32, startTime: ProcStartTime?) -> OpenFileList {
+        let list = OpenFilesResolver.openFiles(forPID: pid)
+        guard KillCore.startTime(of: pid) == startTime else { return OpenFileList(files: [], total: 0) }
+        return list
+    }
 
     /// Every parameter defaults to the live system; tests inject an isolated suite,
     /// canned snapshots, a fake kill, a temp clean log, a short linger (PID-078.3),
-    /// and a notification recorder (PID-086.4).
+    /// a notification recorder (PID-086.4), and an open-files reader (PID-099).
     init(defaults: UserDefaults = .standard,
          scanSource: @escaping ScanSource = { ScanPipeline.run($0) },
          killer: @escaping Killer = { KillService.kill($0, onComplete: $1) },
          cleanLog: CleanLogStore = CleanLogStore(),
          killFeedbackLinger: TimeInterval = ScanEngine.defaultKillFeedbackLinger,
-         notifier: @escaping Notifier = ScanEngine.postNotification) {
+         notifier: @escaping Notifier = ScanEngine.postNotification,
+         openFilesLoader: @escaping OpenFilesLoader = ScanEngine.liveOpenFiles) {
         self.defaults = defaults
         self.scanSource = scanSource
         self.killer = killer
         self.notifier = notifier
+        self.openFilesLoader = openFilesLoader
         self.cleanLog = cleanLog
         self.killFeedbackLinger = killFeedbackLinger
         let saved = ScanSettings.load(from: defaults)
@@ -260,7 +285,7 @@ final class ScanEngine: ObservableObject {
         completionsForNextScan = []
         let request = ScanRequest(elapsedThreshold: elapsedThreshold,
                                   ignoreRules: ignoredNames.compactMap(IgnoreRule.parse),
-                                  dismissedPIDs: dismissedPIDs,
+                                  dismissed: dismissed,
                                   disabledKinds: disabledKinds,
                                   customRules: customRules)
         let source = scanSource
@@ -270,7 +295,7 @@ final class ScanEngine: ObservableObject {
                 guard let self else { return }
                 // Re-apply dismissals: a row dismissed while this scan ran isn't in
                 // the snapshot it started with, and must not come back (PID-62.5).
-                let visible = snapshot.items.filter { !self.dismissedPIDs.contains($0.pid) }
+                let visible = snapshot.items.filter { !ScanCore.isDismissed($0, by: self.dismissed) }
                 self.items = visible
                 self.listeningPorts = snapshot.listeningPorts
                 self.portScanUnavailable = snapshot.portScanUnavailable
@@ -318,31 +343,45 @@ final class ScanEngine: ObservableObject {
         }
     }
 
+    /// `item`'s cached open files, if they were fetched for this identity — a
+    /// recycled PID reads nil, not its previous occupant's list (PID-099).
+    func openFiles(for item: ProcessItem) -> OpenFileList? {
+        guard let cached = openFilesCache[item.pid], cached.startTime == item.startTime else { return nil }
+        return cached.list
+    }
+
     /// Fetch a process's open files on-demand when its inspector expands (PID-52.3).
-    /// No-op if already cached (fetch once per PID per session — the guard also stops
-    /// a re-expand from re-spawning `lsof`); the single `lsof -p <pid>` runs on a
-    /// background queue and publishes on the main thread. Empty results are cached too,
-    /// so a fileless process isn't re-queried. Safe to call on every expansion.
-    func loadOpenFiles(for pid: Int32) {
-        guard openFiles[pid] == nil else { return }
+    /// No-op if already cached for this identity (fetch once per process per session —
+    /// the guard also stops a re-expand from re-spawning `lsof`); the single
+    /// `lsof -p <pid>` runs on a background queue and publishes on the main thread.
+    /// Empty results are cached too, so a fileless process isn't re-queried. Safe to
+    /// call on every expansion.
+    func loadOpenFiles(for item: ProcessItem) {
+        guard openFiles(for: item) == nil else { return }
+        let pid = item.pid
+        let startTime = item.startTime
+        let loader = openFilesLoader
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let result = OpenFilesResolver.openFiles(forPID: pid)
-            DispatchQueue.main.async { self?.openFiles[pid] = result }
+            let result = loader(pid, startTime)
+            DispatchQueue.main.async {
+                self?.openFilesCache[pid] = CachedOpenFiles(startTime: startTime, list: result)
+            }
         }
     }
 
     /// Hide a process for this session. Removes it from `items` immediately and
-    /// excludes it from subsequent scans. A manual rescan (↺) clears the dismissed set.
-    func dismiss(_ pid: Int32) {
-        dismissedPIDs.insert(pid)
-        items = items.filter { $0.pid != pid }
+    /// excludes this identity from subsequent scans (a recycled PID still shows,
+    /// PID-099). A manual rescan (↺) clears the dismissed set.
+    func dismiss(_ item: ProcessItem) {
+        dismissed.updateValue(item.startTime, forKey: item.pid)
+        items = items.filter { $0.pid != item.pid }
     }
 
-    /// Manual rescan: clears all dismissed PIDs before scanning so previously
+    /// Manual rescan: clears all dismissals before scanning so previously
     /// hidden items can reappear. They don't re-announce: the new-stray baseline
     /// remembers every stray seen this session (`announcedStrays`).
     func rescan() {
-        dismissedPIDs = []
+        dismissed = [:]
         scan()
     }
 

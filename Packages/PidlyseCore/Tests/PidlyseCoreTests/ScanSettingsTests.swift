@@ -80,6 +80,6 @@ final class ScanSettingsTests: XCTestCase {
                                              IgnoreRule(substring: "node", pathPrefix: "~/code/bidviz")])
         XCTAssertEqual(request.disabledKinds, [.docker])
         XCTAssertEqual(request.customRules, [rule])
-        XCTAssertTrue(request.dismissedPIDs.isEmpty)
+        XCTAssertTrue(request.dismissed.isEmpty)
     }
 }

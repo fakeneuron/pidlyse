@@ -194,7 +194,7 @@ final class ScanCoreTreeCollapseTests: XCTestCase {
           105 99945 14:55:40 ttys000 0.0 336 npm exec @playwright/mcp@latest --headless
           160   105 14:55:40 ttys000 0.0 80 node /Users/x/.npm/_npx/abc/node_modules/.bin/playwright-mcp --headless
         """
-        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60, psOutput: output, dismissedPIDs: [105])
+        let items = ScanCore.enumerate(elapsedThreshold: 30 * 60, psOutput: output, dismissed: [105: nil])
         XCTAssertTrue(items.isEmpty)
     }
 }

@@ -7,19 +7,20 @@ public struct ScanRequest {
     public var elapsedThreshold: TimeInterval
     /// Every parsed ignore line, global and cwd-scoped (`IgnoreRule`, PID-54.4).
     public var ignoreRules: [IgnoreRule]
-    /// Session-only dismissals (app); a one-shot CLI has none.
-    public var dismissedPIDs: Set<Int32>
+    /// Session-only dismissals (app), pid → scan-time start time (`ScanCore.isDismissed`,
+    /// PID-099); a one-shot CLI has none.
+    public var dismissed: [Int32: ProcStartTime?]
     public var disabledKinds: Set<ProcessKind>
     public var customRules: [CustomRule]
 
     public init(elapsedThreshold: TimeInterval = ScanCore.defaultElapsedThreshold,
                 ignoreRules: [IgnoreRule] = [],
-                dismissedPIDs: Set<Int32> = [],
+                dismissed: [Int32: ProcStartTime?] = [:],
                 disabledKinds: Set<ProcessKind> = [],
                 customRules: [CustomRule] = []) {
         self.elapsedThreshold = elapsedThreshold
         self.ignoreRules = ignoreRules
-        self.dismissedPIDs = dismissedPIDs
+        self.dismissed = dismissed
         self.disabledKinds = disabledKinds
         self.customRules = customRules
     }
@@ -83,7 +84,7 @@ public enum ScanPipeline {
                                        registeredPIDs: Set(portMap.keys),
                                        portScanUnavailable: scannedPorts == nil,
                                        ignoredNames: request.globalIgnores,
-                                       dismissedPIDs: request.dismissedPIDs,
+                                       dismissed: request.dismissed,
                                        disabledKinds: request.disabledKinds,
                                        customRules: request.customRules,
                                        startTimeProvider: KillCore.startTime,

@@ -410,7 +410,7 @@ struct MenuBarView: View {
                 reasoningBlock(item: item, isOld: isOld, killability: killability)
                     // On-demand open-files fetch (PID-52.3): fires whenever the inspector
                     // appears, decoupled from the row toggle; the engine caches per session.
-                    .onAppear { engine.loadOpenFiles(for: item.pid) }
+                    .onAppear { engine.loadOpenFiles(for: item) }
             }
         }
         // A row whose process is gone stays only to show the verdict (PID-62.5).
@@ -463,7 +463,7 @@ struct MenuBarView: View {
                 toggleProtected(item)
             }
         }
-        Button("Ignore for session") { engine.dismiss(item.pid) }
+        Button("Ignore for session") { engine.dismiss(item) }
         Divider()
         Button("Copy PID") { copyToPasteboard(String(item.pid)) }
         Button("Copy command line") { copyToPasteboard(item.command) }
@@ -571,7 +571,7 @@ struct MenuBarView: View {
             // appears (see `.onAppear` in `row`), cached per session. Rendered only once
             // resolved and non-empty — a process with nothing to show adds no lines
             // (graceful degrade, like the other hints).
-            if let list = engine.openFiles[item.pid], !list.files.isEmpty {
+            if let list = engine.openFiles(for: item), !list.files.isEmpty {
                 Text("open files")
                     .font(.caption2)
                     .foregroundStyle(.secondary)

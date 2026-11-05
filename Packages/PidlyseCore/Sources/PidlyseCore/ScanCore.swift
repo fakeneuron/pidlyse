@@ -13,19 +13,19 @@ public enum ScanCore {
     // MARK: - Enumeration
 
     /// Parse + classify `ps` output into stray candidates. `psOutput`,
-    /// `registeredPIDs`, `ignoredNames`, and `dismissedPIDs` are injectable
+    /// `registeredPIDs`, `ignoredNames`, and `dismissed` are injectable
     /// for unit testing. When `registeredPIDs` is nil the live `lsof` query runs.
     /// `portScanUnavailable` says a caller-supplied `registeredPIDs` is empty for want
     /// of an answer (PID-093), so the classifier demotes every easy row; the live
     /// query reports the same fact itself when it gets no answer.
-    /// Items whose command args contain any `ignoredNames` entry, whose PID is
-    /// in `dismissedPIDs`, or whose `kind` is in `disabledKinds`, are dropped.
+    /// Items whose command args contain any `ignoredNames` entry, that `dismissed`
+    /// names (`isDismissed`), or whose `kind` is in `disabledKinds`, are dropped.
     public static func enumerate(elapsedThreshold: TimeInterval = defaultElapsedThreshold,
                                  psOutput: String? = nil,
                                  registeredPIDs: Set<Int32>? = nil,
                                  portScanUnavailable: Bool = false,
                                  ignoredNames: [String] = [],
-                                 dismissedPIDs: Set<Int32> = [],
+                                 dismissed: [Int32: ProcStartTime?] = [:],
                                  disabledKinds: Set<ProcessKind> = [],
                                  customRules: [CustomRule] = [],
                                  startTimeProvider: ((Int32) -> ProcStartTime?)? = nil,
@@ -59,8 +59,19 @@ public enum ScanCore {
         // Dismissals apply to whole rows, so they filter *after* the collapse: a
         // dismissed group's root pid drops the group, rather than leaving its members
         // to re-form a smaller group on the next scan. (PID-62.4)
-        guard !dismissedPIDs.isEmpty else { return collapsed }
-        return collapsed.filter { !dismissedPIDs.contains($0.pid) }
+        guard !dismissed.isEmpty else { return collapsed }
+        return collapsed.filter { !isDismissed($0, by: dismissed) }
+    }
+
+    /// Whether `item` is the process a session dismissal named: the same pid **and**
+    /// the same scan-time start time, so a recycled PID isn't hidden by its previous
+    /// occupant's dismissal (PID-099). A dismissal recorded with no start time matches
+    /// a row with none — an unverifiable identity stays dismissable (unlike the app's
+    /// `killDeniedIdentities`, PID-62.3, which drops a start-time-less denial so it
+    /// degrades to killable). `dismissed` maps pid → start time.
+    public static func isDismissed(_ item: ProcessItem, by dismissed: [Int32: ProcStartTime?]) -> Bool {
+        guard let startTime = dismissed[item.pid] else { return false }
+        return startTime == item.startTime
     }
 
     /// The registered-port facts one `enumerate` classifies with (PID-093). A supplied

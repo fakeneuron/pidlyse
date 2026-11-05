@@ -27,7 +27,7 @@ final class ScanPipelineTests: XCTestCase {
         let request = ScanRequest()
         XCTAssertEqual(request.elapsedThreshold, ScanCore.defaultElapsedThreshold)
         XCTAssertTrue(request.globalIgnores.isEmpty)
-        XCTAssertTrue(request.dismissedPIDs.isEmpty)
+        XCTAssertTrue(request.dismissed.isEmpty)
     }
 
     // MARK: - Pipeline tail

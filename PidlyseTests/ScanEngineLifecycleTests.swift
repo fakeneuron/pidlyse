@@ -76,13 +76,18 @@ final class ScanEngineLifecycleTests: XCTestCase {
                             defaults: UserDefaults? = nil,
                             killer: @escaping ScanEngine.Killer = { _, _ in XCTFail("unexpected kill") },
                             linger: TimeInterval = 0.2,
-                            notifier: @escaping ScanEngine.Notifier = { _, _ in }) -> ScanEngine {
+                            notifier: @escaping ScanEngine.Notifier = { _, _ in },
+                            openFilesLoader: @escaping ScanEngine.OpenFilesLoader = { _, _ in
+                                XCTFail("unexpected open-files fetch")
+                                return OpenFileList(files: [], total: 0)
+                            }) -> ScanEngine {
         ScanEngine(defaults: defaults ?? makeSuite(),
                    scanSource: source.scan,
                    killer: killer,
                    cleanLog: CleanLogStore(fileURL: logURL),
                    killFeedbackLinger: linger,
-                   notifier: notifier)
+                   notifier: notifier,
+                   openFilesLoader: openFilesLoader)
     }
 
     private func item(_ pid: Int32, command: String = "node server.js", tier: RiskTier = .easy,
@@ -203,22 +208,72 @@ final class ScanEngineLifecycleTests: XCTestCase {
         engine.scan { first.fulfill() }
         XCTAssertEqual(source.started.wait(timeout: .now() + 2), .success)
         // The in-flight request was built before this dismissal.
-        engine.dismiss(10)
-        XCTAssertEqual(source.requests.first?.dismissedPIDs, [])
+        engine.dismiss(item(10))
+        XCTAssertEqual(source.requests.first?.dismissed, [:])
         source.release()
         wait(for: [first], timeout: 5)
         XCTAssertEqual(engine.items.map(\.pid), [11])
 
         scanAndWait(engine)
-        XCTAssertEqual(source.requests.last?.dismissedPIDs, [10])
+        XCTAssertEqual(source.requests.last?.dismissed, [10: item(10).startTime])
         XCTAssertEqual(engine.items.map(\.pid), [11])
 
         // `rescan()` starts a scan; this request queues behind it, so its
         // completion fires once a scan with the cleared set has published.
         engine.rescan()
         scanAndWait(engine)
-        XCTAssertEqual(source.requests.last?.dismissedPIDs, [])
+        XCTAssertEqual(source.requests.last?.dismissed, [:])
         XCTAssertEqual(engine.items.map(\.pid), [10, 11])
+    }
+
+    /// PID-099: a dismissal hides one process identity. The engine's publish-time
+    /// re-filter (the fake source applies no dismissals) lets a recycled PID — same
+    /// number, new start time — back in, without any rescan.
+    func testDismissalDoesNotHideARecycledPID() {
+        let source = FakeSource(snapshot([item(10, start: 1)]), snapshot([item(10, start: 1)]),
+                                snapshot([item(10, start: 2)]))
+        let engine = makeEngine(source)
+        scanAndWait(engine)
+
+        engine.dismiss(item(10, start: 1))
+        XCTAssertTrue(engine.items.isEmpty)
+        scanAndWait(engine)
+        XCTAssertTrue(engine.items.isEmpty, "the dismissed identity stays hidden")
+
+        scanAndWait(engine)
+        XCTAssertEqual(engine.items.map(\.startTime), [ProcStartTime(sec: 2, usec: 0)],
+                       "a new process on the same PID is not the dismissed one")
+    }
+
+    // MARK: - Open-files cache (PID-099)
+
+    func testOpenFilesCacheIsKeyedByProcessIdentity() {
+        var fetched: [Int32] = []
+        let lists = [OpenFileList(files: [OpenFile(name: "~/old.log", isSocket: false)], total: 1),
+                     OpenFileList(files: [OpenFile(name: "~/new.log", isSocket: false)], total: 1)]
+        let engine = makeEngine(FakeSource(snapshot([])), openFilesLoader: { pid, _ in
+            let call = DispatchQueue.main.sync { () -> Int in
+                fetched.append(pid)
+                return fetched.count
+            }
+            return lists[min(call - 1, 1)]
+        })
+        let old = item(10, start: 1)
+        let recycled = item(10, start: 2)
+
+        engine.loadOpenFiles(for: old)
+        drainMain(for: 0.2)
+        XCTAssertEqual(engine.openFiles(for: old), lists[0])
+        XCTAssertNil(engine.openFiles(for: recycled), "a recycled PID never shows its predecessor's files")
+
+        engine.loadOpenFiles(for: old)
+        drainMain(for: 0.2)
+        XCTAssertEqual(fetched, [10], "a re-expand of the same process reuses the cache")
+
+        engine.loadOpenFiles(for: recycled)
+        drainMain(for: 0.2)
+        XCTAssertEqual(fetched, [10, 10], "the recycled PID is fetched afresh")
+        XCTAssertEqual(engine.openFiles(for: recycled), lists[1])
     }
 
     // MARK: - Kill lifecycle

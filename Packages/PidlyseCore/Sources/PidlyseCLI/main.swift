@@ -19,7 +19,7 @@ private let defaultsDomain = "com.fakeneuron.pidlyse"
 
 /// The scan-relevant slice of the app's settings, read once per invocation.
 /// `scanInterval` / `notificationsEnabled` are app-lifecycle settings with no
-/// CLI meaning; the app's `dismissedPIDs` are session-only (never persisted),
+/// CLI meaning; the app's dismissals are session-only (never persisted),
 /// so a one-shot CLI correctly has no dismissed set.
 private struct Settings {
     let request: ScanRequest

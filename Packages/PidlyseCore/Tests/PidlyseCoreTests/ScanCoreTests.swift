@@ -493,30 +493,44 @@ final class ScanCoreTests: XCTestCase {
         XCTAssertEqual(items.count, 1)
     }
 
-    // MARK: - dismissedPIDs filtering
+    // MARK: - dismissal filtering
 
-    func testEnumerate_dismissedPIDs_match_filtersProcess() {
+    func testEnumerate_dismissed_match_filtersProcess() {
         let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
         let items = ScanCore.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
-                                         dismissedPIDs: [4000])
+                                         dismissed: [4000: nil])
         XCTAssertEqual(items.count, 0)
     }
 
-    func testEnumerate_dismissedPIDs_noMatch_processKept() {
+    func testEnumerate_dismissed_noMatch_processKept() {
         let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
         let items = ScanCore.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
-                                         dismissedPIDs: [9999])
+                                         dismissed: [9999: nil])
         XCTAssertEqual(items.count, 1)
     }
 
-    func testEnumerate_dismissedPIDs_empty_noFiltering() {
+    func testEnumerate_dismissed_empty_noFiltering() {
         let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
         let items = ScanCore.enumerate(elapsedThreshold: 30 * 60,
                                          psOutput: output,
-                                         dismissedPIDs: [])
+                                         dismissed: [:])
         XCTAssertEqual(items.count, 1)
+    }
+
+    /// PID-099: a dismissal names one process identity, not the PID — a recycled PID
+    /// (same number, new start time) is a different process and stays listed.
+    func testEnumerate_dismissed_recycledPID_processKept() {
+        let output = "  4000     1 01:46:38 ??   0.0  4096   python -m pytest tests/slow"
+        let now = ProcStartTime(sec: 200, usec: 0)
+        let scan = { (dismissed: [Int32: ProcStartTime?]) in
+            ScanCore.enumerate(elapsedThreshold: 30 * 60, psOutput: output, dismissed: dismissed,
+                               startTimeProvider: { _ in now })
+        }
+        XCTAssertEqual(scan([4000: ProcStartTime(sec: 100, usec: 0)]).count, 1, "previous occupant's dismissal")
+        XCTAssertEqual(scan([4000: now]).count, 0, "this identity's dismissal")
+        XCTAssertEqual(scan([4000: nil]).count, 1, "a start-time-less dismissal can't name a timed row")
     }
 
     // MARK: - applyScopedIgnores (cwd-scoped ignore post-filter, PID-54.4)
