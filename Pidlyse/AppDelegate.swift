@@ -67,17 +67,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// `LSUIElement` status-item app the open lands on the delegate with no window.
     /// The pure verb parse lives in `PidlyseCore.URLScheme`; foreign schemes and
     /// unknown verbs are ignored silently (no error surface for a drive-by URL).
-    /// `scan` re-enumerates but keeps the session's dismissals (plain `scan()`, not
-    /// the ↺ `rescan()`): any web page or app can open a URL, and clearing the
-    /// dismissed set would return "Ignore for session" rows to the "Clean all" set
-    /// (PID-098). There is deliberately no kill verb for the same reason (PID-094).
+    /// Each verb runs through `ScanEngine.handle(_:)` (PID-103), which keeps the
+    /// session's dismissals (PID-098). There is deliberately no kill verb: any web
+    /// page or app can open a URL (PID-094).
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls {
-            switch URLScheme.parse(url) {
-            case .scan:
-                engine.scan()
-            case nil:
-                continue
+            if let command = URLScheme.parse(url) {
+                engine.handle(command)
             }
         }
     }

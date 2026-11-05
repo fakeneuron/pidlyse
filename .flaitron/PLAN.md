@@ -13,7 +13,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## Low
 
 - [ ] **PID-092** [light] | readme-screenshots — Re-record `docs/screenshots/popover.png` and `clean-all.gif`: both date from 2026-07-03 and show the pre-[[PID-EPIC-086]] popover (PID-titled rows, kind groups, a Needs review section). Operator-recorded; refresh the alt text if the framing changes. From [[PID-086.N]] audit.
-- [ ] **PID-103** [moderate] | scan-now-dismissals-and-url-seam — Scan Now AppIntent still calls `rescan()`, clearing session dismissals from an externally triggerable path: switch to `scan()` or accept. Also add a testable seam for URL-verb→`scan()` routing.
 
 ## Future Opportunities
 
@@ -21,6 +20,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-103** [moderate] | scan-now-dismissals-and-url-seam — Completed 2026-11-05.
 - [x] **PID-099** [medium]🧩 [unattended] | pid-keyed-session-caches — Completed 2026-11-05.
 - [x] **PID-100** [light]🔧 [unattended] | dead-test-only-symbols — Completed 2026-11-05.
 - [x] **PID-098** [light]🔧 [unattended] | url-scan-keeps-dismissals — Completed 2026-11-05.

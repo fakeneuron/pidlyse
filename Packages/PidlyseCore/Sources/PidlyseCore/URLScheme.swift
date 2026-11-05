@@ -3,8 +3,8 @@ import Foundation
 /// Pure grammar for the `pidlyse://` URL scheme (PID-58.2). Lives in
 /// `PidlyseCore` — not the app target — so `PidlyseCoreTests` can cover the parse
 /// via `swift test`, mirroring the `CLICore` (cli-companion) precedent. The
-/// app's `AppDelegate.application(_:open:)` owns the impure side (routing a
-/// parsed verb to `ScanEngine.scan`).
+/// app's `AppDelegate.application(_:open:)` owns the impure side, forwarding a
+/// parsed verb to `ScanEngine.handle(_:)` (PID-103).
 ///
 /// Any web page or local app can open a `pidlyse://` URL with no click inside
 /// Pidlyse, so the scheme carries no destructive verb: `pidlyse://clean` was

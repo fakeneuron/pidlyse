@@ -226,6 +226,26 @@ final class ScanEngineLifecycleTests: XCTestCase {
         XCTAssertEqual(engine.items.map(\.pid), [10, 11])
     }
 
+    /// PID-103: the external `scan` verb (`pidlyse://scan` and the Scan Now Shortcut)
+    /// routes through `handle(_:)` to a plain `scan()`. Other apps can trigger both,
+    /// so it must keep the session's dismissals (PID-098) rather than act as the ↺
+    /// `rescan()` — which would empty the engine's set and let pid 10 back in at publish.
+    func testExternalScanVerbKeepsDismissals() {
+        let source = FakeSource(snapshot([item(10), item(11)]))
+        let engine = makeEngine(source)
+        scanAndWait(engine)
+        engine.dismiss(item(10))
+
+        // `handle` starts a scan; this request queues behind it, so its completion
+        // fires once a scan started after the verb has published.
+        engine.handle(.scan)
+        scanAndWait(engine)
+
+        XCTAssertEqual(source.requests.count, 3)
+        XCTAssertEqual(source.requests[1].dismissed, [10: item(10).startTime], "the verb's own scan")
+        XCTAssertEqual(engine.items.map(\.pid), [11])
+    }
+
     /// PID-099: a dismissal hides one process identity. The engine's publish-time
     /// re-filter (the fake source applies no dismissals) lets a recycled PID — same
     /// number, new start time — back in, without any rescan.

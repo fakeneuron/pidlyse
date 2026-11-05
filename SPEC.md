@@ -225,15 +225,15 @@ Full app parity: settings (threshold, ignores incl. scoped, disabled kinds, cust
 
 ## Integrations (PID-EPIC-58)
 
-External launchers reach Pidlyse's clean/scan actions through one shared engine-side action layer — `ScanEngine.cleanAllSafe` (the `sweepableStrays` set — every row `ScanEngine.isSweepable` admits: a likely stray that isn't high-risk, protected, port-bound, unkillable, a respawner, or mid-kill ([[PID-086.2]], [[PID-62.3]], [[PID-62.5]]) — through `ScanEngine.kill`, clean-log append, rescan) and the scan entry points `ScanEngine.rescan` (↺, Scan Now) and `ScanEngine.scan` (the URL verb), the same set CLI `clean` uses. Every trigger is bounded to that sweep set: it never touches a running (in-use) or high-risk row.
+External launchers reach Pidlyse's clean/scan actions through one shared engine-side action layer — `ScanEngine.cleanAllSafe` (the `sweepableStrays` set — every row `ScanEngine.isSweepable` admits: a likely stray that isn't high-risk, protected, port-bound, unkillable, a respawner, or mid-kill ([[PID-086.2]], [[PID-62.3]], [[PID-62.5]]) — through `ScanEngine.kill`, clean-log append, a `scan()` re-scan) and the external scan entry point `ScanEngine.handle(.scan)` (Scan Now and the URL verb — a plain `scan()`, [[PID-103]]), the same set CLI `clean` uses. Every trigger is bounded to that sweep set: it never touches a running (in-use) or high-risk row.
 
 | Surface | Entry point | Clean | Scan |
 |---------|-------------|-------|------|
 | URL scheme | `AppDelegate.application(_:open:)`; pure verb parse in `PidlyseCore.URLScheme` (PID-58.2) | none: `pidlyse://clean` was dropped ([[PID-094]]) because any web page or app can open a URL | `pidlyse://scan` → scan, keeping session dismissals ([[PID-098]]) |
-| Shortcuts / Spotlight | `AppShortcutsProvider` + two `AppIntent`s in `PidlyseApp.swift` (PID-58.3) | "Clean Likely Strays" → dialog summary | "Scan Now" → rescan |
+| Shortcuts / Spotlight | `AppShortcutsProvider` + two `AppIntent`s in `PidlyseApp.swift` (PID-58.3) | "Clean Likely Strays" → dialog summary | "Scan Now" → scan, keeping session dismissals |
 | Raycast | `integrations/raycast/*.sh` wrapping the installed CLI (PID-58.3) | `pidlyse clean` | `pidlyse list` (view-only) |
 
-The URL scheme and AppIntents run in-app against the live scan. The URL verb is a plain `scan()` while the ↺ button and "Scan Now" keep `rescan()` (which clears the session's dismissed set): any web page or app can open a URL, so it must not return "Ignore for session" rows to the "Clean all" set ([[PID-098]]). On a cold launch, "Clean Likely Strays" waits for the launch scan to publish before consuming `items`; the Raycast scripts shell out to the CLI, which scans fresh per invocation. AppIntents return a dialog as their feedback channel and post no notification. AppleScript is deliberately unsupported (`osascript` users have `do shell script "pidlyse clean"`), keeping the PID-35.1 "no NSAppleScript" security baseline intact.
+The URL scheme and AppIntents run in-app against the live scan. The URL verb and "Scan Now" are a plain `scan()`; only the in-popover ↺ calls `rescan()`, which clears the session's dismissed set. Any web page or app can open a URL or run a Shortcut, so neither may return "Ignore for session" rows to the "Clean all" set ([[PID-098]], [[PID-103]]). On a cold launch, "Clean Likely Strays" waits for the launch scan to publish before consuming `items`; the Raycast scripts shell out to the CLI, which scans fresh per invocation. AppIntents return a dialog as their feedback channel and post no notification. AppleScript is deliberately unsupported (`osascript` users have `do shell script "pidlyse clean"`), keeping the PID-35.1 "no NSAppleScript" security baseline intact.
 
 ---
 

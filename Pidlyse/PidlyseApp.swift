@@ -37,7 +37,7 @@ private func sharedEngine() -> ScanEngine? {
 /// "Clean likely strays" — the Shortcuts/Spotlight parallel of the popover's "Clean
 /// all" and `pidlyse clean`. Rides the engine's `cleanAllSafe` action
 /// (likely strays minus high-risk, protected and unkillable rows, clean-log append,
-/// rescan; PID-086.2), so it can never touch in-use, high-risk or protected work. The
+/// a dismissal-keeping re-scan; PID-086.2), so it can never touch in-use, high-risk or protected work. The
 /// type keeps its pre-PID-086.4 name: existing user shortcuts bind to it. It waits
 /// for the launch scan when invoked on a cold app, so it never treats the initial
 /// empty snapshot as a clean result.
@@ -70,18 +70,20 @@ struct CleanSafeStraysIntent: AppIntent {
     }
 }
 
-/// "Scan now" — the Shortcuts/Spotlight parallel of the manual ↺ (PID-58.2): clears the
-/// session's dismissed PIDs and re-enumerates. Unlike `pidlyse://scan`, which keeps
-/// dismissals (PID-098). Fire-and-forget; the scan runs async on the engine, so the
-/// dialog confirms the trigger, not a count.
+/// "Scan now" — re-enumerates through `ScanEngine.handle(.scan)`, keeping the session's
+/// dismissals like `pidlyse://scan` (PID-103). Other apps can run a Shortcut, so it must
+/// not undo "Ignore for session" (PID-098); the popover's ↺ is the only clearing path.
+/// The legacy "Rescan with …" phrase stays so learned invocations keep working, but it
+/// no longer restores hidden rows. Fire-and-forget; the scan runs async on the engine,
+/// so the dialog confirms the trigger, not a count.
 struct ScanNowIntent: AppIntent {
     static var title: LocalizedStringResource = "Scan Now"
-    static var description = IntentDescription("Rescan for stray processes now.")
+    static var description = IntentDescription("Scan for stray processes now.")
     static var openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        await MainActor.run { sharedEngine()?.rescan() }
-        return .result(dialog: "Rescanning for strays.")
+        await MainActor.run { sharedEngine()?.handle(.scan) }
+        return .result(dialog: "Scanning for strays.")
     }
 }
 

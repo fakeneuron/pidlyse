@@ -385,6 +385,18 @@ final class ScanEngine: ObservableObject {
         scan()
     }
 
+    /// Run an externally triggered verb (PID-103): the one seam `AppDelegate`'s
+    /// `pidlyse://` handler and the Scan Now Shortcut both call, so the routing is
+    /// testable. `scan` is a plain `scan()` that keeps the session's dismissals, never
+    /// the ↺ `rescan()`: any web page or app can open a URL or run a Shortcut, and
+    /// clearing the dismissed set would return "Ignore for session" rows to the
+    /// "Clean all" set (PID-098).
+    func handle(_ command: URLScheme.Command) {
+        switch command {
+        case .scan: scan()
+        }
+    }
+
     // MARK: - Clean log (PID-53.2)
 
     /// Record every outcome from a `[pid: outcome]` map, resolving each pid back to
