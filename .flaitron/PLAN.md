@@ -10,6 +10,9 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Medium
 
+- [ ] **CORE-001** [moderate] | grok-block-adoption — Adopt Natabula Grok block v1 public variant in AGENTS.md; retain one CLAUDE import/link or symlink. Verify exact payload, checkout/closure capability stops and public-ID boundary using Natabula docs/GROK-TASKNOTES.md and its audit. Owner executes; push/PR/merge/deploy need explicit go.
+
+
 ## Low
 
 - [ ] **PID-092** [light] | readme-screenshots — Re-record `docs/screenshots/popover.png` and `clean-all.gif`: both date from 2026-07-03 and show the pre-[[PID-EPIC-086]] popover (PID-titled rows, kind groups, a Needs review section). Operator-recorded; refresh the alt text if the framing changes. From [[PID-086.N]] audit.
