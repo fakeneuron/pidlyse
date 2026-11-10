@@ -16,7 +16,6 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 ## Low
 
 - [ ] **PID-092** [light] | readme-screenshots — Re-record `docs/screenshots/popover.png` and `clean-all.gif`: both date from 2026-07-03 and show the pre-[[PID-EPIC-086]] popover (PID-titled rows, kind groups, a Needs review section). Operator-recorded; refresh the alt text if the framing changes. From [[PID-086.N]] audit.
-- [ ] **PID-104** [light] [unattended] | port-registry-citation — Update the stale `~/Code/natabula/docs/PORT-REGISTRY.md` citation in `Packages/PidlyseCore/Tests/PidlyseCoreTests/PortRegistryTests.swift:81` to `~/.natabula/registers/PORT-REGISTRY.md` (moved by natabula NAT-495.9). Verify: `git grep -F 'natabula/docs/PORT-REGISTRY.md' -- Packages/` returns nothing.
 
 ## Future Opportunities
 
@@ -24,6 +23,7 @@ See [`SPEC.md`](../SPEC.md) for the canonical workflow contract.
 
 ## Completed
 
+- [x] **PID-104** [light] [unattended] | port-registry-citation — Completed 2026-11-10.
 - [x] **PID-103** [moderate] | scan-now-dismissals-and-url-seam — Completed 2026-11-05.
 - [x] **PID-099** [medium]🧩 [unattended] | pid-keyed-session-caches — Completed 2026-11-05.
 - [x] **PID-100** [light]🔧 [unattended] | dead-test-only-symbols — Completed 2026-11-05.

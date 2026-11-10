@@ -78,7 +78,7 @@ final class PortRegistryTests: XCTestCase {
     // MARK: - PortRegistry.registeredPorts (anti-drift canary)
 
     /// Tripwire for the manually-synced port table. `registeredPorts` mirrors
-    /// `~/Code/natabula/docs/PORT-REGISTRY.md` by hand; if an edit
+    /// `~/.natabula/registers/PORT-REGISTRY.md` by hand; if an edit
     /// accidentally drops or corrupts a known port, this assertion fails under
     /// `make test`. Each port is an anchor for an active project — keep this
     /// canary in sync when the registry changes.
